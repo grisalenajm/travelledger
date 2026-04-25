@@ -1,0 +1,135 @@
+# docker-compose.yml — Ledger (producción)
+# Desplegado en LXC Proxmox (768 MB RAM, nesting habilitado)
+# PostgreSQL y Paperless-ngx viven en el NAS UGREEN — NO se levantan aquí
+
+services:
+
+  # ─────────────────────────────────────────
+  # BACKEND — FastAPI
+  # ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ledger-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      PAPERLESS_URL: ${PAPERLESS_URL}
+      PAPERLESS_TOKEN: ${PAPERLESS_TOKEN}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      BOT_API_KEY: ${BOT_API_KEY}
+      FIREBASE_CREDENTIALS_PATH: /app/secrets/firebase-credentials.json
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    volumes:
+      - ./secrets/firebase-credentials.json:/app/secrets/firebase-credentials.json:ro
+    networks:
+      - ledger-net
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    # Límite de memoria para no ahogar el LXC
+    mem_limit: 220m
+    mem_reservation: 150m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────
+  # FRONTEND — Next.js (standalone output)
+  # ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ledger-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      # Internal URL para SSR (dentro de la red Docker)
+      API_INTERNAL_URL: http://backend:8000
+    networks:
+      - ledger-net
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    mem_limit: 320m
+    mem_reservation: 200m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────
+  # BOT — Telegram LLM (PTB + Haiku)
+  # ─────────────────────────────────────────
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: ledger-bot
+    restart: unless-stopped
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LEDGER_API_URL: http://backend:8000
+      BOT_API_KEY: ${BOT_API_KEY}
+      BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}       # https://tu-dominio.com/bot/webhook
+      BOT_MODE: ${BOT_MODE:-webhook}            # webhook | polling
+    networks:
+      - ledger-net
+    expose:
+      - "8080"                                   # health check (siempre activo)
+      - "8443"                                   # webhook en producción
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8080/health', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    mem_limit: 110m
+    mem_reservation: 70m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ledger-net:
+    driver: bridge
+    name: ledger-net
+
+# ─────────────────────────────────────────
+# NOTA: servicios externos en el NAS
+# ─────────────────────────────────────────
+# PostgreSQL  → accesible en 192.168.1.154:5433, DB "ledger" (postgres-ledger)
+# Paperless   → accesible en ${PAPERLESS_URL} (http://nas-ip:puerto)
+# nginx-proxy → enruta ledger.tudominio.com → frontend:3000
+#               y     api.ledger.tudominio.com → backend:8000
+#               y     bot.ledger.tudominio.com → bot:8443 (si webhook)

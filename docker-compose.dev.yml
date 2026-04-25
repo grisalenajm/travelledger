@@ -1,0 +1,55 @@
+# docker-compose.dev.yml — Ledger (desarrollo local)
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Diferencias respecto a producción:
+#  - Hot-reload en backend y bot (volumen con código fuente)
+#  - Frontend en modo dev (next dev) — hot-reload automático
+#  - Sin límites de memoria (desarrollo en máquina con más RAM)
+#  - BOT_MODE=polling (no necesita webhook público)
+#  - Logs más verbosos
+
+services:
+
+  backend:
+    build:
+      context: ./backend
+      target: development          # stage dev en Dockerfile multi-stage
+    volumes:
+      - ./backend/app:/app/app:ro  # hot-reload con uvicorn --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+    environment:
+      ENV: development
+      LOG_LEVEL: debug
+    mem_limit: ""
+    mem_reservation: ""
+    ports:
+      - "8000:8000"                # expuesto en dev para llamadas directas / swagger
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules          # anónimo para no machacar node_modules del host
+      - /app/.next
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+    mem_limit: ""
+    mem_reservation: ""
+    ports:
+      - "3000:3000"
+
+  bot:
+    build:
+      context: ./bot
+      target: development
+    volumes:
+      - ./bot:/app:ro
+    command: python -m watchfiles "python main.py" .
+    environment:
+      BOT_MODE: polling            # en dev no necesitamos webhook
+      LOG_LEVEL: debug
+    mem_limit: ""
+    mem_reservation: ""

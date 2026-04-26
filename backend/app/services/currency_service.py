@@ -66,7 +66,6 @@ async def convert(
 
 
 async def _fetch_rate(from_currency: str, to_currency: str, rate_date: date) -> Decimal:
-    # open.er-api.com no soporta fechas históricas en el plan gratuito — usa el tipo actual
     url = f"https://open.er-api.com/v6/latest/{from_currency.upper()}"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:

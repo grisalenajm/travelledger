@@ -8,7 +8,7 @@
 ## 📅 Última actualización
 - **Fecha:** 2026-04-26
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Navbar global, página /settings/profile, back navigation en detalle de viaje; fix proveedor de tipos de cambio; tareas UX pendientes documentadas en TODO.md
+- **Sesión:** Navbar global, página /settings/profile, back navigation, edición de gastos (modal con PUT); fix proveedor de tipos de cambio
 
 ---
 
@@ -44,11 +44,14 @@
   - `tests/test_jwt.py` + `tests/test_auth.py` — suite completa
   - Fix: `bcrypt>=4.0,<5.0` (incompatibilidad passlib 1.7.4 + bcrypt 5.x)
 - [x] **FASE 2 Backend** — trips/expenses/legs/loyalty-cards/currency; 27/27 tests; migración `34765b5418c8` aplicada
-- [x] **Navbar global + Perfil** — desplegado 2026-04-26:
-  - `components/navbar.tsx` — sticky, session-aware (`useSession`): logo → `/`, Viajes → `/trips`, Tarjetas → `/settings/cards`, avatar → `/settings/profile`, botón signOut. Invisible en login/register (status ≠ authenticated).
-  - `app/settings/profile/page.tsx` — editar nombre y `currency_base` con la misma lista de monedas del formulario de viajes; toast de confirmación 3 s; PUT `/api/proxy/users/me`
-  - `app/trips/[id]/page.tsx` — back link "← Viajes" sobre el título del viaje
-  - `app/layout.tsx` — `<Navbar />` añadida dentro de `<Providers>` (necesario para contexto NextAuth)
+- [x] **Navbar global + Perfil + Edición de gastos** — desplegado 2026-04-26:
+  - `components/navbar.tsx` — sticky, session-aware (`useSession`): logo → `/`, Viajes → `/trips`, Tarjetas → `/settings/cards`, avatar → `/settings/profile`, botón signOut. Invisible si status ≠ authenticated.
+  - `app/settings/profile/page.tsx` — editar nombre y `currency_base`; react-hook-form + zod; toast 3 s; PUT `/api/proxy/users/me`
+  - `app/trips/[id]/page.tsx` — back link "← Viajes" + botón editar en cada ExpenseCard → abre AddExpenseModal pre-relleno
+  - `app/layout.tsx` — `<Navbar />` dentro de `<Providers>` (necesario para contexto NextAuth)
+  - `components/add-expense-modal.tsx` — extendido para soportar modo edición (prop `expense?`); cuando está presente usa PUT `/api/proxy/expenses/{id}`, título "Editar gasto"
+  - `components/expense-card.tsx` — prop `onEdit?` añadida; muestra icono de lápiz cuando se proporciona
+  - `hooks/use-expenses.ts` — añadido `useUpdateExpense()` mutation
 - [x] **Fix proveedor de tipos de cambio** (commits `cb7602e` + `5b07a4c`) — migrado de `exchangerate.host` a `open.er-api.com` (sin API key, plan gratuito). Limitación conocida: plan gratuito solo sirve tipos actuales, no históricos.
 - [x] **FASE 2 Web** — desplegado 2026-04-25:
   - `app/page.tsx` — dashboard: saludo, viaje activo (border-primary), sin viaje (border-dashed), últimos gastos, estado vacío global
@@ -128,7 +131,7 @@ Los errores de ownership de Windows→Linux son inofensivos (archivos se extraen
 ## 🐛 Bugs Conocidos
 
 - `/register` no solicita confirmación de contraseña — campo `confirm_password` ausente en el formulario `[Web]`
-- Detalle de gasto no es editable desde UI — no existe modal/página de edición `[Web]`
+- ~~Detalle de gasto no es editable desde UI~~ — **resuelto**: botón editar en ExpenseCard + AddExpenseModal en modo edición `[Web]`
 - Flujo A no permite adjuntar imagen — `AddExpenseModal` no tiene campo de imagen `[Web]`
 - Export de datos ausente en UI — no hay botón ni página para descargar CSV o ZIP `[Web]`
 

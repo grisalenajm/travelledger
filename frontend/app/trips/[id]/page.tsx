@@ -18,6 +18,29 @@ function fmtDate(iso: string) {
   })
 }
 
+const MONTHS_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+function getTripDays(startDate: string, endDate: string): string[] {
+  const days: string[] = []
+  const [sy, sm, sd] = startDate.split("-").map(Number)
+  const [ey, em, ed] = endDate.split("-").map(Number)
+  const current = new Date(sy, sm - 1, sd)
+  const end = new Date(ey, em - 1, ed)
+  while (current <= end) {
+    const y = current.getFullYear()
+    const m = String(current.getMonth() + 1).padStart(2, "0")
+    const d = String(current.getDate()).padStart(2, "0")
+    days.push(`${y}-${m}-${d}`)
+    current.setDate(current.getDate() + 1)
+  }
+  return days
+}
+
+function fmtChipDay(isoDate: string): string {
+  const [, m, d] = isoDate.split("-").map(Number)
+  return `${d} ${MONTHS_SHORT[m - 1]}`
+}
+
 function PageSkeleton() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 space-y-6 animate-pulse">
@@ -70,6 +93,7 @@ export default function TripDetailPage() {
   const [tab, setTab] = useState<Tab>("expenses")
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const handleCloseExpenseModal = useCallback(() => setAddExpenseOpen(false), [])
 
@@ -250,6 +274,38 @@ export default function TripDetailPage() {
               </Button>
             </div>
 
+            {/* Day selector */}
+            <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {/* "T" = todo */}
+              <button
+                type="button"
+                onClick={() => setSelectedDay(null)}
+                className={[
+                  "shrink-0 px-3 py-1 rounded-full text-xs font-label font-semibold transition-colors",
+                  selectedDay === null
+                    ? "bg-primary text-white"
+                    : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
+                ].join(" ")}
+              >
+                T
+              </button>
+              {getTripDays(trip.start_date, trip.end_date).map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => setSelectedDay(day === selectedDay ? null : day)}
+                  className={[
+                    "shrink-0 px-3 py-1 rounded-full text-xs font-label font-medium transition-colors whitespace-nowrap",
+                    selectedDay === day
+                      ? "bg-primary text-white"
+                      : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
+                  ].join(" ")}
+                >
+                  {fmtChipDay(day)}
+                </button>
+              ))}
+            </div>
+
             {expensesLoading ? (
               <div className="space-y-2 animate-pulse">
                 {[1, 2].map((i) => (
@@ -276,18 +332,32 @@ export default function TripDetailPage() {
                   Añade el primer gasto de este viaje.
                 </p>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {expenses.map((expense) => (
-                  <ExpenseCard
-                    key={expense.id}
-                    expense={expense}
-                    currencyBase={currencyBase}
-                    onDoubleClick={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
-                  />
-                ))}
-              </div>
-            )}
+            ) : (() => {
+              const visible = selectedDay
+                ? expenses.filter((e) => e.date === selectedDay)
+                : expenses
+              return visible.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-3">
+                    event_busy
+                  </span>
+                  <p className="text-sm font-medium text-on-surface-variant">
+                    Sin gastos este día
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {visible.map((expense) => (
+                    <ExpenseCard
+                      key={expense.id}
+                      expense={expense}
+                      currencyBase={currencyBase}
+                      onDoubleClick={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
+                    />
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         )}
 

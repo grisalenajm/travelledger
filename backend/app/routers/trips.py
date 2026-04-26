@@ -1,13 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.user import User
 from app.schemas.trip import TripCreate, TripRead, TripSummary, TripUpdate
-from app.services import trip_service
+from app.services import paperless_service, trip_service
 
 router = APIRouter(prefix="/api/trips", tags=["trips"])
 
@@ -65,3 +65,53 @@ async def get_summary(
     user: User = Depends(get_current_user),
 ):
     return await trip_service.get_summary(db, trip_id, user)
+
+
+_ALLOWED_IMAGE_MAGIC: list[tuple[bytes, str]] = [
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"\x89PNG", "image/png"),
+]
+
+
+def _detect_mime(content: bytes) -> str:
+    for magic, mime in _ALLOWED_IMAGE_MAGIC:
+        if content[: len(magic)] == magic:
+            return mime
+    # WebP: RIFF????WEBP
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "image/webp"
+    raise HTTPException(
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        "Unsupported image format. Use JPEG, PNG, or WebP.",
+    )
+
+
+@router.post("/{trip_id}/cover", response_model=TripRead)
+async def upload_cover(
+    trip_id: UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    trip = await trip_service.get_or_404(db, trip_id, user.id)
+    content = await file.read()
+    mime = _detect_mime(content)
+    filename = file.filename or f"cover_{trip_id}.jpg"
+    doc_id = await paperless_service.upload_document(content, filename, mime)
+    trip.cover_doc_id = doc_id
+    await db.flush()
+    await db.refresh(trip)
+    return trip
+
+
+@router.get("/{trip_id}/cover-url")
+async def get_cover_url(
+    trip_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    trip = await trip_service.get_or_404(db, trip_id, user.id)
+    if not trip.cover_doc_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No cover image")
+    url = await paperless_service.get_url(trip.cover_doc_id)
+    return {"url": url}

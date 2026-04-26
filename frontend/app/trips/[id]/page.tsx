@@ -175,7 +175,17 @@ export default function TripDetailPage() {
             <span className="material-symbols-outlined text-base leading-none">arrow_back</span>
             Viajes
           </Link>
-          <h1 className="font-headline text-2xl font-bold text-on-surface">{trip.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-headline text-2xl font-bold text-on-surface flex-1">{trip.name}</h1>
+            <button
+              type="button"
+              onClick={() => router.push(`/trips/${id}/edit`)}
+              className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors flex-shrink-0"
+              aria-label="Editar viaje"
+            >
+              <span className="material-symbols-outlined text-[20px] leading-none">edit</span>
+            </button>
+          </div>
           <p className="mt-1 text-sm text-on-surface-variant">
             {trip.destination} · {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}
           </p>

@@ -26,6 +26,7 @@ class Trip(Base):
     budget_currency: Mapped[str] = mapped_column(String(3), default="EUR")
     status: Mapped[str] = mapped_column(String(10), default="active")
     # valores: active | closed | draft
+    cover_doc_id: Mapped[int | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -24,15 +24,25 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   const session = await getServerSession(authOptions)
   const url = `${API_INTERNAL_URL}/api/${pathSegments.join("/")}${req.nextUrl.search}`
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  }
+  const incomingContentType = req.headers.get("content-type") ?? ""
+  const isMultipart = incomingContentType.startsWith("multipart/form-data")
+
+  const headers: Record<string, string> = {}
   if (session?.accessToken) {
     headers["Authorization"] = `Bearer ${session.accessToken}`
   }
+  // Multipart: forward content-type as-is (includes boundary); JSON: force application/json
+  if (isMultipart) {
+    headers["Content-Type"] = incomingContentType
+  } else {
+    headers["Content-Type"] = "application/json"
+  }
 
   const hasBody = ["POST", "PUT", "PATCH"].includes(method)
-  const body = hasBody ? await req.text() : undefined
+  let body: BodyInit | undefined
+  if (hasBody) {
+    body = isMultipart ? await req.arrayBuffer() : await req.text()
+  }
 
   const response = await fetch(url, { method, headers, body })
 

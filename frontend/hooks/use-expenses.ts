@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import type { Expense } from "@/types/ledger"
-import type { ExpenseCreate } from "@/types/ledger"
+import type { Expense, ExpenseCreate, ExpenseUpdate } from "@/types/ledger"
 
 export function useExpenses(tripId: string) {
   return useQuery({
@@ -22,6 +21,18 @@ export function useCreateExpense() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: ExpenseCreate) => api.post<Expense>("/api/proxy/expenses", data),
+    onSuccess: (expense) => {
+      qc.invalidateQueries({ queryKey: ["expenses", expense.trip_id] })
+      qc.invalidateQueries({ queryKey: ["trips", expense.trip_id, "summary"] })
+    },
+  })
+}
+
+export function useUpdateExpense() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ExpenseUpdate; tripId: string }) =>
+      api.put<Expense>(`/api/proxy/expenses/${id}`, data),
     onSuccess: (expense) => {
       qc.invalidateQueries({ queryKey: ["expenses", expense.trip_id] })
       qc.invalidateQueries({ queryKey: ["trips", expense.trip_id, "summary"] })

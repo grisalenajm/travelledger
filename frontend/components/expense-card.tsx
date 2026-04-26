@@ -21,9 +21,10 @@ function fmtDate(iso: string) {
 interface ExpenseCardProps {
   expense: Expense
   currencyBase: string
+  onEdit?: () => void
 }
 
-export function ExpenseCard({ expense, currencyBase }: ExpenseCardProps) {
+export function ExpenseCard({ expense, currencyBase, onEdit }: ExpenseCardProps) {
   const showBase = expense.currency !== currencyBase
 
   return (
@@ -52,6 +53,20 @@ export function ExpenseCard({ expense, currencyBase }: ExpenseCardProps) {
           </p>
         )}
       </div>
+
+      {onEdit && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit()
+          }}
+          className="shrink-0 p-1.5 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+          title="Editar gasto"
+        >
+          <span className="material-symbols-outlined text-[18px] leading-none">edit</span>
+        </button>
+      )}
     </div>
   )
 }

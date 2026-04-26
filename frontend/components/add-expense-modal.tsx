@@ -4,8 +4,8 @@ import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import type { Trip } from "@/types/index"
-import { useCreateExpense } from "@/hooks/use-expenses"
+import type { Trip, Expense } from "@/types/index"
+import { useCreateExpense, useUpdateExpense } from "@/hooks/use-expenses"
 import { useLoyaltyCards } from "@/hooks/use-loyalty-cards"
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
@@ -49,10 +49,13 @@ interface AddExpenseModalProps {
   trip: Trip
   open: boolean
   onClose: () => void
+  expense?: Expense
 }
 
-export function AddExpenseModal({ trip, open, onClose }: AddExpenseModalProps) {
+export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModalProps) {
+  const isEdit = !!expense
   const createExpense = useCreateExpense()
+  const updateExpense = useUpdateExpense()
   const { data: loyaltyCards } = useLoyaltyCards()
   const hasCards = loyaltyCards !== undefined && loyaltyCards.length > 0
 
@@ -79,32 +82,73 @@ export function AddExpenseModal({ trip, open, onClose }: AddExpenseModalProps) {
   })
 
   useEffect(() => {
-    if (!open) reset()
-    // reset excluded from deps: we only want to reset when open changes,
-    // not on every render where RHF may issue a new function reference
+    if (!open) {
+      reset({
+        amount: undefined,
+        currency: trip.primary_currency,
+        category: "Dining",
+        date: today,
+        description: "",
+        payment_method: undefined,
+        billable: true,
+        loyalty_card_id: undefined,
+      })
+    } else if (expense) {
+      reset({
+        amount: Number(expense.amount),
+        currency: expense.currency,
+        category: expense.category,
+        date: expense.date,
+        description: expense.description ?? "",
+        payment_method: expense.payment_method ?? undefined,
+        billable: expense.billable,
+        loyalty_card_id: expense.loyalty_card_id ?? undefined,
+      })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, expense?.id])
 
   const onSubmit = async (values: FormValues) => {
-    await createExpense.mutateAsync({
-      trip_id: trip.id,
-      amount: values.amount,
-      currency: values.currency,
-      category: values.category,
-      date: values.date,
-      description: values.description || null,
-      payment_method: values.payment_method || null,
-      billable: values.billable,
-      loyalty_card_id: values.loyalty_card_id || null,
-    })
+    if (isEdit && expense) {
+      await updateExpense.mutateAsync({
+        id: expense.id,
+        tripId: expense.trip_id,
+        data: {
+          amount: values.amount,
+          currency: values.currency,
+          category: values.category,
+          date: values.date,
+          description: values.description || null,
+          payment_method: values.payment_method || null,
+          billable: values.billable,
+          loyalty_card_id: values.loyalty_card_id || null,
+        },
+      })
+    } else {
+      await createExpense.mutateAsync({
+        trip_id: trip.id,
+        amount: values.amount,
+        currency: values.currency,
+        category: values.category,
+        date: values.date,
+        description: values.description || null,
+        payment_method: values.payment_method || null,
+        billable: values.billable,
+        loyalty_card_id: values.loyalty_card_id || null,
+      })
+    }
     onClose()
     reset()
   }
 
+  const isPending = createExpense.isPending || updateExpense.isPending
+
   return (
     <Dialog open={open} onClose={onClose} className="max-w-md">
       <DialogHeader>
-        <DialogTitle>Nuevo gasto — {trip.name}</DialogTitle>
+        <DialogTitle>
+          {isEdit ? "Editar gasto" : "Nuevo gasto"} — {trip.name}
+        </DialogTitle>
       </DialogHeader>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
@@ -220,8 +264,12 @@ export function AddExpenseModal({ trip, open, onClose }: AddExpenseModalProps) {
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={createExpense.isPending}>
-            {createExpense.isPending ? "Guardando…" : "Guardar gasto"}
+          <Button type="submit" disabled={isPending}>
+            {isPending
+              ? "Guardando…"
+              : isEdit
+              ? "Actualizar gasto"
+              : "Guardar gasto"}
           </Button>
         </DialogFooter>
       </form>

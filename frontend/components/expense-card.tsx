@@ -44,11 +44,11 @@ export function ExpenseCard({ expense, currencyBase }: ExpenseCardProps) {
 
       <div className="shrink-0 text-right">
         <p className="text-sm font-semibold text-on-surface">
-          {expense.amount.toFixed(2)} {expense.currency}
+          {Number(expense.amount).toFixed(2)} {expense.currency}
         </p>
         {showBase && (
           <p className="text-xs text-on-surface-variant">
-            {expense.amount_base.toFixed(2)} {currencyBase}
+            {Number(expense.amount_base).toFixed(2)} {currencyBase}
           </p>
         )}
       </div>

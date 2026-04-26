@@ -99,8 +99,8 @@ export default function TripDetailPage() {
     )
   }
 
-  const overBudget = summary !== undefined && summary.percentage > 100
-  const hasBudget = summary !== undefined && summary.budget_base > 0
+  const overBudget = summary !== undefined && Number(summary.percentage) > 100
+  const hasBudget = summary !== undefined && Number(summary.budget_base) > 0
   const currencyBase = summary?.currency_base ?? trip.primary_currency
 
   return (
@@ -123,7 +123,7 @@ export default function TripDetailPage() {
                   Gastado
                 </p>
                 <p className="font-headline text-3xl font-extrabold text-on-surface leading-none mt-1">
-                  {summary.spent_base.toFixed(2)}{" "}
+                  {Number(summary.spent_base).toFixed(2)}{" "}
                   <span className="text-lg font-semibold text-on-surface-variant">
                     {summary.currency_base}
                   </span>
@@ -135,7 +135,7 @@ export default function TripDetailPage() {
                     Presupuesto
                   </p>
                   <p className="mt-1 text-base font-semibold text-on-surface">
-                    {summary.budget_base.toFixed(2)} {summary.currency_base}
+                    {Number(summary.budget_base).toFixed(2)} {summary.currency_base}
                   </p>
                 </div>
               )}
@@ -145,7 +145,7 @@ export default function TripDetailPage() {
               <>
                 <div className="mt-4">
                   <Progress
-                    value={summary.percentage}
+                    value={Number(summary.percentage)}
                     indicatorClassName={overBudget ? "bg-error" : undefined}
                   />
                 </div>
@@ -155,7 +155,7 @@ export default function TripDetailPage() {
                   <span>{summary.legs_count} tramos</span>
                   <span>·</span>
                   <span className={overBudget ? "text-error font-semibold" : ""}>
-                    {summary.percentage.toFixed(0)}% del presupuesto
+                    {Number(summary.percentage).toFixed(0)}% del presupuesto
                   </span>
                 </div>
               </>

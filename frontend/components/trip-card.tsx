@@ -27,7 +27,7 @@ interface TripCardProps {
 
 export function TripCard({ trip, summary }: TripCardProps) {
   const { label, variant } = STATUS_CONFIG[trip.status]
-  const overBudget = summary !== undefined && summary.percentage > 100
+  const overBudget = summary !== undefined && Number(summary.percentage) > 100
 
   return (
     <Link
@@ -51,12 +51,12 @@ export function TripCard({ trip, summary }: TripCardProps) {
       {summary !== undefined && (
         <div className="mt-4 space-y-2">
           <Progress
-            value={summary.percentage}
+            value={Number(summary.percentage)}
             indicatorClassName={overBudget ? "bg-error" : undefined}
           />
           <div className="flex items-center justify-between text-xs text-on-surface-variant">
             <span>
-              {summary.spent_base.toFixed(2)} / {summary.budget_base.toFixed(2)}{" "}
+              {Number(summary.spent_base).toFixed(2)} / {Number(summary.budget_base).toFixed(2)}{" "}
               {summary.currency_base}
             </span>
             <div className="flex gap-3">

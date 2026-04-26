@@ -127,6 +127,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Detalle/edición de gasto — doble clic en ExpenseCard → /trips/[id]/expenses/[expenseId] con edición completa y eliminación con confirmación
 - [x] Barra de totales por moneda en trip detail — chip base (budget_currency) + chips por moneda, reactiva al filtro de día
 - [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
+- [x] Ver comprobante desde detalle de gasto — GET /api/expenses/{id}/receipt-url + paperless_service.get_url()
 - [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv + botón "Exportar CSV" en trip detail
 - [x] Selector de días deslizante en trip detail — chips "T" + día por día, filtra gastos por fecha
 - [ ] Fix confirm_password en /register
@@ -164,7 +165,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 ## 🔵 FASE 4 — Paperless-ngx integración `[OCR]` `[Web]` `[And]`
 
 - [ ] [!] expense_service.delete() — cascade borrado en Paperless
-- [ ] Web: botón "Ver factura" en ExpenseCard
+- [x] Web: botón "Ver factura" en expense detail page (Comprobante clickable)
 - [ ] Android: botón "Ver factura" con Intent.ACTION_VIEW
 
 ---

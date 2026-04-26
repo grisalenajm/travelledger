@@ -164,7 +164,7 @@ export default function TripDetailPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-2xl px-4 py-8 space-y-6 min-w-0">
 
         {/* Header */}
         <div>
@@ -183,58 +183,60 @@ export default function TripDetailPage() {
 
         {/* Totals bar */}
         {!expensesLoading && visible.length > 0 && (
-          <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <div className="flex gap-3 pb-2">
-              <div
-                className="flex-shrink-0 px-5 py-3 rounded-full text-base font-semibold text-white whitespace-nowrap"
-                style={{ backgroundColor: "#004d5d" }}
-              >
-                {fmtAmount(baseTotal, trip.budget_currency)}
-              </div>
-              {!showOnlyBase && currencyEntries.map(([currency, total]) => (
-                <div
-                  key={currency}
-                  className="flex-shrink-0 px-5 py-3 rounded-full text-base font-semibold whitespace-nowrap"
-                  style={{ backgroundColor: "#e8f0f2", color: "#004d5d" }}
-                >
-                  {fmtAmount(total, currency)}
-                </div>
-              ))}
+          <div
+            className="flex gap-3 overflow-x-scroll pb-2"
+            style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "thin" }}
+          >
+            <div
+              className="flex-shrink-0 px-5 py-3 rounded-full text-base font-semibold text-white whitespace-nowrap"
+              style={{ backgroundColor: "#004d5d" }}
+            >
+              {fmtAmount(baseTotal, trip.budget_currency)}
             </div>
+            {!showOnlyBase && currencyEntries.map(([currency, total]) => (
+              <div
+                key={currency}
+                className="flex-shrink-0 px-5 py-3 rounded-full text-base font-semibold whitespace-nowrap"
+                style={{ backgroundColor: "#e8f0f2", color: "#004d5d" }}
+              >
+                {fmtAmount(total, currency)}
+              </div>
+            ))}
           </div>
         )}
 
         {/* Day selector */}
-        <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="flex gap-2 pb-1">
+        <div
+          className="flex gap-2 overflow-x-scroll pb-2"
+          style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "thin" }}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedDay(null)}
+            className={[
+              "flex-shrink-0 px-3 py-1 rounded-full text-xs font-label font-semibold transition-colors whitespace-nowrap",
+              selectedDay === null
+                ? "bg-primary text-white"
+                : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
+            ].join(" ")}
+          >
+            T
+          </button>
+          {getTripDays(trip.start_date, trip.end_date).map((day) => (
             <button
+              key={day}
               type="button"
-              onClick={() => setSelectedDay(null)}
+              onClick={() => setSelectedDay(day === selectedDay ? null : day)}
               className={[
-                "flex-shrink-0 px-3 py-1 rounded-full text-xs font-label font-semibold transition-colors whitespace-nowrap",
-                selectedDay === null
+                "flex-shrink-0 px-3 py-1 rounded-full text-xs font-label font-medium transition-colors whitespace-nowrap",
+                selectedDay === day
                   ? "bg-primary text-white"
                   : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
               ].join(" ")}
             >
-              T
+              {fmtChipDay(day)}
             </button>
-            {getTripDays(trip.start_date, trip.end_date).map((day) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => setSelectedDay(day === selectedDay ? null : day)}
-                className={[
-                  "flex-shrink-0 px-3 py-1 rounded-full text-xs font-label font-medium transition-colors whitespace-nowrap",
-                  selectedDay === day
-                    ? "bg-primary text-white"
-                    : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
-                ].join(" ")}
-              >
-                {fmtChipDay(day)}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
 
         {/* Expense list */}
@@ -291,7 +293,10 @@ export default function TripDetailPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div
+              className="overflow-y-auto space-y-2"
+              style={{ maxHeight: "calc(100vh - 380px)" }}
+            >
               {visible.map((expense) => (
                 <ExpenseCard
                   key={expense.id}

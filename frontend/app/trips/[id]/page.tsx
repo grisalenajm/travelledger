@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useParams } from "next/navigation"
 import { useTrip, useTripSummary } from "@/hooks/use-trips"
 import { useExpenses } from "@/hooks/use-expenses"
@@ -67,6 +67,7 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [tab, setTab] = useState<Tab>("expenses")
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
+  const handleCloseExpenseModal = useCallback(() => setAddExpenseOpen(false), [])
 
   const { data: trip, isLoading: tripLoading, isError } = useTrip(id)
   const { data: summary } = useTripSummary(id)
@@ -251,7 +252,7 @@ export default function TripDetailPage() {
       <AddExpenseModal
         trip={trip}
         open={addExpenseOpen}
-        onClose={() => setAddExpenseOpen(false)}
+        onClose={handleCloseExpenseModal}
       />
     </main>
   )

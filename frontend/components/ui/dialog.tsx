@@ -14,11 +14,13 @@ interface DialogProps {
 
 export function Dialog({ open, onClose, children, className }: DialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
+      if (e.key === "Escape") onCloseRef.current()
     }
     document.addEventListener("keydown", onKey)
     document.body.style.overflow = "hidden"
@@ -26,7 +28,7 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
       document.removeEventListener("keydown", onKey)
       document.body.style.overflow = ""
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open || typeof document === "undefined") return null
 
@@ -35,7 +37,7 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => {
-        if (e.target === overlayRef.current) onClose()
+        if (e.target === overlayRef.current) onCloseRef.current()
       }}
     >
       <div

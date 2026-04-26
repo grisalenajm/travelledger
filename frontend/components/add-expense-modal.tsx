@@ -80,7 +80,10 @@ export function AddExpenseModal({ trip, open, onClose }: AddExpenseModalProps) {
 
   useEffect(() => {
     if (!open) reset()
-  }, [open, reset])
+    // reset excluded from deps: we only want to reset when open changes,
+    // not on every render where RHF may issue a new function reference
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const onSubmit = async (values: FormValues) => {
     await createExpense.mutateAsync({

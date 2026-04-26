@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import Link from "next/link"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { useTrip, useTripSummary } from "@/hooks/use-trips"
@@ -122,6 +123,13 @@ export default function TripDetailPage() {
 
         {/* Header */}
         <div>
+          <Link
+            href="/trips"
+            className="inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-on-surface transition-colors mb-3"
+          >
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            Viajes
+          </Link>
           <h1 className="font-headline text-2xl font-bold text-on-surface">{trip.name}</h1>
           <p className="mt-1 text-sm text-on-surface-variant">
             {trip.destination} · {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}

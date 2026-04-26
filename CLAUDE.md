@@ -227,7 +227,8 @@ La moneda base del usuario (`User.currency_base`) es la moneda de reporting corp
 `currency_service.convert(amount, from_currency, to_currency, date)`:
 - Usa el tipo del **día del gasto** (no del día de hoy)
 - Cachea en la tabla `ExchangeRate` para evitar llamadas repetidas
-- Fuente: exchangerate.host (actualizar 1 vez/día por par)
+- Fuente: **open.er-api.com** (`v6/latest/{base}`, sin API key, plan gratuito)
+- Limitación: plan gratuito solo sirve tipos actuales, no históricos
 
 ---
 

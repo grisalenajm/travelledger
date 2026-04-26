@@ -3,75 +3,67 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
-import { Button } from "@/components/ui/button"
 
-const AUTH_PATHS = ["/login", "/register"]
+const NAV_LINKS = [
+  { href: "/trips", label: "Viajes" },
+  { href: "/settings/cards", label: "Tarjetas" },
+]
 
 export function Navbar() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
 
-  if (status !== "authenticated" || AUTH_PATHS.includes(pathname)) return null
+  if (status !== "authenticated") return null
 
-  const initial =
-    session.user?.name?.[0]?.toUpperCase() ??
-    session.user?.email?.[0]?.toUpperCase() ??
-    "?"
+  const initial = session.user?.name?.[0]?.toUpperCase() ?? "?"
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-outline-variant bg-surface/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-2xl items-center justify-between px-4 h-14">
-        <Link href="/" className="font-headline text-lg font-bold text-primary">
+    <header className="sticky top-0 z-40 border-b border-outline-variant bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto max-w-2xl px-4 h-14 flex items-center justify-between gap-4">
+        <Link
+          href="/"
+          className="font-headline font-extrabold text-lg text-primary tracking-tight"
+        >
           Ledger
         </Link>
 
-        <div className="flex items-center gap-1">
-          <Link
-            href="/trips"
-            className={[
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-              pathname.startsWith("/trips")
-                ? "text-primary bg-primary/10"
-                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container",
-            ].join(" ")}
-          >
-            Viajes
-          </Link>
-          <Link
-            href="/settings/cards"
-            className={[
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-              pathname === "/settings/cards"
-                ? "text-primary bg-primary/10"
-                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container",
-            ].join(" ")}
-          >
-            Tarjetas
-          </Link>
-        </div>
+        <nav className="flex items-center gap-1">
+          {NAV_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className={[
+                "px-3 py-1.5 rounded-lg text-sm font-label font-medium transition-colors",
+                pathname.startsWith(href)
+                  ? "bg-primary/10 text-primary"
+                  : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
+              ].join(" ")}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
 
         <div className="flex items-center gap-2">
           <Link
             href="/settings/profile"
             className={[
-              "flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-sm font-bold transition-opacity hover:opacity-90",
-              pathname === "/settings/profile" ? "ring-2 ring-primary ring-offset-2" : "",
+              "h-8 w-8 rounded-full bg-primary/15 text-primary font-headline font-bold text-sm flex items-center justify-center transition-colors hover:bg-primary/25",
+              pathname === "/settings/profile" ? "ring-2 ring-primary ring-offset-1" : "",
             ].join(" ")}
-            title="Perfil"
+            title={session.user?.name ?? "Perfil"}
           >
             {initial}
           </Link>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-on-surface-variant"
+          <button
             onClick={() => signOut({ callbackUrl: "/login" })}
+            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+            title="Cerrar sesión"
           >
-            <span className="material-symbols-outlined text-base leading-none mr-1">logout</span>
-            Salir
-          </Button>
+            <span className="material-symbols-outlined text-xl">logout</span>
+          </button>
         </div>
       </div>
-    </nav>
+    </header>
   )
 }

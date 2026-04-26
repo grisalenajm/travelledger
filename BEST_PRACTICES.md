@@ -339,6 +339,27 @@ interface Expense {
 - Props siempre tipadas con `interface`.
 - Lógica compleja en custom hooks.
 
+### App Router — componentes session-aware
+
+Los Client Components que usan `useSession` (ej. `<Navbar />`) **deben** renderizarse dentro de `<SessionProvider>`. En este proyecto, `<Providers>` ya incluye `SessionProvider`, por lo que cualquier componente rendereizado como hijo de `<Providers>` en el root layout tiene acceso al contexto.
+
+```tsx
+// ✅ CORRECTO — Navbar es hijo de Providers (dentro de SessionProvider)
+// app/layout.tsx (Server Component)
+<Providers>
+  <Navbar />   {/* Client Component — useSession funciona */}
+  {children}
+</Providers>
+
+// ❌ INCORRECTO — fuera del contexto
+<>
+  <Navbar />          {/* useSession falla */}
+  <Providers>{children}</Providers>
+</>
+```
+
+El componente debe retornar `null` cuando `status !== "authenticated"` para ocultarse automáticamente en páginas públicas (login, register) sin necesidad de un layout adicional.
+
 ### Data Fetching
 
 ```typescript

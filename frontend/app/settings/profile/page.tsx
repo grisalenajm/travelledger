@@ -1,72 +1,74 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { api } from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import type { User } from "@/types"
+import { Button } from "@/components/ui/button"
 
-const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "JPY", "ARS", "BRL", "MXN", "CAD", "AUD"]
+const CURRENCIES = [
+  "EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD", "SEK", "NOK", "DKK",
+  "ARS", "BRL", "MXN", "CLP", "COP", "PEN",
+  "CNY", "HKD", "SGD", "KRW", "THB", "INR",
+  "AED", "TRY", "PLN", "CZK", "HUF", "RON",
+]
 
-const INPUT_CLASS =
-  "mt-1 block w-full rounded border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+const labelClass = "font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant"
+const inputClass = "w-full bg-transparent border-b border-outline py-3 text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary focus:outline-none transition-colors font-body text-sm"
+const selectClass = "w-full bg-transparent border-b border-outline py-3 text-on-surface focus:border-primary focus:outline-none transition-colors font-body text-sm appearance-none cursor-pointer"
+const errorClass = "text-error text-xs font-body mt-1"
+
+const schema = z.object({
+  name: z.string().min(1, "El nombre es obligatorio"),
+  currency_base: z.string().min(1, "Selecciona una moneda"),
+})
+
+type FormValues = z.infer<typeof schema>
 
 export default function ProfilePage() {
-  const { data: session } = useSession()
-  const qc = useQueryClient()
-
-  const [name, setName] = useState("")
-  const [currency, setCurrency] = useState("EUR")
-  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["users", "me"],
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ["me"],
     queryFn: () => api.get<User>("/api/proxy/users/me"),
-    enabled: !!session?.accessToken,
   })
 
-  useEffect(() => {
-    if (user) {
-      setName(user.name)
-      setCurrency(user.currency_base)
-    }
-  }, [user])
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    values: user ? { name: user.name, currency_base: user.currency_base } : undefined,
+  })
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
-    setSaving(true)
-    setError(null)
-    setSaved(false)
-    try {
-      await api.put<User>("/api/proxy/users/me", {
-        name: name.trim(),
-        currency_base: currency,
-      })
-      qc.invalidateQueries({ queryKey: ["users", "me"] })
+  const mutation = useMutation({
+    mutationFn: (data: FormValues) => api.put<User>("/api/proxy/users/me", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["me"] })
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    } catch {
-      setError("Error al guardar. Inténtalo de nuevo.")
-    } finally {
-      setSaving(false)
-    }
-  }
+    },
+    onError: () => {
+      setError("root", { message: "Error al guardar. Inténtalo de nuevo." })
+    },
+  })
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <main className="min-h-screen bg-background">
-        <div className="mx-auto max-w-2xl px-4 py-8 space-y-6 animate-pulse">
-          <div className="h-7 bg-surface-container-high rounded w-32" />
-          <div className="h-4 bg-surface-container rounded w-48" />
-          <div className="space-y-4">
-            <div className="h-14 bg-surface-container-lowest rounded-xl" />
-            <div className="h-14 bg-surface-container-lowest rounded-xl" />
+        <div className="mx-auto max-w-lg px-4 py-8 animate-pulse space-y-6">
+          <div className="space-y-1">
+            <div className="h-7 bg-surface-container-high rounded w-32" />
+            <div className="h-4 bg-surface-container rounded w-52" />
           </div>
+          <div className="h-10 bg-surface-container-high rounded" />
+          <div className="h-10 bg-surface-container-high rounded" />
         </div>
       </main>
     )
@@ -74,59 +76,55 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-lg px-4 py-8 space-y-8">
         <div>
           <h1 className="font-headline text-2xl font-bold text-on-surface">Perfil</h1>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            {user?.email ?? session?.user?.email}
-          </p>
+          <p className="mt-1 text-sm text-on-surface-variant">{user.email}</p>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-5">
-          <div>
-            <Label htmlFor="name">Nombre</Label>
+        <form
+          onSubmit={handleSubmit((data) => mutation.mutate(data))}
+          className="space-y-7"
+        >
+          <div className="space-y-1.5">
+            <label className={labelClass}>Nombre</label>
             <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
               placeholder="Tu nombre"
-              className={INPUT_CLASS}
-              required
+              className={inputClass}
             />
+            {errors.name && <p className={errorClass}>{errors.name.message}</p>}
           </div>
 
-          <div>
-            <Label htmlFor="currency_base">Moneda base</Label>
-            <p className="mt-0.5 mb-1 text-xs text-on-surface-variant">
-              Usada para totales y presupuestos en todos los viajes
-            </p>
-            <select
-              id="currency_base"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className={INPUT_CLASS}
-            >
+          <div className="space-y-1.5">
+            <label className={labelClass}>Moneda base (reporting)</label>
+            <select {...register("currency_base")} className={selectClass}>
               {CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
+            {errors.currency_base && (
+              <p className={errorClass}>{errors.currency_base.message}</p>
+            )}
           </div>
 
-          {error && <p className="text-sm text-error">{error}</p>}
-
-          {saved && (
-            <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
-              <span className="material-symbols-outlined text-base leading-none">check_circle</span>
-              Cambios guardados correctamente
-            </p>
+          {errors.root && (
+            <div className="bg-error-container rounded-xl px-4 py-3">
+              <p className="text-error text-sm font-body">{errors.root.message}</p>
+            </div>
           )}
 
-          <Button type="submit" disabled={saving}>
-            {saving ? "Guardando…" : "Guardar cambios"}
-          </Button>
+          <div className="flex items-center gap-4 pt-2">
+            <Button type="submit" disabled={isSubmitting || mutation.isPending}>
+              {mutation.isPending ? "Guardando…" : "Guardar cambios"}
+            </Button>
+            {saved && (
+              <span className="flex items-center gap-1.5 text-sm text-on-surface-variant">
+                <span className="material-symbols-outlined text-base">check_circle</span>
+                Cambios guardados
+              </span>
+            )}
+          </div>
         </form>
       </div>
     </main>

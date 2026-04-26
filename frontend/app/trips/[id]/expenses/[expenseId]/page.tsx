@@ -7,9 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/use-expenses"
 import { useLoyaltyCards } from "@/hooks/use-loyalty-cards"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
 
 const CATEGORIES = [
   "Dining",
@@ -26,8 +25,12 @@ const COMMON_CURRENCIES = [
   "CAD", "AUD", "CNY", "INR", "THB", "SGD", "NOK", "SEK", "DKK",
 ]
 
-const INPUT_CLASS =
-  "mt-1 block w-full rounded border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+// Editorial bottom-border inputs — stitch style
+const FIELD_INPUT =
+  "block w-full border-0 border-b border-outline-variant bg-transparent pt-1 pb-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary focus:outline-none focus:ring-0 disabled:opacity-50 appearance-none"
+
+const FIELD_LABEL =
+  "block text-[10px] font-label font-bold tracking-widest uppercase text-on-surface-variant mt-4 mb-0"
 
 const schema = z.object({
   amount: z.coerce
@@ -46,15 +49,22 @@ type FormValues = z.infer<typeof schema>
 
 function PageSkeleton() {
   return (
-    <div className="mx-auto max-w-lg px-4 py-8 space-y-5 animate-pulse">
-      <div className="h-6 bg-surface-container-high rounded w-40" />
-      <div className="space-y-3">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="space-y-1">
-            <div className="h-3 bg-surface-container rounded w-24" />
-            <div className="h-9 bg-surface-container-high rounded" />
+    <div className="max-w-lg mx-auto px-4 pt-20 pb-24 animate-pulse space-y-6">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="grid grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <div className="h-2.5 bg-surface-container rounded w-16" />
+            <div className="h-7 bg-surface-container-high rounded" />
           </div>
-        ))}
+          <div className="space-y-2">
+            <div className="h-2.5 bg-surface-container rounded w-16" />
+            <div className="h-7 bg-surface-container-high rounded" />
+          </div>
+        </div>
+      ))}
+      <div className="space-y-2">
+        <div className="h-2.5 bg-surface-container rounded w-20" />
+        <div className="h-16 bg-surface-container-high rounded-xl" />
       </div>
     </div>
   )
@@ -123,128 +133,157 @@ export default function ExpenseDetailPage() {
   }
 
   const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
     await deleteExpense.mutateAsync({ id: expenseId, tripId })
     router.push(`/trips/${tripId}`)
   }
 
+  const isPending = updateExpense.isPending || deleteExpense.isPending
+
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-background">
+      <div className="min-h-screen bg-surface-container-low">
+        {/* Header skeleton */}
+        <header className="fixed top-0 inset-x-0 z-20 h-14 bg-surface border-b border-outline-variant/20 flex items-center px-4 gap-4">
+          <div className="w-8 h-8 rounded-full bg-surface-container-high" />
+          <div className="flex-1 flex justify-center">
+            <div className="h-4 w-24 bg-surface-container-high rounded" />
+          </div>
+          <div className="w-8 h-8 rounded-full bg-surface-container-high" />
+        </header>
         <PageSkeleton />
-      </main>
+      </div>
     )
   }
 
   if (isError || !expense) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <span className="material-symbols-outlined text-5xl text-on-surface-variant/40 mb-4 block">
+      <div className="min-h-screen bg-surface-container-low flex items-center justify-center">
+        <div className="text-center px-6">
+          <span className="material-symbols-outlined text-5xl text-on-surface-variant/30 block mb-4">
             error_outline
           </span>
-          <p className="font-headline text-base font-semibold text-on-surface">
-            Gasto no encontrado
-          </p>
+          <p className="font-headline text-base font-bold text-on-surface">Gasto no encontrado</p>
           <p className="mt-1 text-sm text-on-surface-variant">
             El gasto no existe o no tienes acceso.
           </p>
-          <Button className="mt-4" variant="ghost" onClick={() => router.push(`/trips/${tripId}`)}>
+          <Button className="mt-6" variant="ghost" onClick={() => router.push(`/trips/${tripId}`)}>
             Volver al viaje
           </Button>
         </div>
-      </main>
+      </div>
     )
   }
 
-  const isPending = updateExpense.isPending || deleteExpense.isPending
-  const hasCards = loyaltyCards !== undefined && loyaltyCards.length > 0
-
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
+    <div className="min-h-screen bg-surface-container-low">
+
+      {/* ── Fixed header ── */}
+      <header className="fixed top-0 inset-x-0 z-20 h-14 bg-surface border-b border-outline-variant/20 flex items-center px-4">
         <button
           type="button"
           onClick={() => router.back()}
-          className="inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-on-surface transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
+          aria-label="Volver"
         >
-          <span className="material-symbols-outlined text-base leading-none">arrow_back</span>
-          Volver
+          <span className="material-symbols-outlined text-[22px] leading-none">arrow_back</span>
         </button>
 
-        <h1 className="font-headline text-xl font-bold text-on-surface">Editar gasto</h1>
+        <h1 className="flex-1 text-center font-headline font-bold text-[15px] text-on-surface">
+          Editar gasto
+        </h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          {/* Importe + Moneda */}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <Label htmlFor="amount">Importe *</Label>
-              <input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="0.00"
-                className={INPUT_CLASS}
-                {...register("amount")}
-              />
-              {errors.amount && (
-                <p className="mt-1 text-xs text-error">{errors.amount.message}</p>
-              )}
-            </div>
+        <button
+          type="button"
+          className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
+          aria-label="Más opciones"
+        >
+          <span className="material-symbols-outlined text-[22px] leading-none">more_vert</span>
+        </button>
+      </header>
 
-            <div className="w-28">
-              <Label htmlFor="currency">Moneda</Label>
-              <select id="currency" className={INPUT_CLASS} {...register("currency")}>
-                {COMMON_CURRENCIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {/* ── Scrollable form ── */}
+      <form
+        id="expense-form"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="max-w-lg mx-auto px-5 pt-20 pb-28"
+      >
+
+        {/* Row 1 — Importe + Moneda */}
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="amount" className={FIELD_LABEL}>Importe</label>
+            <input
+              id="amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              placeholder="0.00"
+              className={FIELD_INPUT}
+              {...register("amount")}
+            />
+            {errors.amount && (
+              <p className="mt-1 text-[11px] text-error">{errors.amount.message}</p>
+            )}
           </div>
 
-          {/* Categoría */}
           <div>
-            <Label htmlFor="category">Categoría *</Label>
-            <select id="category" className={INPUT_CLASS} {...register("category")}>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+            <label htmlFor="currency" className={FIELD_LABEL}>Moneda</label>
+            <select id="currency" className={FIELD_INPUT} {...register("currency")}>
+              {COMMON_CURRENCIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            {errors.category && (
-              <p className="mt-1 text-xs text-error">{errors.category.message}</p>
-            )}
+          </div>
+        </div>
+
+        {/* Row 2 — Categoría + Fecha */}
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="category" className={FIELD_LABEL}>Categoría</label>
+            <select id="category" className={FIELD_INPUT} {...register("category")}>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Fecha */}
           <div>
-            <Label htmlFor="date">Fecha *</Label>
-            <input id="date" type="date" className={INPUT_CLASS} {...register("date")} />
-            {errors.date && (
-              <p className="mt-1 text-xs text-error">{errors.date.message}</p>
-            )}
-          </div>
-
-          {/* Descripción */}
-          <div>
-            <Label htmlFor="description">Descripción</Label>
+            <label htmlFor="date" className={FIELD_LABEL}>Fecha</label>
             <input
-              id="description"
-              type="text"
-              placeholder="Ej: Cena en restaurante"
-              className={INPUT_CLASS}
-              {...register("description")}
+              id="date"
+              type="date"
+              className={FIELD_INPUT}
+              {...register("date")}
             />
+            {errors.date && (
+              <p className="mt-1 text-[11px] text-error">{errors.date.message}</p>
+            )}
           </div>
+        </div>
 
-          {/* Método de pago */}
+        {/* Row 3 — Descripción (full width) */}
+        <div>
+          <label htmlFor="description" className={FIELD_LABEL}>Descripción</label>
+          <input
+            id="description"
+            type="text"
+            placeholder="Descripción del gasto"
+            className={FIELD_INPUT}
+            {...register("description")}
+          />
+        </div>
+
+        {/* Row 4 — Método de pago + Tarjeta de viajero */}
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="payment_method">Método de pago</Label>
-            <select id="payment_method" className={INPUT_CLASS} {...register("payment_method")}>
-              <option value="">— Sin especificar —</option>
+            <label htmlFor="payment_method" className={FIELD_LABEL}>Método de pago</label>
+            <select id="payment_method" className={FIELD_INPUT} {...register("payment_method")}>
+              <option value="">Sin especificar</option>
               <option value="card">Tarjeta</option>
               <option value="cash">Efectivo</option>
               <option value="transfer">Transferencia</option>
@@ -252,89 +291,111 @@ export default function ExpenseDetailPage() {
             </select>
           </div>
 
-          {/* Facturable */}
-          <div className="flex items-center justify-between rounded-lg border border-outline-variant px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-on-surface">Facturable</p>
-              <p className="text-xs text-on-surface-variant">¿Es un gasto de empresa?</p>
-            </div>
-            <Controller
-              name="billable"
-              control={control}
-              render={({ field }) => (
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-              )}
-            />
+          <div>
+            <label htmlFor="loyalty_card_id" className={FIELD_LABEL}>Tarjeta viajero</label>
+            <select id="loyalty_card_id" className={FIELD_INPUT} {...register("loyalty_card_id")}>
+              <option value="">Sin tarjeta</option>
+              {loyaltyCards?.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {card.alias ?? card.program_name}
+                </option>
+              ))}
+            </select>
           </div>
+        </div>
 
-          {/* Tarjeta de viajero */}
-          {hasCards && (
-            <div>
-              <Label htmlFor="loyalty_card_id">Tarjeta de viajero</Label>
-              <select
-                id="loyalty_card_id"
-                className={INPUT_CLASS}
-                {...register("loyalty_card_id")}
-              >
-                <option value="">— Sin tarjeta —</option>
-                {loyaltyCards!.map((card) => (
-                  <option key={card.id} value={card.id}>
-                    {card.alias ?? card.program_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+        {/* Row 5 — Toggle facturable */}
+        <div className="mt-6 flex items-center justify-between py-3 border-b border-outline-variant/30">
+          <div>
+            <p className="text-sm font-medium text-on-surface">Facturable</p>
+            <p className="text-xs text-on-surface-variant mt-0.5">¿Es un gasto de empresa?</p>
+          </div>
+          <Controller
+            name="billable"
+            control={control}
+            render={({ field }) => (
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+        </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => router.back()}
-              disabled={isPending}
+        {/* Row 6 — Comprobante */}
+        <div className="mt-6">
+          <p className={FIELD_LABEL}>Comprobante</p>
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest px-4 py-4">
+            <span
+              className={[
+                "material-symbols-outlined text-2xl leading-none select-none",
+                expense.paperless_doc_id
+                  ? "text-primary"
+                  : "text-on-surface-variant/40",
+              ].join(" ")}
             >
-              Cancelar
-            </Button>
-
-            <div className="flex gap-2">
-              {!confirmDelete ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setConfirmDelete(true)}
-                  disabled={isPending}
-                >
-                  Eliminar
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={isPending}
-                  >
-                    No
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={isPending}
-                  >
-                    {deleteExpense.isPending ? "Eliminando…" : "Confirmar"}
-                  </Button>
-                </>
-              )}
-
-              <Button type="submit" disabled={isPending}>
-                {updateExpense.isPending ? "Guardando…" : "Guardar"}
-              </Button>
-            </div>
+              receipt_long
+            </span>
+            <span
+              className={
+                expense.paperless_doc_id
+                  ? "text-sm font-medium text-on-surface"
+                  : "text-sm text-on-surface-variant"
+              }
+            >
+              {expense.paperless_doc_id
+                ? `Comprobante #${expense.paperless_doc_id}`
+                : "Sin comprobante adjunto"}
+            </span>
           </div>
-        </form>
-      </div>
-    </main>
+        </div>
+
+      </form>
+
+      {/* ── Fixed footer ── */}
+      <footer className="fixed bottom-0 inset-x-0 z-20 bg-surface border-t border-outline-variant/20">
+        <div className="max-w-lg mx-auto px-5 py-3 flex items-center justify-between">
+
+          {/* Cancelar */}
+          <button
+            type="button"
+            onClick={() => { setConfirmDelete(false); router.back() }}
+            disabled={isPending}
+            className="text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors px-1 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+
+          {/* Eliminar + Guardar */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isPending}
+              className={[
+                "h-10 px-4 rounded-full text-sm font-label font-semibold text-white transition-colors disabled:opacity-50",
+                confirmDelete
+                  ? "bg-error/80 animate-pulse"
+                  : "bg-error hover:bg-error/90",
+              ].join(" ")}
+            >
+              {deleteExpense.isPending
+                ? "Eliminando…"
+                : confirmDelete
+                ? "¿Confirmar?"
+                : "Eliminar"}
+            </button>
+
+            <button
+              type="submit"
+              form="expense-form"
+              disabled={isPending}
+              className="h-10 px-6 rounded-full text-sm font-label font-semibold text-white bg-primary hover:bg-primary-container transition-colors disabled:opacity-50"
+            >
+              {updateExpense.isPending ? "Guardando…" : "Guardar"}
+            </button>
+          </div>
+
+        </div>
+      </footer>
+
+    </div>
   )
 }

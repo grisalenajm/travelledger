@@ -11,8 +11,6 @@ from app.models.exchange_rate import ExchangeRate
 
 logger = logging.getLogger(__name__)
 
-EXCHANGE_RATE_API = "https://api.exchangerate.host"
-
 
 async def convert(
     db: AsyncSession,
@@ -23,7 +21,7 @@ async def convert(
 ) -> tuple[Decimal, date]:
     """
     Devuelve (amount_convertido, rate_date).
-    Cachea en ExchangeRate. Llama a exchangerate.host solo si no hay caché.
+    Cachea en ExchangeRate. Llama a open.er-api.com solo si no hay caché.
     """
     from_currency = from_currency.upper()
     to_currency = to_currency.upper()
@@ -68,25 +66,21 @@ async def convert(
 
 
 async def _fetch_rate(from_currency: str, to_currency: str, rate_date: date) -> Decimal:
-    url = f"{EXCHANGE_RATE_API}/convert"
-    params = {
-        "from": from_currency,
-        "to": to_currency,
-        "amount": "1",
-        "date": rate_date.isoformat(),
-    }
+    # open.er-api.com no soporta fechas históricas en el plan gratuito — usa el tipo actual
+    url = f"https://open.er-api.com/v6/latest/{from_currency.upper()}"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url, params=params)
+            response = await client.get(url)
             response.raise_for_status()
             data = response.json()
-            if not data.get("success"):
-                raise ValueError("API returned success=false")
-            return Decimal(str(data["result"]))
-    except HTTPException:
-        raise
+            if data.get("result") != "success":
+                raise ValueError("API returned non-success")
+            rate = data["rates"].get(to_currency.upper())
+            if rate is None:
+                raise ValueError(f"Rate not found for {to_currency}")
+            return Decimal(str(rate))
     except Exception as e:
-        logger.error("exchangerate.host failed: %s", e)
+        logger.error(f"open.er-api.com failed: {e}")
         raise HTTPException(503, "Exchange rate service unavailable")
 
 

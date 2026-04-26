@@ -41,6 +41,13 @@ function fmtChipDay(isoDate: string): string {
   return `${d} ${MONTHS_SHORT[m - 1]}`
 }
 
+function fmtAmount(amount: number, currency: string): string {
+  return `${currency} ${amount.toLocaleString("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
 function PageSkeleton() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 space-y-6 animate-pulse">
@@ -152,6 +159,23 @@ export default function TripDetailPage() {
   const overBudget = summary !== undefined && Number(summary.percentage) > 100
   const hasBudget = summary !== undefined && Number(summary.budget_base) > 0
   const currencyBase = summary?.currency_base ?? trip.primary_currency
+
+  // Totals bar — derived from visible (filtered or all) expenses
+  const visible = expenses
+    ? selectedDay
+      ? expenses.filter((e) => e.date === selectedDay)
+      : expenses
+    : []
+
+  const baseTotal = visible.reduce((sum, e) => sum + Number(e.amount_base), 0)
+
+  const currencyTotalsMap = new Map<string, number>()
+  for (const e of visible) {
+    currencyTotalsMap.set(e.currency, (currencyTotalsMap.get(e.currency) ?? 0) + Number(e.amount))
+  }
+  const currencyEntries = Array.from(currencyTotalsMap.entries())
+  const showOnlyBase =
+    currencyEntries.length === 1 && currencyEntries[0][0] === trip.budget_currency
 
   return (
     <main className="min-h-screen bg-background">
@@ -306,6 +330,25 @@ export default function TripDetailPage() {
               ))}
             </div>
 
+            {/* Totals bar */}
+            {!expensesLoading && visible.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {/* Base chip — amount_base summed, in budget_currency */}
+                <div className="shrink-0 px-3 py-1.5 rounded-full text-xs font-label font-semibold text-white bg-primary whitespace-nowrap">
+                  {fmtAmount(baseTotal, trip.budget_currency)}
+                </div>
+                {/* Per-currency chips — only when more than one currency or currency ≠ budget_currency */}
+                {!showOnlyBase && currencyEntries.map(([currency, total]) => (
+                  <div
+                    key={currency}
+                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-label font-medium bg-surface-container text-on-surface whitespace-nowrap"
+                  >
+                    {fmtAmount(total, currency)}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {expensesLoading ? (
               <div className="space-y-2 animate-pulse">
                 {[1, 2].map((i) => (
@@ -332,32 +375,27 @@ export default function TripDetailPage() {
                   Añade el primer gasto de este viaje.
                 </p>
               </div>
-            ) : (() => {
-              const visible = selectedDay
-                ? expenses.filter((e) => e.date === selectedDay)
-                : expenses
-              return visible.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-3">
-                    event_busy
-                  </span>
-                  <p className="text-sm font-medium text-on-surface-variant">
-                    Sin gastos este día
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {visible.map((expense) => (
-                    <ExpenseCard
-                      key={expense.id}
-                      expense={expense}
-                      currencyBase={currencyBase}
-                      onDoubleClick={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
-                    />
-                  ))}
-                </div>
-              )
-            })()}
+            ) : visible.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-3">
+                  event_busy
+                </span>
+                <p className="text-sm font-medium text-on-surface-variant">
+                  Sin gastos este día
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {visible.map((expense) => (
+                  <ExpenseCard
+                    key={expense.id}
+                    expense={expense}
+                    currencyBase={currencyBase}
+                    onDoubleClick={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 

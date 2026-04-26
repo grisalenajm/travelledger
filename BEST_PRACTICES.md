@@ -545,6 +545,7 @@ fun exportAndShareCsv(tripId: String, context: Context) {
 - Multi-stage builds en cada Dockerfile.
 - Secrets nunca en código. `.env` gitignoreado, `.env.example` documentado.
 - Healthchecks en todos los servicios.
+- **Sync de código antes de build** — antes de `docker compose up --build`, verificar que el código en el LXC está actualizado (`git pull` o `tar + scp`). Un build exitoso (exit code 0) **no garantiza** que el código nuevo esté dentro: si la carpeta de contexto tiene el código anterior, Docker construye la imagen antigua sin error ni aviso.
 
 ---
 

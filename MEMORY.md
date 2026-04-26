@@ -6,9 +6,9 @@
 ---
 
 ## 📅 Última actualización
-- **Fecha:** 2026-04-24
+- **Fecha:** 2026-04-25
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** FASE 0 completada (deploy verificado) + FASE 1 Backend Auth implementado y desplegado
+- **Sesión:** FASE 2 Web completada y desplegada — dashboard, tarjetas, proxy route; tres fixes de infraestructura documentados
 
 ---
 
@@ -43,6 +43,15 @@
   - `alembic/versions/0001_create_users.py` — migración aplicada ✅
   - `tests/test_jwt.py` + `tests/test_auth.py` — suite completa
   - Fix: `bcrypt>=4.0,<5.0` (incompatibilidad passlib 1.7.4 + bcrypt 5.x)
+- [x] **FASE 2 Backend** — trips/expenses/legs/loyalty-cards/currency; 27/27 tests; migración `34765b5418c8` aplicada
+- [x] **FASE 2 Web** — desplegado 2026-04-25:
+  - `app/page.tsx` — dashboard: saludo, viaje activo (border-primary), sin viaje (border-dashed), últimos gastos, estado vacío global
+  - `app/settings/cards/page.tsx` — CRUD loyalty cards con modal inline, validación Zod
+  - `app/api/proxy/[...path]/route.ts` — proxy BFF server-side: lee sesión, añade Bearer, reenvía a `http://backend:8000/api/*`
+  - `lib/api.ts` — `API_BASE=""` (URLs relativas; el proxy añade el token)
+  - `middleware.ts` — excluye `api/proxy` del matcher withAuth
+  - hooks: `use-trips.ts`, `use-expenses.ts`, `use-loyalty-cards.ts`
+  - components: `trip-card`, `expense-card`, `add-expense-modal`, badge, button, dialog, label, progress, switch
 - [x] **FASE 1 Web Auth** — desplegado y verificado en http://192.168.1.125:3000/login:
   - `lib/auth.ts` — NextAuth authOptions: credentials provider → backend login → /me
   - `app/api/auth/[...nextauth]/route.ts` — handler NextAuth
@@ -60,6 +69,7 @@
 ## 🔄 En Progreso
 
 - **FASE 1 Android** — LoginScreen, AuthRepository, AuthInterceptor, TokenStore, SplashScreen
+- **FASE 3+** — OCR, Paperless, offline sync, export bundle, bot (pendiente priorización)
 
 ---
 
@@ -68,7 +78,7 @@
 - **FASE 0:** ✅ Completado (pendiente menor: README NAS, Android skeleton, seed SQL)
 - **FASE 1 Backend:** ✅ Completado y desplegado
 - **FASE 1 Web/Android:** Auth completo (nextauth, screens kotlin)
-- **FASE 2:** CRUD Trips + TripLegs + Expenses + LoyaltyCards + CurrencyService
+- **FASE 2:** ✅ Completado — backend + web desplegados (2026-04-25)
 - **FASE 3:** OCR (ocr_service.py + paperless_service.py + router upload)
 - **FASE 4:** Paperless cascade delete + botones "Ver factura"
 - **FASE 5:** Offline sync Android (WorkManager + endpoints push/pull con legs)
@@ -76,6 +86,31 @@
 - **FASE 7:** FCM push notifications + polish
 - **FASE 8:** Bot Telegram completo
 - **FASE 9 (backlog):** OCR de confirmaciones de vuelo para TripLeg automático
+
+---
+
+## 🔧 Fixes Aplicados
+
+### Fix 1 — Sync de código al LXC antes de build (2026-04-25)
+El LXC tenía el skeleton de Fase 0 en `/opt/ledger/frontend/`. El código nuevo (hooks, components, páginas) no se sincronizó automáticamente. Un `docker compose build` con código desactualizado termina con **exit code 0 sin avisar** — simplemente construye la imagen antigua.
+
+**Solución:** antes de cualquier build, sincronizar via `tar + scp` o `git pull`:
+```bash
+tar -czf /tmp/frontend.tar.gz --exclude='node_modules' --exclude='.next' -C /ruta/proyecto frontend/
+scp frontend.tar.gz root@192.168.1.125:/tmp/
+ssh root@192.168.1.125 "tar -xzf /tmp/frontend.tar.gz -C /opt/ledger --overwrite"
+```
+Los errores de ownership de Windows→Linux son inofensivos (archivos se extraen correctamente).
+
+### Fix 2 — Proxy route faltante (2026-04-25)
+`app/api/proxy/[...path]/route.ts` no existía. Todos los hooks (`useTrips`, `useExpenses`, etc.) llaman a `/api/proxy/*`. Sin el handler, Next.js retornaba **307 redirect al login** en lugar de llegar al backend. TanStack Query recibía errores silenciosos → `data = undefined` → dashboard mostraba el estado vacío de "Bienvenido a Ledger".
+
+**Solución:** crear el catch-all proxy server-side que lee `getServerSession`, añade `Authorization: Bearer`, y reenvía a `http://backend:8000/api/*`. Excluir `api/proxy` del matcher del middleware (de lo contrario, el middleware redirige a `/login` antes de que llegue al handler).
+
+### Fix 3 — lib/api.ts con URL relativa (2026-04-25)
+`API_BASE` tenía como default `"http://localhost:8000"`. Desde el navegador, `localhost` apunta a la máquina del usuario, no al LXC. Si `NEXT_PUBLIC_API_URL` se ponía a la URL del backend (`http://192.168.1.125:8000`), el navegador intentaba llamar directamente al backend con el prefijo `/api/proxy/` que FastAPI no tiene.
+
+**Solución:** `API_BASE = ""` (vacío). Las llamadas son relativas (`/api/proxy/trips`), van al servidor Next.js, y el proxy route añade el token y reenvía al backend via la red Docker interna (`API_INTERNAL_URL=http://backend:8000`, ya configurado en docker-compose.yml).
 
 ---
 

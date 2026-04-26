@@ -2,10 +2,9 @@
 .env
 .env.local
 .env.*.local
-secrets/firebase-credentials.json
-secrets/*.json
-secrets/*.pem
-secrets/*.key
+.env.production
+secrets/*
+!secrets/.gitkeep
 
 # ─── Python ────────────────────────────────────────────────
 __pycache__/

@@ -1,43 +1,44 @@
+import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { type NextRequest, NextResponse } from "next/server"
 
-const BACKEND =
-  process.env.API_INTERNAL_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:8000"
+const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://backend:8000"
 
-const NO_BODY = new Set(["GET", "HEAD", "DELETE"])
-
-async function proxy(req: NextRequest, { params }: { params: { path: string[] } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.accessToken) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 })
-  }
-
-  const target = `${BACKEND}/api/${params.path.join("/")}${req.nextUrl.search}`
-
-  const headers = new Headers()
-  headers.set("Authorization", `Bearer ${session.accessToken}`)
-  const ct = req.headers.get("content-type")
-  if (ct) headers.set("content-type", ct)
-
-  const upstream = await fetch(target, {
-    method: req.method,
-    headers,
-    body: NO_BODY.has(req.method) ? undefined : await req.arrayBuffer(),
-  })
-
-  // 204 No Content — cuerpo vacío
-  if (upstream.status === 204) {
-    return new NextResponse(null, { status: 204 })
-  }
-
-  const upstreamCT = upstream.headers.get("content-type") ?? "application/json"
-  return new NextResponse(await upstream.arrayBuffer(), {
-    status: upstream.status,
-    headers: { "content-type": upstreamCT },
-  })
+export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params.path, "GET")
+}
+export async function POST(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params.path, "POST")
+}
+export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params.path, "PUT")
+}
+export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params.path, "DELETE")
+}
+export async function PATCH(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params.path, "PATCH")
 }
 
-export { proxy as GET, proxy as POST, proxy as PUT, proxy as DELETE, proxy as PATCH }
+async function proxy(req: NextRequest, pathSegments: string[], method: string) {
+  const session = await getServerSession(authOptions)
+  const url = `${API_INTERNAL_URL}/api/${pathSegments.join("/")}${req.nextUrl.search}`
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+  if (session?.accessToken) {
+    headers["Authorization"] = `Bearer ${session.accessToken}`
+  }
+
+  const hasBody = ["POST", "PUT", "PATCH"].includes(method)
+  const body = hasBody ? await req.text() : undefined
+
+  const response = await fetch(url, { method, headers, body })
+
+  const text = await response.text()
+  return new NextResponse(text, {
+    status: response.status,
+    headers: { "Content-Type": "application/json" },
+  })
+}

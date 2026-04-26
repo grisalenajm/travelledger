@@ -127,7 +127,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Detalle/edición de gasto — doble clic en ExpenseCard → /trips/[id]/expenses/[expenseId] con edición completa y eliminación con confirmación
 - [ ] Summary del viaje — totales por categoría visibles en UI
 - [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
-- [ ] Export CSV del viaje — GET /api/reports/export/{id}?format=csv
+- [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv + botón "Exportar CSV" en trip detail
 - [ ] Fix confirm_password en /register
 
 ### Android `[And]`

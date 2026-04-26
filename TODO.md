@@ -121,10 +121,10 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] /settings/cards — loyalty cards CRUD
 
 ### Web `[Web]` — UX pendiente *(revisión 2026-04-26)*
-- [ ] Navbar global: logo→/, Viajes→/trips, Tarjetas→/settings/cards, avatar→/settings/profile, signOut
-- [ ] Breadcrumb/botón "← Viajes" en /trips/[id]
-- [ ] /settings/profile — editar nombre y currency_base, PUT /api/users/me
-- [ ] Detalle/edición de gasto — modal con todos los campos editables
+- [x] Navbar global: logo→/, Viajes→/trips, Tarjetas→/settings/cards, avatar→/settings/profile, signOut
+- [x] Breadcrumb/botón "← Viajes" en /trips/[id]
+- [x] /settings/profile — editar nombre y currency_base, PUT /api/users/me
+- [x] Detalle/edición de gasto — doble clic en ExpenseCard → /trips/[id]/expenses/[expenseId] con edición completa y eliminación con confirmación
 - [ ] Summary del viaje — totales por categoría visibles en UI
 - [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
 - [ ] Export CSV del viaje — GET /api/reports/export/{id}?format=csv

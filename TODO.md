@@ -125,7 +125,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Breadcrumb/botón "← Viajes" en /trips/[id]
 - [x] /settings/profile — editar nombre y currency_base, PUT /api/users/me
 - [x] Detalle/edición de gasto — doble clic en ExpenseCard → /trips/[id]/expenses/[expenseId] con edición completa y eliminación con confirmación
-- [ ] Summary del viaje — totales por categoría visibles en UI
+- [x] Barra de totales por moneda en trip detail — chip base (budget_currency) + chips por moneda, reactiva al filtro de día
 - [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
 - [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv + botón "Exportar CSV" en trip detail
 - [x] Selector de días deslizante en trip detail — chips "T" + día por día, filtra gastos por fecha

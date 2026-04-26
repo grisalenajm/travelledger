@@ -1,13 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.user import User
 from app.schemas.expense import ExpenseCreate, ExpenseRead, ExpenseUpdate
-from app.services import expense_service
+from app.services import expense_service, paperless_service
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"])
 
@@ -62,3 +62,16 @@ async def delete_expense(
     user: User = Depends(get_current_user),
 ):
     await expense_service.delete(db, expense_id, user.id)
+
+
+@router.get("/{expense_id}/receipt-url")
+async def get_receipt_url(
+    expense_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    expense = await expense_service.get_or_404(db, expense_id, user.id)
+    if not expense.paperless_doc_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No receipt attached")
+    url = await paperless_service.get_url(expense.paperless_doc_id)
+    return {"url": url}

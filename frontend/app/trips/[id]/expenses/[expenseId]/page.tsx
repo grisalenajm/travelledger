@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -78,6 +78,22 @@ export default function ExpenseDetailPage() {
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [receiptLoading, setReceiptLoading] = useState(false)
+
+  const handleOpenReceipt = useCallback(async () => {
+    if (!expense?.paperless_doc_id) return
+    setReceiptLoading(true)
+    try {
+      const res = await fetch(`/api/proxy/expenses/${expenseId}/receipt-url`)
+      if (!res.ok) throw new Error("receipt-url failed")
+      const { url } = await res.json() as { url: string }
+      window.open(url, "_blank", "noopener,noreferrer")
+    } catch (e) {
+      console.error("Failed to open receipt", e)
+    } finally {
+      setReceiptLoading(false)
+    }
+  }, [expense?.paperless_doc_id, expenseId])
 
   const {
     register,
@@ -322,29 +338,33 @@ export default function ExpenseDetailPage() {
         {/* Row 6 — Comprobante */}
         <div className="mt-6">
           <p className={FIELD_LABEL}>Comprobante</p>
-          <div className="mt-3 flex items-center gap-3 rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest px-4 py-4">
-            <span
-              className={[
-                "material-symbols-outlined text-2xl leading-none select-none",
-                expense.paperless_doc_id
-                  ? "text-primary"
-                  : "text-on-surface-variant/40",
-              ].join(" ")}
+          {expense.paperless_doc_id ? (
+            <button
+              type="button"
+              onClick={handleOpenReceipt}
+              disabled={receiptLoading}
+              className="mt-3 w-full flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-4 text-left transition-colors hover:bg-surface-container disabled:opacity-60"
             >
-              receipt_long
-            </span>
-            <span
-              className={
-                expense.paperless_doc_id
-                  ? "text-sm font-medium text-on-surface"
-                  : "text-sm text-on-surface-variant"
-              }
-            >
-              {expense.paperless_doc_id
-                ? `Comprobante #${expense.paperless_doc_id}`
-                : "Sin comprobante adjunto"}
-            </span>
-          </div>
+              <span className="material-symbols-outlined text-2xl leading-none select-none text-primary">
+                {receiptLoading ? "hourglass_empty" : "receipt_long"}
+              </span>
+              <span className="text-sm font-medium text-on-surface flex-1">
+                {receiptLoading ? "Abriendo…" : `Comprobante #${expense.paperless_doc_id}`}
+              </span>
+              <span className="material-symbols-outlined text-base text-on-surface-variant/60 leading-none">
+                open_in_new
+              </span>
+            </button>
+          ) : (
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest px-4 py-4">
+              <span className="material-symbols-outlined text-2xl leading-none select-none text-on-surface-variant/40">
+                receipt_long
+              </span>
+              <span className="text-sm text-on-surface-variant">
+                Sin comprobante adjunto
+              </span>
+            </div>
+          )}
         </div>
 
       </form>

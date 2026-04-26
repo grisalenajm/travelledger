@@ -6,9 +6,9 @@
 ---
 
 ## 📅 Última actualización
-- **Fecha:** 2026-04-25
+- **Fecha:** 2026-04-26
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** FASE 2 Web completada y desplegada — dashboard, tarjetas, proxy route; tres fixes de infraestructura documentados
+- **Sesión:** Navbar global, página /settings/profile, back navigation en detalle de viaje; fix proveedor de tipos de cambio; tareas UX pendientes documentadas en TODO.md
 
 ---
 
@@ -44,6 +44,12 @@
   - `tests/test_jwt.py` + `tests/test_auth.py` — suite completa
   - Fix: `bcrypt>=4.0,<5.0` (incompatibilidad passlib 1.7.4 + bcrypt 5.x)
 - [x] **FASE 2 Backend** — trips/expenses/legs/loyalty-cards/currency; 27/27 tests; migración `34765b5418c8` aplicada
+- [x] **Navbar global + Perfil** — desplegado 2026-04-26:
+  - `components/navbar.tsx` — sticky, session-aware (`useSession`): logo → `/`, Viajes → `/trips`, Tarjetas → `/settings/cards`, avatar → `/settings/profile`, botón signOut. Invisible en login/register (status ≠ authenticated).
+  - `app/settings/profile/page.tsx` — editar nombre y `currency_base` con la misma lista de monedas del formulario de viajes; toast de confirmación 3 s; PUT `/api/proxy/users/me`
+  - `app/trips/[id]/page.tsx` — back link "← Viajes" sobre el título del viaje
+  - `app/layout.tsx` — `<Navbar />` añadida dentro de `<Providers>` (necesario para contexto NextAuth)
+- [x] **Fix proveedor de tipos de cambio** (commits `cb7602e` + `5b07a4c`) — migrado de `exchangerate.host` a `open.er-api.com` (sin API key, plan gratuito). Limitación conocida: plan gratuito solo sirve tipos actuales, no históricos.
 - [x] **FASE 2 Web** — desplegado 2026-04-25:
   - `app/page.tsx` — dashboard: saludo, viaje activo (border-primary), sin viaje (border-dashed), últimos gastos, estado vacío global
   - `app/settings/cards/page.tsx` — CRUD loyalty cards con modal inline, validación Zod
@@ -107,6 +113,11 @@ Los errores de ownership de Windows→Linux son inofensivos (archivos se extraen
 
 **Solución:** crear el catch-all proxy server-side que lee `getServerSession`, añade `Authorization: Bearer`, y reenvía a `http://backend:8000/api/*`. Excluir `api/proxy` del matcher del middleware (de lo contrario, el middleware redirige a `/login` antes de que llegue al handler).
 
+### Fix 4 — Proveedor de tipos de cambio (2026-04-26)
+`exchangerate.host` dejó de ser accesible sin API key. Se migró a `open.er-api.com` endpoint `v6/latest/{base}` que no requiere autenticación en plan gratuito.
+
+**Limitación aceptada:** el plan gratuito solo expone tipos actuales (no históricos). El sistema guarda en caché por `(from, to, date)`, por lo que los gastos pasados conservan el tipo que tenía el API en la fecha en que se registraron, no el tipo histórico exacto de esa fecha.
+
 ### Fix 3 — lib/api.ts con URL relativa (2026-04-25)
 `API_BASE` tenía como default `"http://localhost:8000"`. Desde el navegador, `localhost` apunta a la máquina del usuario, no al LXC. Si `NEXT_PUBLIC_API_URL` se ponía a la URL del backend (`http://192.168.1.125:8000`), el navegador intentaba llamar directamente al backend con el prefijo `/api/proxy/` que FastAPI no tiene.
 
@@ -116,7 +127,10 @@ Los errores de ownership de Windows→Linux son inofensivos (archivos se extraen
 
 ## 🐛 Bugs Conocidos
 
-*(ninguno)*
+- `/register` no solicita confirmación de contraseña — campo `confirm_password` ausente en el formulario `[Web]`
+- Detalle de gasto no es editable desde UI — no existe modal/página de edición `[Web]`
+- Flujo A no permite adjuntar imagen — `AddExpenseModal` no tiene campo de imagen `[Web]`
+- Export de datos ausente en UI — no hay botón ni página para descargar CSV o ZIP `[Web]`
 
 ---
 
@@ -191,4 +205,4 @@ Los errores de ownership de Windows→Linux son inofensivos (archivos se extraen
 - [Jetpack Compose](https://developer.android.com/jetpack/compose)
 - [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager)
 - [python-telegram-bot](https://python-telegram-bot.org/)
-- [exchangerate.host](https://exchangerate.host/)
+- [open.er-api.com](https://www.exchangerate-api.com/docs/free)

@@ -132,53 +132,62 @@ LXC Proxmox (768 MB RAM, nesting)
 
 ---
 
-## 🟡 FASE 2 — CRUD Trips, Legs, Expenses & Loyalty Cards `[BE]` `[Web]` `[And]`
+## 🟡 FASE 2 — CRUD Trips, Legs, Expenses & Loyalty Cards `[BE]` `[Web]` `[And]` *(BE completada 2026-04-25 · Web parcial)*
 
-### Backend
-- [ ] [!] Modelos + migrations:
-  - [ ] `LoyaltyCard` (user_id, program_name, program_type, membership_number, tier, alias)
-  - [ ] `Trip` (user_id, name, description, destination, start/end_date,
+### Backend *(COMPLETADO 2026-04-25)*
+- [x] [!] Modelos + migrations:
+  - [x] `LoyaltyCard` (user_id, program_name, program_type, membership_number, tier, alias)
+  - [x] `Trip` (user_id, name, description, destination, start/end_date,
                **primary_currency OBLIGATORIO**, budget, budget_currency, status)
-  - [ ] `TripLeg` (trip_id, mode, origin, destination, departure_local, arrival_local,
+  - [x] `TripLeg` (trip_id, mode, origin, destination, departure_local, arrival_local,
                    carrier, reservation_number, locator_code, loyalty_card_id, notes)
-  - [ ] `Expense` (trip_id, user_id, amount, currency, amount_base, rate_date,
+  - [x] `Expense` (trip_id, user_id, amount, currency, amount_base, rate_date,
                    category, description, date, payment_method,
                    **billable DEFAULT True**, loyalty_card_id, paperless_doc_id)
-  - [ ] `ExchangeRate` (from, to, rate, date — UNIQUE por par+fecha)
-- [ ] [!] Router `/api/loyalty-cards` — CRUD completo
-- [ ] [!] Router `/api/trips` — CRUD + GET summary
-- [ ] [!] Router `/api/trips/{id}/legs` — CRUD completo
-- [ ] [!] Router `/api/expenses` — CRUD completo
-- [ ] `loyalty_card_service.py`
-- [ ] `trip_service.py`
-- [ ] `leg_service.py`
-- [ ] `expense_service.py` — incluye conversión de moneda al crear/actualizar
-- [ ] `currency_service.py`:
-  - [ ] `GET /api/currencies/rates`
-  - [ ] `GET /api/currencies/convert`
-  - [ ] Cache en `ExchangeRate` (fuente: exchangerate.host, 1 vez/día por par)
-  - [ ] `convert(amount, from_currency, to_currency, date)` → Decimal
-- [ ] Tests: `test_trip_service_*`, `test_expense_service_*`, `test_currency_service_*`
+  - [x] `ExchangeRate` (from, to, rate, date — UNIQUE por par+fecha)
+- [x] [!] Router `/api/loyalty-cards` — CRUD completo
+- [x] [!] Router `/api/trips` — CRUD + GET summary
+- [x] [!] Router `/api/trips/{id}/legs` — CRUD completo
+- [x] [!] Router `/api/expenses` — CRUD completo
+- [x] `loyalty_card_service.py`
+- [x] `trip_service.py`
+- [x] `leg_service.py`
+- [x] `expense_service.py` — incluye conversión de moneda al crear/actualizar
+- [x] `currency_service.py`:
+  - [x] `GET /api/currencies/rates`
+  - [x] `GET /api/currencies/convert`
+  - [x] Cache en `ExchangeRate` (fuente: **open.er-api.com**, plan gratuito — solo tipos actuales)
+  - [x] `convert(amount, from_currency, to_currency, date)` → Decimal
+- [x] Tests: `test_trip_service_*`, `test_expense_service_*`, `test_currency_service_*`
 
-### Web
-- [ ] Página `/trips` — lista de viajes con card editorial por viaje
-- [ ] Página `/trips/new` — formulario (nombre, destino, fechas, primary_currency OBLIGATORIO,
+### Web *(core completado 2026-04-25)*
+- [x] Página `/trips` — lista de viajes con card por viaje y filtros de estado
+- [x] Página `/trips/new` — formulario (nombre, destino, fechas, primary_currency OBLIGATORIO,
                                         presupuesto, budget_currency, descripción)
-- [ ] Página `/trips/[id]` — detalle:
-  - [ ] Header editorial con nombre del viaje y totales
-  - [ ] Grid 3 col de `ExpenseCard` (ver `DESIGN_SYSTEM.md`)
-  - [ ] Sección de tramos del viaje (TripLeg cards)
+- [x] Página `/trips/[id]` — detalle:
+  - [x] Header editorial con nombre del viaje, destino y fechas
+  - [x] Summary card con gastado/presupuesto y progress bar (en currency_base)
+  - [x] Lista `ExpenseCard` en tab Gastos
+  - [x] Tab Tramos — placeholder "Próximamente" (sin CRUD)
   - [ ] Filtros: categoría, fecha, billable/todos
-  - [ ] FAB "Quick Entry" (Flujo A)
-  - [ ] Botón "Escanear" (Flujo B)
-- [ ] Página `/` (Dashboard):
-  - [ ] Header "Current Journey" + barra de progreso (en currency_base)
-  - [ ] Bento stats: Budget / Spent / Remaining (todos en currency_base)
+  - [ ] Botón "Escanear" (Flujo B — requiere Fase 3)
+- [x] Página `/` (Dashboard) — viaje activo con border-primary, últimos gastos, estado vacío global
   - [ ] Chart donut "Spending Architecture"
+  - [ ] Bento stats: Budget / Spent / Remaining (todos en currency_base)
   - [ ] Side card "Pending Receipts"
-- [ ] Página `/settings/cards` — gestión de loyalty cards
-- [ ] Modal `AddExpenseForm` — Flujo A (campos + imagen opcional)
-- [ ] Hooks: `useTrips()`, `useExpenses(tripId)`, `useLoyaltyCards()` con React Query
+- [x] Página `/settings/cards` — gestión de loyalty cards (CRUD completo con modal)
+- [x] Modal `AddExpenseModal` — Flujo A (campos manuales; imagen pendiente)
+- [x] Hooks: `useTrips()`, `useExpenses(tripId)`, `useLoyaltyCards()` con React Query
+
+### Web `[Web]` — UX pendiente post-revisión (2026-04-26)
+- [x] Navbar global (`components/navbar.tsx`) — logo → `/`, Viajes, Tarjetas, avatar → `/settings/profile`, signOut
+- [x] Breadcrumb/botón "← Viajes" en `/trips/[id]`
+- [x] Página `/settings/profile` — editar nombre y `currency_base`, PUT `/api/users/me`
+- [ ] Detalle/edición de gasto — modal o página con todos los campos editables
+- [ ] Summary del viaje — totales por categoría visibles en UI
+- [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) — enviar al backend, subir a Paperless, guardar `paperless_doc_id`
+- [ ] Export CSV del viaje desde UI — `GET /api/reports/export/{id}?format=csv`
+- [ ] Fix `confirm_password` en `/register` — pedir dos veces y validar que coinciden
 
 ### Android
 - [ ] Room entities + DAOs: `TripEntity`, `TripLegEntity`, `ExpenseEntity`, `LoyaltyCardEntity`
@@ -364,15 +373,17 @@ LXC Proxmox (768 MB RAM, nesting)
 
 ## 🎨 Pantallas sin diseño en stitch (mantener tokens del DESIGN_SYSTEM.md)
 
-- [ ] Login / Register (Web + Android)
-- [ ] Lista de viajes `/trips` — cards con nombre, destino, fechas, % presupuesto en currency_base
-- [ ] Nuevo viaje `/trips/new` — date range picker, selector primary_currency obligatorio
+- [x] Login / Register (Web — implementado)
+- [ ] Login / Register (Android — pendiente)
+- [x] Lista de viajes `/trips` — implementado
+- [x] Nuevo viaje `/trips/new` — implementado
+- [x] Loyalty cards `/settings/cards` — implementado
+- [x] Settings `/settings/profile` — nombre y currency_base (implementado 2026-04-26)
 - [ ] Tramos del viaje `/trips/[id]/legs` — cards por tramo con icono de modo de transporte,
       horarios locales, carrier, localizador, loyalty card asociada
-- [ ] Loyalty cards `/settings/cards` — lista con program_type badge, número enmascarado, tier
 - [ ] Modal export en `/trips/[id]` — toggle billable/todos, date range, botones CSV y ZIP
 - [ ] Reports `/reports` — gráficos + tabla con totales en currency_base
-- [ ] Settings `/settings` — moneda base, vinculación Telegram, notificaciones
+- [ ] Settings `/settings` — vinculación Telegram, notificaciones (currency_base ya en /profile)
 
 ---
 
@@ -388,7 +399,12 @@ LXC Proxmox (768 MB RAM, nesting)
 
 ## 🐛 Bugs conocidos
 
-*(ninguno aún)*
+- ~~Navbar global ausente~~ → **RESUELTO 2026-04-26** (`components/navbar.tsx`)
+- ~~Página de perfil inexistente~~ → **RESUELTO 2026-04-26** (`/settings/profile`)
+- `/register` no solicita confirmación de contraseña — campo `confirm_password` ausente en el formulario `[Web]`
+- Detalle de gasto no es editable desde UI — no existe modal ni página de edición `[Web]`
+- `AddExpenseModal` (Flujo A) no permite adjuntar imagen — campo de fichero ausente `[Web]`
+- Export de datos ausente en UI — no hay botón ni página para descargar CSV o ZIP `[Web]`
 
 ---
 

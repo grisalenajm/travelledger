@@ -2,14 +2,13 @@
 
 import { useState, useCallback } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useTrip, useTripSummary } from "@/hooks/use-trips"
 import { useExpenses } from "@/hooks/use-expenses"
 import { ExpenseCard } from "@/components/expense-card"
 import { AddExpenseModal } from "@/components/add-expense-modal"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import type { Expense } from "@/types/index"
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-ES", {
@@ -67,12 +66,11 @@ type Tab = "expenses" | "legs"
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>("expenses")
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
 
   const handleCloseExpenseModal = useCallback(() => setAddExpenseOpen(false), [])
-  const handleCloseEditModal = useCallback(() => setEditingExpense(null), [])
 
   const { data: trip, isLoading: tripLoading, isError } = useTrip(id)
   const { data: summary } = useTripSummary(id)
@@ -253,7 +251,7 @@ export default function TripDetailPage() {
                     key={expense.id}
                     expense={expense}
                     currencyBase={currencyBase}
-                    onEdit={() => setEditingExpense(expense)}
+                    onDoubleClick={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
                   />
                 ))}
               </div>
@@ -275,19 +273,10 @@ export default function TripDetailPage() {
         )}
       </div>
 
-      {/* Add expense modal */}
       <AddExpenseModal
         trip={trip}
         open={addExpenseOpen}
         onClose={handleCloseExpenseModal}
-      />
-
-      {/* Edit expense modal */}
-      <AddExpenseModal
-        trip={trip}
-        open={editingExpense !== null}
-        expense={editingExpense ?? undefined}
-        onClose={handleCloseEditModal}
       />
     </main>
   )

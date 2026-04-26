@@ -10,6 +10,14 @@ export function useExpenses(tripId: string) {
   })
 }
 
+export function useExpense(id: string) {
+  return useQuery({
+    queryKey: ["expense", id],
+    queryFn: () => api.get<Expense>(`/api/proxy/expenses/${id}`),
+    enabled: !!id,
+  })
+}
+
 export function useRecentExpenses(limit = 10) {
   return useQuery({
     queryKey: ["expenses", "recent", limit],

@@ -21,14 +21,18 @@ function fmtDate(iso: string) {
 interface ExpenseCardProps {
   expense: Expense
   currencyBase: string
-  onEdit?: () => void
+  onDoubleClick?: () => void
 }
 
-export function ExpenseCard({ expense, currencyBase, onEdit }: ExpenseCardProps) {
+export function ExpenseCard({ expense, currencyBase, onDoubleClick }: ExpenseCardProps) {
   const showBase = expense.currency !== currencyBase
 
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-surface-container-lowest px-4 py-3 shadow-editorial">
+    <div
+      className="flex items-center gap-3 rounded-xl bg-surface-container-lowest px-4 py-3 shadow-editorial cursor-pointer select-none"
+      onDoubleClick={onDoubleClick}
+      title="Doble clic para editar"
+    >
       <span className="text-2xl leading-none select-none" aria-hidden="true">
         {CATEGORY_EMOJI[expense.category]}
       </span>
@@ -53,20 +57,6 @@ export function ExpenseCard({ expense, currencyBase, onEdit }: ExpenseCardProps)
           </p>
         )}
       </div>
-
-      {onEdit && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onEdit()
-          }}
-          className="shrink-0 p-1.5 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
-          title="Editar gasto"
-        >
-          <span className="material-symbols-outlined text-[18px] leading-none">edit</span>
-        </button>
-      )}
     </div>
   )
 }

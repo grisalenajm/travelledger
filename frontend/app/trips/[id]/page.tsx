@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import Link from "next/link"
 import { useTrip, useTripSummary } from "@/hooks/use-trips"
 import { useExpenses } from "@/hooks/use-expenses"
 import { ExpenseCard } from "@/components/expense-card"

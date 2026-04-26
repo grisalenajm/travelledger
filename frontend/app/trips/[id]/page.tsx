@@ -69,8 +69,31 @@ export default function TripDetailPage() {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>("expenses")
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const handleCloseExpenseModal = useCallback(() => setAddExpenseOpen(false), [])
+
+  async function handleExportCsv() {
+    if (!trip) return
+    setExporting(true)
+    try {
+      const res = await fetch(`/api/proxy/reports/export/${id}?format=csv`)
+      if (!res.ok) throw new Error("Export failed")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `gastos_${trip.name}_${new Date().toISOString().split("T")[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error("CSV export failed", e)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const { data: trip, isLoading: tripLoading, isError } = useTrip(id)
   const { data: summary } = useTripSummary(id)
@@ -211,7 +234,16 @@ export default function TripDetailPage() {
         {/* Tab: Gastos */}
         {tab === "expenses" && (
           <div className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportCsv}
+                disabled={exporting || !expenses || expenses.length === 0}
+              >
+                <span className="material-symbols-outlined text-sm mr-1">download</span>
+                {exporting ? "Exportando…" : "Exportar CSV"}
+              </Button>
               <Button size="sm" onClick={() => setAddExpenseOpen(true)}>
                 <span className="material-symbols-outlined text-sm mr-1">add</span>
                 Añadir gasto

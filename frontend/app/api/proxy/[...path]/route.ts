@@ -36,9 +36,15 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
 
   const response = await fetch(url, { method, headers, body })
 
-  const text = await response.text()
-  return new NextResponse(text, {
+  const body = await response.arrayBuffer()
+  const contentType = response.headers.get("content-type") ?? "application/json"
+  const contentDisposition = response.headers.get("content-disposition")
+  const responseHeaders: Record<string, string> = { "Content-Type": contentType }
+  if (contentDisposition) {
+    responseHeaders["Content-Disposition"] = contentDisposition
+  }
+  return new NextResponse(body, {
     status: response.status,
-    headers: { "Content-Type": "application/json" },
+    headers: responseHeaders,
   })
 }

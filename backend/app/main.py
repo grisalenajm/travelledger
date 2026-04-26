@@ -11,7 +11,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
 from app.core.limiter import limiter
 from app.database import engine
-from app.routers import auth, currencies, expenses, health, legs, loyalty_cards, trips, users
+from app.routers import auth, currencies, expenses, health, legs, loyalty_cards, reports, trips, users
 
 logger = logging.getLogger(__name__)
 
@@ -74,3 +74,4 @@ app.include_router(trips.router)
 app.include_router(legs.router)
 app.include_router(expenses.router)
 app.include_router(currencies.router)
+app.include_router(reports.router)

@@ -126,6 +126,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] /settings/profile — editar nombre y currency_base, PUT /api/users/me
 - [x] Detalle/edición de gasto — doble clic en ExpenseCard → /trips/[id]/expenses/[expenseId] con edición completa y eliminación con confirmación
 - [x] Barra de totales por moneda en trip detail — chip base (budget_currency) + chips por moneda, reactiva al filtro de día
+- [x] Edición de viaje — /trips/[id]/edit con cover image, todos los campos, eliminación con 2-step confirm; botón edit en trip detail header
+- [x] Imagen de portada de viaje — POST /api/trips/{id}/cover (magic-bytes MIME, Paperless upload + task polling); GET /api/trips/{id}/cover-url; migration 0003
 - [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
 - [x] Ver comprobante desde detalle de gasto — GET /api/expenses/{id}/receipt-url + paperless_service.get_url()
 - [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv + botón "Exportar CSV" en trip detail
@@ -219,11 +221,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 ## 🐛 Bugs conocidos
 
 - `/register` no pide `confirm_password` — validar que coinciden antes de enviar
-- No hay navbar global — no se puede navegar entre secciones sin editar la URL
-- No hay página de perfil — `currency_base` no es editable desde UI
-- Detalle de gasto no es editable desde la UI
-- No se pueden adjuntar imágenes en Flujo A (pendiente Paperless service)
-- No hay export de datos desde UI
+- No se pueden adjuntar imágenes en Flujo A (pendiente Paperless service en FASE 3)
 
 ---
 

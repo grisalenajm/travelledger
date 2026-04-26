@@ -575,18 +575,46 @@ fun exportAndShareCsv(tripId: String, context: Context) {
 - Passwords: **bcrypt** siempre.
 - JWT: access 30min, refresh 7d en cookie HttpOnly (web) / DataStore cifrado (Android).
 - CORS: orígenes explícitos, nunca `*` en producción.
-- Uploads: validar MIME type en servidor (no confiar en extensión).
+- Uploads: validar MIME type en servidor **por magic bytes**, no por extensión ni por `file.content_type` (que viene del cliente y puede ser falso).
 - Android: `network_security_config.xml` para no permitir cleartext en producción.
 
 ```python
-ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
+# ✅ CORRECTO — validación por magic bytes sin dependencias externas
+def _detect_mime(content: bytes) -> str:
+    if content[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if content[:4] == b"\x89PNG":
+        return "image/png"
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "image/webp"
+    raise HTTPException(422, "Unsupported image format. Use JPEG, PNG, or WebP.")
 
-async def validate_upload(file: UploadFile):
-    content = await file.read(2048)
-    await file.seek(0)
-    mime = magic.from_buffer(content, mime=True)
-    if mime not in ALLOWED_MIME_TYPES:
-        raise HTTPException(400, "Tipo de archivo no permitido")
+# Luego en el endpoint:
+content = await file.read()
+mime = _detect_mime(content)  # detectado, no confiado
+```
+
+### Proxy Next.js — uploads multipart
+
+El proxy `/api/proxy/[...path]/route.ts` debe detectar si la request es multipart y, en ese caso:
+1. Leer el body como `arrayBuffer` (no como `text` — rompería los bytes binarios)
+2. Reenviar el `Content-Type` original del cliente (incluye el `boundary`)
+3. **No** sobreescribir con `application/json`
+
+```typescript
+const isMultipart = incomingContentType.startsWith("multipart/form-data")
+const body = hasBody
+  ? isMultipart ? await req.arrayBuffer() : await req.text()
+  : undefined
+headers["Content-Type"] = isMultipart ? incomingContentType : "application/json"
+```
+
+En el cliente (browser), usar `FormData` sin fijar `Content-Type` manualmente — el browser/fetch lo fija automáticamente con el boundary correcto:
+```typescript
+const fd = new FormData()
+fd.append("file", file)
+await fetch("/api/proxy/trips/{id}/cover", { method: "POST", body: fd })
+// ✅ NO hacer: headers: { "Content-Type": "multipart/form-data" } — faltaría el boundary
 ```
 
 ---

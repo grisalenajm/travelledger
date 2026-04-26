@@ -572,6 +572,12 @@ pytest-asyncio>=0.23
 
 ---
 
+## 🔄 Workflow del Agente
+
+- La rama principal es **main**. Nunca commitear a master.
+
+---
+
 ## 🚫 Reglas Absolutas para Agentes
 
 1. Nunca lógica de negocio en routers FastAPI — solo en services.

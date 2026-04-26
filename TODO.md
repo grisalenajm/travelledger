@@ -128,6 +128,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [ ] Summary del viaje — totales por categoría visibles en UI
 - [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
 - [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv + botón "Exportar CSV" en trip detail
+- [x] Selector de días deslizante en trip detail — chips "T" + día por día, filtra gastos por fecha
 - [ ] Fix confirm_password en /register
 
 ### Android `[And]`

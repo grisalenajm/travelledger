@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useQueryClient } from "@tanstack/react-query"
 import type { Trip, Expense } from "@/types/index"
 import { useCreateExpense, useUpdateExpense } from "@/hooks/use-expenses"
 import { useLoyaltyCards } from "@/hooks/use-loyalty-cards"
@@ -11,6 +12,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { api } from "@/lib/api"
 
 const CATEGORIES = [
   "Dining",
@@ -58,6 +60,11 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
   const updateExpense = useUpdateExpense()
   const { data: loyaltyCards } = useLoyaltyCards()
   const hasCards = loyaltyCards !== undefined && loyaltyCards.length > 0
+  const qc = useQueryClient()
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const today = new Date().toISOString().split("T")[0]
 
@@ -93,6 +100,8 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
         billable: true,
         loyalty_card_id: undefined,
       })
+      setImageFile(null)
+      setImagePreview(null)
     } else if (expense) {
       reset({
         amount: Number(expense.amount),
@@ -124,6 +133,24 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
           loyalty_card_id: values.loyalty_card_id || null,
         },
       })
+    } else if (imageFile) {
+      const formData = new FormData()
+      const fields: Record<string, string> = {
+        trip_id: trip.id,
+        amount: String(values.amount),
+        currency: values.currency,
+        category: values.category,
+        date: values.date,
+        billable: String(values.billable),
+      }
+      Object.entries(fields).forEach(([k, v]) => formData.append(k, v))
+      if (values.description) formData.append("description", values.description)
+      if (values.payment_method) formData.append("payment_method", values.payment_method)
+      if (values.loyalty_card_id) formData.append("loyalty_card_id", values.loyalty_card_id)
+      formData.append("image", imageFile)
+      const created = await api.post<Expense>("/api/proxy/expenses", formData)
+      qc.invalidateQueries({ queryKey: ["expenses", created.trip_id] })
+      qc.invalidateQueries({ queryKey: ["trips", created.trip_id, "summary"] })
     } else {
       await createExpense.mutateAsync({
         trip_id: trip.id,
@@ -139,6 +166,8 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
     }
     onClose()
     reset()
+    setImageFile(null)
+    setImagePreview(null)
   }
 
   const isPending = createExpense.isPending || updateExpense.isPending
@@ -257,6 +286,51 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Comprobante */}
+        {!isEdit && (
+          <div>
+            <Label>Comprobante</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                setImageFile(file)
+                setImagePreview(file.type.startsWith("image/") ? URL.createObjectURL(file) : null)
+              }}
+            />
+            {!imageFile ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-border rounded-lg p-4 text-center text-muted-foreground hover:border-primary transition-colors"
+              >
+                📎 Adjuntar imagen o PDF
+              </button>
+            ) : (
+              <div className="relative border border-border rounded-lg p-3 flex items-center gap-3">
+                {imagePreview && (
+                  <img src={imagePreview} className="h-12 w-12 object-cover rounded" alt="" />
+                )}
+                <span className="text-sm flex-1 truncate">{imageFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null)
+                    setImagePreview(null)
+                  }}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
         )}
 

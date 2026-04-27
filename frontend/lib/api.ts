@@ -27,11 +27,12 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const authHeaders = await getAuthHeaders()
+  const isFormData = options.body instanceof FormData
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...authHeaders,
       ...(options.headers as Record<string, string>),
     },
@@ -58,7 +59,7 @@ export const api = {
   post: <T>(path: string, body: unknown, init?: RequestInit) =>
     request<T>(path, {
       method: "POST",
-      body: JSON.stringify(body),
+      body: body instanceof FormData ? body : JSON.stringify(body),
       ...init,
     }),
 

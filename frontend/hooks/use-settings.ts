@@ -21,7 +21,9 @@ export function useSettings() {
 export function useUpdateSetting() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: SettingUpdate) => api.put<Settings>("/api/proxy/settings", data),
+    mutationFn: async (data: SettingUpdate) => {
+      await api.put<void>("/api/proxy/settings", data)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["settings"] })
     },

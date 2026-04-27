@@ -60,7 +60,7 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
   const updateExpense = useUpdateExpense()
   const { data: loyaltyCards } = useLoyaltyCards()
   const hasCards = loyaltyCards !== undefined && loyaltyCards.length > 0
-  const qc = useQueryClient()
+  const queryClient = useQueryClient()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -118,11 +118,43 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
   }, [open, expense?.id])
 
   const onSubmit = async (values: FormValues) => {
-    if (isEdit && expense) {
-      await updateExpense.mutateAsync({
-        id: expense.id,
-        tripId: expense.trip_id,
-        data: {
+    try {
+      if (isEdit && expense) {
+        await updateExpense.mutateAsync({
+          id: expense.id,
+          tripId: expense.trip_id,
+          data: {
+            amount: values.amount,
+            currency: values.currency,
+            category: values.category,
+            date: values.date,
+            description: values.description || null,
+            payment_method: values.payment_method || null,
+            billable: values.billable,
+            loyalty_card_id: values.loyalty_card_id || null,
+          },
+        })
+      } else if (imageFile) {
+        const formData = new FormData()
+        const fields: Record<string, string> = {
+          trip_id: trip.id,
+          amount: String(values.amount),
+          currency: values.currency,
+          category: values.category,
+          date: values.date,
+          billable: String(values.billable),
+        }
+        Object.entries(fields).forEach(([k, v]) => formData.append(k, v))
+        if (values.description) formData.append("description", values.description)
+        if (values.payment_method) formData.append("payment_method", values.payment_method)
+        if (values.loyalty_card_id) formData.append("loyalty_card_id", values.loyalty_card_id)
+        formData.append("image", imageFile)
+        await api.post<Expense>("/api/proxy/expenses", formData)
+        queryClient.invalidateQueries({ queryKey: ["expenses", trip.id] })
+        queryClient.invalidateQueries({ queryKey: ["trips", trip.id, "summary"] })
+      } else {
+        await createExpense.mutateAsync({
+          trip_id: trip.id,
           amount: values.amount,
           currency: values.currency,
           category: values.category,
@@ -131,43 +163,15 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
           payment_method: values.payment_method || null,
           billable: values.billable,
           loyalty_card_id: values.loyalty_card_id || null,
-        },
-      })
-    } else if (imageFile) {
-      const formData = new FormData()
-      const fields: Record<string, string> = {
-        trip_id: trip.id,
-        amount: String(values.amount),
-        currency: values.currency,
-        category: values.category,
-        date: values.date,
-        billable: String(values.billable),
+        })
       }
-      Object.entries(fields).forEach(([k, v]) => formData.append(k, v))
-      if (values.description) formData.append("description", values.description)
-      if (values.payment_method) formData.append("payment_method", values.payment_method)
-      if (values.loyalty_card_id) formData.append("loyalty_card_id", values.loyalty_card_id)
-      formData.append("image", imageFile)
-      const created = await api.post<Expense>("/api/proxy/expenses", formData)
-      qc.invalidateQueries({ queryKey: ["expenses", created.trip_id] })
-      qc.invalidateQueries({ queryKey: ["trips", created.trip_id, "summary"] })
-    } else {
-      await createExpense.mutateAsync({
-        trip_id: trip.id,
-        amount: values.amount,
-        currency: values.currency,
-        category: values.category,
-        date: values.date,
-        description: values.description || null,
-        payment_method: values.payment_method || null,
-        billable: values.billable,
-        loyalty_card_id: values.loyalty_card_id || null,
-      })
+      reset()
+      setImageFile(null)
+      setImagePreview(null)
+      onClose()
+    } catch (error) {
+      console.error("Error saving expense:", error)
     }
-    onClose()
-    reset()
-    setImageFile(null)
-    setImagePreview(null)
   }
 
   const isPending = createExpense.isPending || updateExpense.isPending

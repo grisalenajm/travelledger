@@ -1,6 +1,8 @@
+from datetime import date as date_t
+from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
@@ -29,11 +31,26 @@ async def list_expenses(
 
 @router.post("/", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED)
 async def create_expense(
-    data: ExpenseCreate,
+    trip_id: UUID = Form(...),
+    amount: Decimal = Form(...),
+    currency: str = Form(...),
+    category: str = Form(...),
+    date: date_t = Form(...),
+    description: str | None = Form(None),
+    payment_method: str | None = Form(None),
+    billable: bool = Form(True),
+    loyalty_card_id: UUID | None = Form(None),
+    image: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await expense_service.create(db, user, data)
+    data = ExpenseCreate(
+        trip_id=trip_id, amount=amount, currency=currency,
+        category=category, date=date, description=description,
+        payment_method=payment_method, billable=billable,
+        loyalty_card_id=loyalty_card_id,
+    )
+    return await expense_service.create(db, user, data, image=image)
 
 
 @router.get("/{expense_id}", response_model=ExpenseRead)
@@ -73,5 +90,5 @@ async def get_receipt_url(
     expense = await expense_service.get_or_404(db, expense_id, user.id)
     if not expense.paperless_doc_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No receipt attached")
-    url = await paperless_service.get_url(expense.paperless_doc_id)
+    url = await paperless_service.get_url(expense.paperless_doc_id, db, user.id)
     return {"url": url}

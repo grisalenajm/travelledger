@@ -128,7 +128,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Barra de totales por moneda en trip detail — chip base (budget_currency) + chips por moneda, reactiva al filtro de día
 - [x] Edición de viaje — /trips/[id]/edit con cover image, todos los campos, eliminación con 2-step confirm; botón edit en trip detail header
 - [x] Imagen de portada de viaje — POST /api/trips/{id}/cover (magic-bytes MIME, Paperless upload + task polling); GET /api/trips/{id}/cover-url; migration 0003
-- [ ] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
+- [x] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
 - [x] Ver comprobante desde detalle de gasto — GET /api/expenses/{id}/receipt-url + paperless_service.get_url()
 - [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv + botón "Exportar CSV" en trip detail
 - [x] Selector de días deslizante en trip detail — chips "T" + día por día, filtra gastos por fecha
@@ -155,7 +155,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [ ] [!] Modelo Receipt + migration
 - [ ] [!] services/ocr_service.py — Haiku 4.5 Vision + prompt caching + Paperless upload
 - [ ] [!] Router POST /api/receipts/upload — Flujo B
-- [ ] Router POST /api/expenses con imagen — Flujo A (sin OCR, solo Paperless)
+- [x] Router POST /api/expenses con imagen — Flujo A (sin OCR, solo Paperless)
 - [ ] Tests con fixtures (mockear Anthropic API y Paperless)
 
 ### Web
@@ -228,7 +228,6 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 ## 🐛 Bugs conocidos
 
 - `/register` no pide `confirm_password` — validar que coinciden antes de enviar
-- No se pueden adjuntar imágenes en Flujo A (pendiente Paperless service en FASE 3)
 
 ---
 

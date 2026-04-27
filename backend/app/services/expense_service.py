@@ -1,15 +1,18 @@
+import logging
 from datetime import date
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate
-from app.services import currency_service
+from app.services import currency_service, paperless_service
 from app.services.trip_service import get_or_404 as get_trip_or_404
+
+logger = logging.getLogger(__name__)
 
 
 async def list_expenses(
@@ -36,20 +39,34 @@ async def list_expenses(
     return list(result.scalars().all())
 
 
-async def create(db: AsyncSession, user: User, data: ExpenseCreate) -> Expense:
-    # Verificar que el trip pertenece al usuario
+async def create(
+    db: AsyncSession, user: User, data: ExpenseCreate, image: UploadFile | None = None
+) -> Expense:
     await get_trip_or_404(db, data.trip_id, user.id)
 
-    # SIEMPRE convertir a currency_base del usuario, incluso si from == to
     amount_base, rate_date = await currency_service.convert(
         db, data.amount, data.currency, user.currency_base, data.date
     )
+
+    paperless_doc_id = None
+    if image:
+        try:
+            content = await image.read()
+            paperless_doc_id = await paperless_service.upload_document(
+                content,
+                image.filename or "receipt",
+                image.content_type or "application/octet-stream",
+                db,
+                user.id,
+            )
+        except Exception as e:
+            logger.warning("Paperless upload failed, continuing without: %s", e)
 
     expense = Expense(
         user_id=user.id,
         amount_base=amount_base,
         rate_date=rate_date,
-        paperless_doc_id=None,  # Fase 3 lo rellenará
+        paperless_doc_id=paperless_doc_id,
         **data.model_dump(),
     )
     db.add(expense)

@@ -121,7 +121,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] /settings/cards — loyalty cards CRUD
 
 ### Web `[Web]` — UX pendiente *(revisión 2026-04-26)*
-- [x] Navbar global: logo→/, Viajes→/trips, Tarjetas→/settings/cards, avatar→/settings/profile, signOut
+- [x] Navbar global: logo→/, Viajes→/trips, Tarjetas→/settings/cards, avatar→/settings (activo en todo /settings/*), signOut
 - [x] Breadcrumb/botón "← Viajes" en /trips/[id]
 - [x] /settings/profile — editar nombre y currency_base, PUT /api/users/me
 - [x] Detalle/edición de gasto — doble clic en ExpenseCard → /trips/[id]/expenses/[expenseId] con edición completa y eliminación con confirmación
@@ -159,6 +159,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [ ] Tests con fixtures (mockear Anthropic API y Paperless)
 
 ### Web
+- [x] /settings — página unificada: Perfil (nombre + currency_base) + Integraciones → Paperless (URL, token con toggle, verificar conexión)
+- [x] hooks/use-settings.ts — useSettings() GET + useUpdateSetting() PUT
 - [ ] /expenses/scan — drag&drop + file + cámara
 - [ ] /expenses/scan/confirm — layout 5/7, pre-rellenado OCR
 

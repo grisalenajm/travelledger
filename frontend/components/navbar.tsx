@@ -46,10 +46,10 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/settings/profile"
+            href="/settings"
             className={[
               "h-8 w-8 rounded-full bg-primary/15 text-primary font-headline font-bold text-sm flex items-center justify-center transition-colors hover:bg-primary/25",
-              pathname === "/settings/profile" ? "ring-2 ring-primary ring-offset-1" : "",
+              pathname.startsWith("/settings") ? "ring-2 ring-primary ring-offset-1" : "",
             ].join(" ")}
             title={session.user?.name ?? "Perfil"}
           >

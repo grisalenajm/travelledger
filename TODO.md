@@ -145,10 +145,15 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 ## 🟢 FASE 3 — OCR & Scanner `[OCR]` `[Web]` `[And]`
 
+### Pre-requisitos (completados)
+- [x] Modelo `Setting` + migration `0004_create_settings`
+- [x] `settings_service.py` — get_all, get, set (upsert PostgreSQL)
+- [x] Router `/api/settings` — GET, PUT, POST /verify-paperless
+- [x] `paperless_service.py` — credenciales per-user desde BD; upload_document, get_url, verify_connection
+
 ### Backend
 - [ ] [!] Modelo Receipt + migration
 - [ ] [!] services/ocr_service.py — Haiku 4.5 Vision + prompt caching + Paperless upload
-- [ ] [!] services/paperless_service.py — upload, get_url, delete, task_id resolver
 - [ ] [!] Router POST /api/receipts/upload — Flujo B
 - [ ] Router POST /api/expenses con imagen — Flujo A (sin OCR, solo Paperless)
 - [ ] Tests con fixtures (mockear Anthropic API y Paperless)

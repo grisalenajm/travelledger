@@ -6,9 +6,9 @@
 ---
 
 ## 📅 Última actualización
-- **Fecha:** 2026-04-26
+- **Fecha:** 2026-04-27
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Navbar global, página /settings/profile, back navigation, edición de gastos (modal con PUT); fix proveedor de tipos de cambio
+- **Sesión:** Settings API (modelo, migration 0004, service, router); paperless_service.py migrado a credenciales por-usuario desde BD
 
 ---
 
@@ -53,6 +53,13 @@
   - `components/expense-card.tsx` — prop `onEdit?` añadida; muestra icono de lápiz cuando se proporciona
   - `hooks/use-expenses.ts` — añadido `useUpdateExpense()` mutation
 - [x] **Fix proveedor de tipos de cambio** (commits `cb7602e` + `5b07a4c`) — migrado de `exchangerate.host` a `open.er-api.com` (sin API key, plan gratuito). Limitación conocida: plan gratuito solo sirve tipos actuales, no históricos.
+- [x] **Settings API** — 2026-04-27:
+  - `app/models/setting.py` — modelo Setting (user_id FK, key, value, uq_user_setting)
+  - `alembic/versions/0004_create_settings.py` — migration settings (down_revision=0003 cover_image)
+  - `app/services/settings_service.py` — get_all, get, set (PostgreSQL upsert on_conflict)
+  - `app/routers/settings.py` — GET /api/settings, PUT /api/settings, POST /api/settings/verify-paperless
+  - `app/services/paperless_service.py` — migrado: credentials per-user desde BD (settings_service), upload_document/get_url ahora reciben db+user_id; get_credentials(), verify_connection()
+  - Nota: migración 0003 ya estaba usada por `0003_add_trip_cover` — settings usa 0004
 - [x] **FASE 2 Web** — desplegado 2026-04-25:
   - `app/page.tsx` — dashboard: saludo, viaje activo (border-primary), sin viaje (border-dashed), últimos gastos, estado vacío global
   - `app/settings/cards/page.tsx` — CRUD loyalty cards con modal inline, validación Zod

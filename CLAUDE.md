@@ -195,6 +195,13 @@ GET    /api/reports/export/{id}/bundle           → ZIP con CSV + imágenes Pap
        ?from=YYYY-MM-DD&to=YYYY-MM-DD            → rango fechas opcional
 ```
 
+### Settings
+```
+GET    /api/settings                  → {paperless_url: str|null, paperless_token: str|null}
+PUT    /api/settings                  → {key: str, value: str|null} — upsert (claves permitidas: paperless_url, paperless_token)
+POST   /api/settings/verify-paperless → {ok: bool, error: str|null} — prueba conexión con credenciales guardadas
+```
+
 ### Bot (internal)
 ```
 POST   /api/bot/link                  → vincula telegram_chat_id con User

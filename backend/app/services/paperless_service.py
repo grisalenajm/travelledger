@@ -43,9 +43,11 @@ async def _get_correspondent_id(
     client: httpx.AsyncClient, base: str, auth_header: dict, name: str
 ) -> int | None:
     resp = await client.get(
-        f"{base}/api/correspondents/", params={"name": name}, headers=auth_header
+        f"{base}/api/correspondents/", params={"name__iexact": name}, headers=auth_header
     )
-    results = resp.json().get("results", [])
+    data = resp.json()
+    results = data.get("results", [])
+    logger.info("correspondent query name=%s results=%s", name, results)
     return results[0]["id"] if results else None
 
 
@@ -53,9 +55,11 @@ async def _get_document_type_id(
     client: httpx.AsyncClient, base: str, auth_header: dict, name: str = "Invoice"
 ) -> int | None:
     resp = await client.get(
-        f"{base}/api/document_types/", params={"name": name}, headers=auth_header
+        f"{base}/api/document_types/", params={"name__iexact": name}, headers=auth_header
     )
-    results = resp.json().get("results", [])
+    data = resp.json()
+    results = data.get("results", [])
+    logger.info("document_type query name=%s results=%s", name, results)
     return results[0]["id"] if results else None
 
 
@@ -63,9 +67,11 @@ async def _get_storage_path_id(
     client: httpx.AsyncClient, base: str, auth_header: dict, name: str = "Viajes"
 ) -> int | None:
     resp = await client.get(
-        f"{base}/api/storage_paths/", params={"name": name}, headers=auth_header
+        f"{base}/api/storage_paths/", params={"name__iexact": name}, headers=auth_header
     )
-    results = resp.json().get("results", [])
+    data = resp.json()
+    results = data.get("results", [])
+    logger.info("storage_path query name=%s results=%s", name, results)
     return results[0]["id"] if results else None
 
 

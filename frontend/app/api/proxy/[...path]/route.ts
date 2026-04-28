@@ -22,7 +22,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { path: stri
 
 async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   const session = await getServerSession(authOptions)
-  const url = `${API_INTERNAL_URL}/api/${pathSegments.join("/")}${req.nextUrl.search}`
+  const joinedPath = pathSegments.join("/")
+  const searchParams = req.nextUrl.searchParams.toString()
+  const url = `${API_INTERNAL_URL}/api/${joinedPath}${searchParams ? `?${searchParams}` : ""}`
 
   const incomingContentType = req.headers.get("content-type") ?? ""
   const isMultipart = incomingContentType.startsWith("multipart/form-data")

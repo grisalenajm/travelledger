@@ -9,10 +9,10 @@ from app.models.user import User
 from app.schemas.trip_leg import TripLegCreate, TripLegRead, TripLegUpdate
 from app.services import leg_service
 
-router = APIRouter(prefix="/api/trips/{trip_id}/legs", tags=["legs"])
+router = APIRouter(prefix="/api/trips/{trip_id}/legs", tags=["legs"], redirect_slashes=False)
 
 
-@router.get("/", response_model=list[TripLegRead])
+@router.get("", response_model=list[TripLegRead])
 async def list_legs(
     trip_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -21,7 +21,7 @@ async def list_legs(
     return await leg_service.list_legs(db, trip_id, user.id)
 
 
-@router.post("/", response_model=TripLegRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TripLegRead, status_code=status.HTTP_201_CREATED)
 async def create_leg(
     trip_id: UUID,
     data: TripLegCreate,

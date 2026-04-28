@@ -10,10 +10,10 @@ from app.models.user import User
 from app.schemas.trip import TripCreate, TripRead, TripSummary, TripUpdate
 from app.services import paperless_service, trip_service
 
-router = APIRouter(prefix="/api/trips", tags=["trips"])
+router = APIRouter(prefix="/api/trips", tags=["trips"], redirect_slashes=False)
 
 
-@router.get("/", response_model=list[TripRead])
+@router.get("", response_model=list[TripRead])
 async def list_trips(
     trip_status: str | None = Query(default=None, alias="status"),
     db: AsyncSession = Depends(get_db),
@@ -22,7 +22,7 @@ async def list_trips(
     return await trip_service.list_trips(db, user.id, trip_status)
 
 
-@router.post("/", response_model=TripRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TripRead, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     data: TripCreate,
     db: AsyncSession = Depends(get_db),

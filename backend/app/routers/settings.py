@@ -12,7 +12,7 @@ from app.services import settings_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/settings", tags=["settings"])
+router = APIRouter(prefix="/api/settings", tags=["settings"], redirect_slashes=False)
 
 _KNOWN_KEYS = {"paperless_url", "paperless_token"}
 
@@ -27,7 +27,7 @@ class PaperlessVerifyResult(BaseModel):
     error: str | None = None
 
 
-@router.get("/", response_model=dict[str, str | None])
+@router.get("", response_model=dict[str, str | None])
 async def get_settings(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -36,7 +36,7 @@ async def get_settings(
     return {key: data.get(key) for key in _KNOWN_KEYS}
 
 
-@router.put("/", status_code=status.HTTP_204_NO_CONTENT)
+@router.put("", status_code=status.HTTP_204_NO_CONTENT)
 async def upsert_setting(
     payload: SettingUpsert,
     current_user: User = Depends(get_current_user),

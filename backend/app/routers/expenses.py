@@ -11,10 +11,10 @@ from app.models.user import User
 from app.schemas.expense import ExpenseCreate, ExpenseRead, ExpenseUpdate
 from app.services import expense_service, paperless_service
 
-router = APIRouter(prefix="/api/expenses", tags=["expenses"])
+router = APIRouter(prefix="/api/expenses", tags=["expenses"], redirect_slashes=False)
 
 
-@router.get("/", response_model=list[ExpenseRead])
+@router.get("", response_model=list[ExpenseRead])
 async def list_expenses(
     trip_id: UUID | None = Query(default=None),
     billable: bool | None = Query(default=None),
@@ -29,7 +29,7 @@ async def list_expenses(
     )
 
 
-@router.post("/", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED)
 async def create_expense(
     trip_id: UUID = Form(...),
     amount: Decimal = Form(...),

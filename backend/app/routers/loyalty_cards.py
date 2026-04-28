@@ -9,10 +9,10 @@ from app.models.user import User
 from app.schemas.loyalty_card import LoyaltyCardCreate, LoyaltyCardRead, LoyaltyCardUpdate
 from app.services import loyalty_card_service
 
-router = APIRouter(prefix="/api/loyalty-cards", tags=["loyalty-cards"])
+router = APIRouter(prefix="/api/loyalty-cards", tags=["loyalty-cards"], redirect_slashes=False)
 
 
-@router.get("/", response_model=list[LoyaltyCardRead])
+@router.get("", response_model=list[LoyaltyCardRead])
 async def list_cards(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -20,7 +20,7 @@ async def list_cards(
     return await loyalty_card_service.list_cards(db, user.id)
 
 
-@router.post("/", response_model=LoyaltyCardRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=LoyaltyCardRead, status_code=status.HTTP_201_CREATED)
 async def create_card(
     data: LoyaltyCardCreate,
     db: AsyncSession = Depends(get_db),

@@ -50,6 +50,14 @@ Proxmox LXC (768 MB RAM, 10 GB disco, nesting habilitado)
     └── bot       (PTB)      ~100 MB RAM
 ```
 
+## Acceso SSH al LXC
+- Host: 192.168.1.125
+- Usuario: root
+- Clave: ~/.ssh/id_ed25519 (sin passphrase)
+- Proyecto: /opt/ledger
+
+---
+
 **Reglas fijas de infra — no cambiar sin consenso:**
 - `postgres-ledger` es un contenedor **propio y aislado** en el NAS, no compartido con ninguna otra app.
 - Puerto **5433** para no colisionar con el 5432 de otros servicios del NAS.

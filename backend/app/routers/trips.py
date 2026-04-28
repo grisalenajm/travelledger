@@ -97,7 +97,7 @@ async def upload_cover(
     content = await file.read()
     mime = _detect_mime(content)
     filename = file.filename or f"cover_{trip_id}.jpg"
-    doc_id = await paperless_service.upload_document(content, filename, mime)
+    doc_id = await paperless_service.upload_document(content, filename, mime, db, user.id)
     trip.cover_doc_id = doc_id
     await db.flush()
     await db.refresh(trip)
@@ -113,5 +113,5 @@ async def get_cover_url(
     trip = await trip_service.get_or_404(db, trip_id, user.id)
     if not trip.cover_doc_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No cover image")
-    url = await paperless_service.get_url(trip.cover_doc_id)
+    url = await paperless_service.get_url(trip.cover_doc_id, db, user.id)
     return {"url": url}

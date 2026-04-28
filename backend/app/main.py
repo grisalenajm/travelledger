@@ -28,6 +28,7 @@ app = FastAPI(
     title="Ledger API",
     version="0.1.0",
     lifespan=lifespan,
+    redirect_slashes=False,
     docs_url="/docs" if settings.ENV != "production" else None,
     redoc_url=None,
     openapi_url="/openapi.json" if settings.ENV != "production" else None,

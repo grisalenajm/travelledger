@@ -149,7 +149,7 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
         if (values.payment_method) formData.append("payment_method", values.payment_method)
         if (values.loyalty_card_id) formData.append("loyalty_card_id", values.loyalty_card_id)
         formData.append("image", imageFile)
-        await api.post<Expense>("/api/proxy/expenses", formData)
+        await api.post<Expense>("/api/proxy/expenses/", formData)
         queryClient.invalidateQueries({ queryKey: ["expenses", trip.id] })
         queryClient.invalidateQueries({ queryKey: ["trips", trip.id, "summary"] })
       } else {

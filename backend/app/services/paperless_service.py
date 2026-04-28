@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import re
+import unicodedata
 from uuid import UUID
 
 import httpx
@@ -14,11 +16,28 @@ _URL_KEY = "paperless_url"
 _TOKEN_KEY = "paperless_token"
 
 
+def slugify(text: str) -> str:
+    text = unicodedata.normalize("NFD", text.lower())
+    text = "".join(c for c in text if unicodedata.category(c) != "Mn")
+    return re.sub(r"[^a-z0-9-]+", "-", text.replace(" ", "-")).strip("-")
+
+
 async def get_credentials(db: AsyncSession, user_id: UUID) -> tuple[str | None, str | None]:
     """Returns (paperless_url, paperless_token) from user settings."""
     url = await settings_service.get(db, user_id, _URL_KEY)
     token = await settings_service.get(db, user_id, _TOKEN_KEY)
     return url, token
+
+
+async def _get_or_create_tag(base: str, auth_header: dict, name: str) -> int:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.get(f"{base}/api/tags/", params={"name": name}, headers=auth_header)
+        results = r.json().get("results", [])
+        if results:
+            return results[0]["id"]
+        r = await client.post(f"{base}/api/tags/", headers=auth_header, json={"name": name})
+        r.raise_for_status()
+        return r.json()["id"]
 
 
 async def verify_connection(url: str, token: str) -> tuple[bool, str | None]:
@@ -51,6 +70,7 @@ async def upload_document(
     mime_type: str,
     db: AsyncSession,
     user_id: UUID,
+    title_parts: dict | None = None,
 ) -> int:
     """Upload document to Paperless-ngx. Returns document_id after async processing."""
     base_url, token = await get_credentials(db, user_id)
@@ -63,11 +83,22 @@ async def upload_document(
     base = base_url.rstrip("/")
     auth_header = {"Authorization": f"Token {token}"}
 
+    if title_parts:
+        category = title_parts.get("category", "expense")
+        date = title_parts.get("date", "")
+        trip_slug = slugify(title_parts.get("trip_name", ""))
+        title = f"{category}_{date}_{trip_slug}"
+    else:
+        title = filename
+
+    tag_id = await _get_or_create_tag(base, auth_header, "travel")
+
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
             f"{base}/api/documents/post_document/",
             headers=auth_header,
             files={"document": (filename, file_bytes, mime_type)},
+            data={"title": title, "tags": [tag_id]},
         )
         if resp.status_code not in (200, 202):
             logger.error("Paperless upload failed: %s %s", resp.status_code, resp.text)

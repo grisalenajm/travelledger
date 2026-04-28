@@ -42,7 +42,7 @@ async def list_expenses(
 async def create(
     db: AsyncSession, user: User, data: ExpenseCreate, image: UploadFile | None = None
 ) -> Expense:
-    await get_trip_or_404(db, data.trip_id, user.id)
+    trip = await get_trip_or_404(db, data.trip_id, user.id)
 
     amount_base, rate_date = await currency_service.convert(
         db, data.amount, data.currency, user.currency_base, data.date
@@ -58,6 +58,11 @@ async def create(
                 image.content_type or "application/octet-stream",
                 db,
                 user.id,
+                title_parts={
+                    "category": data.category,
+                    "date": str(data.date),
+                    "trip_name": trip.name,
+                },
             )
         except Exception as e:
             logger.warning("Paperless upload failed, continuing without: %s", e)

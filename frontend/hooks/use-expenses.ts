@@ -28,7 +28,7 @@ export function useRecentExpenses(limit = 10) {
 export function useCreateExpense() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: ExpenseCreate) => api.post<Expense>("/api/proxy/expenses", data),
+    mutationFn: (data: ExpenseCreate) => api.post<Expense>("/api/proxy/expenses/", data),
     onSuccess: (expense) => {
       qc.invalidateQueries({ queryKey: ["expenses", expense.trip_id] })
       qc.invalidateQueries({ queryKey: ["trips", expense.trip_id, "summary"] })

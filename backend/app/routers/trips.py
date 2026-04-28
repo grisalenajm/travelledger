@@ -1,3 +1,4 @@
+from datetime import date as date_type
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -97,7 +98,10 @@ async def upload_cover(
     content = await file.read()
     mime = _detect_mime(content)
     filename = file.filename or f"cover_{trip_id}.jpg"
-    doc_id = await paperless_service.upload_document(content, filename, mime, db, user.id)
+    doc_id = await paperless_service.upload_document(
+        content, filename, mime, db, user.id,
+        title_parts={"category": "cover", "date": str(date_type.today()), "trip_name": trip.name},
+    )
     trip.cover_doc_id = doc_id
     await db.flush()
     await db.refresh(trip)

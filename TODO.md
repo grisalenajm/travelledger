@@ -129,6 +129,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Edición de viaje — /trips/[id]/edit con cover image, todos los campos, eliminación con 2-step confirm; botón edit en trip detail header
 - [x] Imagen de portada de viaje — POST /api/trips/{id}/cover (magic-bytes MIME, Paperless upload + task polling); GET /api/trips/{id}/cover-url; migration 0003
 - [x] Adjuntar imagen a gasto en Flujo A (sin OCR) → backend → Paperless → paperless_doc_id
+- [x] Web: campo comprobante en AddExpenseModal (file picker, preview, multipart submit via /api/proxy/expenses/ con trailing slash)
 - [x] Ver comprobante desde detalle de gasto — GET /api/expenses/{id}/receipt-url + paperless_service.get_url()
 - [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv + botón "Exportar CSV" en trip detail
 - [x] Selector de días deslizante en trip detail — chips "T" + día por día, filtra gastos por fecha
@@ -149,7 +150,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Modelo `Setting` + migration `0004_create_settings`
 - [x] `settings_service.py` — get_all, get, set (upsert PostgreSQL)
 - [x] Router `/api/settings` — GET, PUT, POST /verify-paperless
-- [x] `paperless_service.py` — credenciales per-user desde BD; upload_document, get_url, verify_connection
+- [x] `paperless_service.py` — credenciales per-user desde BD; upload_document, get_url, verify_connection; título {category}_{date}_{trip_slug}; etiqueta "travel" auto-creada en Paperless
 
 ### Backend
 - [ ] [!] Modelo Receipt + migration

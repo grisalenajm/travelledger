@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 _URL_KEY = "paperless_url"
 _TOKEN_KEY = "paperless_token"
 
+CATEGORY_TO_CORRESPONDENT = {
+    "Dining": "Comida",
+    "Transport": "Transporte",
+    "Lodging": "Alojamiento",
+    "Culture": "Cultura",
+    "Shopping": "Compras",
+    "Health": "Salud",
+    "Other": "Otros",
+}
+
 
 def slugify(text: str) -> str:
     text = unicodedata.normalize("NFD", text.lower())
@@ -27,6 +37,36 @@ async def get_credentials(db: AsyncSession, user_id: UUID) -> tuple[str | None, 
     url = await settings_service.get(db, user_id, _URL_KEY)
     token = await settings_service.get(db, user_id, _TOKEN_KEY)
     return url, token
+
+
+async def _get_correspondent_id(
+    client: httpx.AsyncClient, base: str, auth_header: dict, name: str
+) -> int | None:
+    resp = await client.get(
+        f"{base}/api/correspondents/", params={"name": name}, headers=auth_header
+    )
+    results = resp.json().get("results", [])
+    return results[0]["id"] if results else None
+
+
+async def _get_document_type_id(
+    client: httpx.AsyncClient, base: str, auth_header: dict, name: str = "Invoice"
+) -> int | None:
+    resp = await client.get(
+        f"{base}/api/document_types/", params={"name": name}, headers=auth_header
+    )
+    results = resp.json().get("results", [])
+    return results[0]["id"] if results else None
+
+
+async def _get_storage_path_id(
+    client: httpx.AsyncClient, base: str, auth_header: dict, name: str = "Viajes"
+) -> int | None:
+    resp = await client.get(
+        f"{base}/api/storage_paths/", params={"name": name}, headers=auth_header
+    )
+    results = resp.json().get("results", [])
+    return results[0]["id"] if results else None
 
 
 async def _get_or_create_tag(base: str, auth_header: dict, name: str) -> int:
@@ -83,22 +123,54 @@ async def upload_document(
     base = base_url.rstrip("/")
     auth_header = {"Authorization": f"Token {token}"}
 
-    if title_parts:
-        category = title_parts.get("category", "expense")
-        date = title_parts.get("date", "")
-        trip_slug = slugify(title_parts.get("trip_name", ""))
-        title = f"{category}_{date}_{trip_slug}"
+    category = title_parts.get("category") if title_parts else None
+    trip_name = title_parts.get("trip_name") if title_parts else None
+    date_str = title_parts.get("date", "") if title_parts else ""
+
+    if trip_name and category:
+        trip_slug = slugify(trip_name)
+        title = f"{trip_slug}_{category}_{date_str}"
     else:
         title = filename
 
     tag_id = await _get_or_create_tag(base, auth_header, "travel")
 
     async with httpx.AsyncClient(timeout=60) as client:
+        correspondent_name = CATEGORY_TO_CORRESPONDENT.get(category) if category else None
+        correspondent_id, document_type_id, storage_path_id = await asyncio.gather(
+            _get_correspondent_id(client, base, auth_header, correspondent_name)
+            if correspondent_name
+            else asyncio.sleep(0, result=None),
+            _get_document_type_id(client, base, auth_header, "Invoice"),
+            _get_storage_path_id(client, base, auth_header, "Viajes"),
+        )
+
+        form_data: dict[str, str] = {"title": title}
+        if correspondent_id is not None:
+            form_data["correspondent"] = str(correspondent_id)
+        if document_type_id is not None:
+            form_data["document_type"] = str(document_type_id)
+        if storage_path_id is not None:
+            form_data["storage_path"] = str(storage_path_id)
+        form_data["tags"] = str(tag_id)
+
+        logger.info(
+            "Paperless upload metadata — title=%s correspondent_name=%s correspondent_id=%s "
+            "document_type_id=%s storage_path_id=%s tag_id=%s form_data=%s",
+            title,
+            correspondent_name,
+            correspondent_id,
+            document_type_id,
+            storage_path_id,
+            tag_id,
+            form_data,
+        )
+
         resp = await client.post(
             f"{base}/api/documents/post_document/",
             headers=auth_header,
             files={"document": (filename, file_bytes, mime_type)},
-            data={"title": title, "tags": [tag_id]},
+            data=form_data,
         )
         if resp.status_code not in (200, 202):
             logger.error("Paperless upload failed: %s %s", resp.status_code, resp.text)

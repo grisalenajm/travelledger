@@ -151,32 +151,32 @@ async def upload_document(
             _get_storage_path_id(client, base, auth_header, "Viajes"),
         )
 
-        form_data: dict[str, str] = {"title": title}
+        multipart_fields: dict = {"title": (None, title)}
         if correspondent_id is not None:
-            form_data["correspondent"] = str(correspondent_id)
+            multipart_fields["correspondent"] = (None, str(correspondent_id))
         if document_type_id is not None:
-            form_data["document_type"] = str(document_type_id)
+            multipart_fields["document_type"] = (None, str(document_type_id))
         if storage_path_id is not None:
-            form_data["storage_path"] = str(storage_path_id)
-        form_data["tags"] = str(tag_id)
+            multipart_fields["storage_path"] = (None, str(storage_path_id))
+        if tag_id is not None:
+            multipart_fields["tags"] = (None, str(tag_id))
+        multipart_fields["document"] = (filename, file_bytes, mime_type)
 
         logger.info(
             "Paperless upload metadata — title=%s correspondent_name=%s correspondent_id=%s "
-            "document_type_id=%s storage_path_id=%s tag_id=%s form_data=%s",
+            "document_type_id=%s storage_path_id=%s tag_id=%s",
             title,
             correspondent_name,
             correspondent_id,
             document_type_id,
             storage_path_id,
             tag_id,
-            form_data,
         )
 
         resp = await client.post(
             f"{base}/api/documents/post_document/",
             headers=auth_header,
-            files={"document": (filename, file_bytes, mime_type)},
-            data=form_data,
+            files=multipart_fields,
         )
         if resp.status_code not in (200, 202):
             logger.error("Paperless upload failed: %s %s", resp.status_code, resp.text)

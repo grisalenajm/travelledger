@@ -594,6 +594,34 @@ content = await file.read()
 mime = _detect_mime(content)  # detectado, no confiado
 ```
 
+### FastAPI — trailing slash en decoradores (evitar 307)
+
+FastAPI con `prefix="/api/foo"` y `@router.get("/")` registra la ruta en `/api/foo/`. Si el cliente llama a `/api/foo` (sin slash), FastAPI devuelve **307 Redirect** → el proxy Next.js no lo sigue por defecto y el cliente recibe un 307 en lugar de datos.
+
+**Regla:** todos los decoradores de colección deben usar `"/"`, nunca `""`:
+
+```python
+# ✅ CORRECTO
+router = APIRouter(prefix="/api/settings", tags=["settings"])
+@router.get("/", ...)   # ruta en /api/settings/
+@router.put("/", ...)
+
+# ❌ INCORRECTO — genera 307 cuando se llama sin slash
+@router.get("", ...)
+@router.put("", ...)
+```
+
+El proxy también debe tener `redirect: "follow"` para atrapar cualquier redirect residual:
+
+```typescript
+const response = await fetch(url, {
+  method, headers: fetchHeaders, body,
+  redirect: "follow",
+  // @ts-ignore
+  duplex: "half",   // necesario con body streaming (ArrayBuffer)
+})
+```
+
 ### Proxy Next.js — uploads multipart
 
 El proxy `/api/proxy/[...path]/route.ts` debe detectar si la request es multipart y, en ese caso:

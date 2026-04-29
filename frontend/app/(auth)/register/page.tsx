@@ -7,14 +7,18 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
-const schema = z.object({
-  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  email: z.string().email("Email inválido"),
-  password: z
-    .string()
-    .min(8, "La contraseña debe tener al menos 8 caracteres"),
-  currency_base: z.string().length(3, "Código ISO de 3 letras").toUpperCase(),
-})
+const schema = z
+  .object({
+    name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+    email: z.string().email("Email inválido"),
+    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+    confirm_password: z.string().min(1, "Confirma tu contraseña"),
+    currency_base: z.string().length(3, "Código ISO de 3 letras").toUpperCase(),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirm_password"],
+  })
 
 type RegisterForm = z.infer<typeof schema>
 
@@ -30,7 +34,7 @@ export default function RegisterPage() {
     defaultValues: { currency_base: "EUR" },
   })
 
-  const onSubmit = async (data: RegisterForm) => {
+  const onSubmit = async ({ confirm_password: _ignore, ...data }: RegisterForm) => {
     try {
       const res = await fetch("/api/register", {
         method: "POST",
@@ -160,6 +164,25 @@ export default function RegisterPage() {
               />
               {errors.password && (
                 <p className="text-error text-xs font-body">{errors.password.message}</p>
+              )}
+            </div>
+
+            {/* Confirm password */}
+            <div className="space-y-1.5">
+              <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                Confirm password
+              </label>
+              <input
+                {...register("confirm_password")}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Repeat your password"
+                className="w-full bg-transparent border-b border-outline py-3 text-on-surface
+                           placeholder:text-on-surface-variant/40 focus:border-primary
+                           focus:outline-none transition-colors font-body text-sm"
+              />
+              {errors.confirm_password && (
+                <p className="text-error text-xs font-body">{errors.confirm_password.message}</p>
               )}
             </div>
 

@@ -112,6 +112,8 @@ async def update(
     for field, value in updates.items():
         setattr(expense, field, value)
 
+    expense.is_draft = False
+
     await db.flush()
     await db.refresh(expense)
     return expense

@@ -2,7 +2,7 @@ from datetime import date as date_t, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -34,7 +34,9 @@ class Expense(Base):
         ForeignKey("loyalty_cards.id", ondelete="SET NULL"), nullable=True
     )
     paperless_doc_id: Mapped[int | None] = mapped_column(nullable=True)
-    # Se rellena en Fase 3 (OCR). En Flujo A siempre None.
+    is_draft: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    ocr_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ocr_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

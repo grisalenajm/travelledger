@@ -178,8 +178,9 @@ DELETE /api/expenses/{id}             → borrar + cascade Paperless
 ### OCR / Receipts
 ```
 POST   /api/receipts/upload           → Flujo B: sube imagen → Haiku OCR →
-                                        sube a Paperless → devuelve OcrResultDto
-                                        NO crea el gasto — solo devuelve datos extraídos
+                                        sube a Paperless → crea Expense en is_draft=True
+                                        Devuelve ExpenseRead completo (con id)
+                                        Cliente redirige a /trips/[id]/expenses/[expenseId]
 ```
 
 ### Currency
@@ -267,21 +268,20 @@ El usuario introduce los datos. La imagen es opcional y va a Paperless sin proce
 **Invariante:** si el usuario introdujo los campos a mano, el OCR nunca se ejecuta.
 
 ### Flujo B — OCR primero, confirmar después
-El usuario sube imagen. Haiku extrae los datos. El usuario confirma o corrige.
+El usuario sube imagen. Haiku extrae los datos. El backend crea un Expense en estado draft.
 
 ```
 1. Usuario selecciona/captura imagen (ticket foto, PDF factura)
-2. POST /api/receipts/upload (multipart)
+2. POST /api/receipts/upload (multipart: file, trip_id)
 3. Backend:
-   a. Valida MIME por magic bytes
-   b. Haiku 4.5 Vision → extrae campos estructurados
-   c. Sube imagen a Paperless → paperless_doc_id
-   d. Crea Receipt (sin expense_id aún)
-   e. Devuelve OcrResultDto — NO crea Expense
-4. Cliente muestra confirmación pre-rellenada
-5. Usuario revisa y ajusta
-6. POST /api/expenses con datos confirmados + receipt_id
-7. Backend vincula Receipt.expense_id = Expense.id recién creado
+   a. Valida MIME por magic bytes (JPEG, PNG, WebP, PDF)
+   b. Haiku 4.5 Vision → extrae campos estructurados (OcrExtracted)
+   c. Sube imagen a Paperless → paperless_doc_id (fallo silencioso)
+   d. Crea Expense con is_draft=True, ocr_raw, ocr_confidence
+   e. Devuelve ExpenseRead (201)
+4. Cliente redirige a /trips/[id]/expenses/[expenseId] para editar
+5. Usuario revisa y ajusta → PUT /api/expenses/{id}
+6. Backend pone is_draft=False automáticamente al hacer PUT
 ```
 
 ### Flujo B en Bot Telegram
@@ -289,10 +289,10 @@ El usuario sube imagen. Haiku extrae los datos. El usuario confirma o corrige.
 Usuario envía foto
   → bot descarga de Telegram
   → POST /api/receipts/upload
-  → recibe OcrResultDto
+  → recibe ExpenseRead (is_draft=True)
   → resuelve viaje activo (cascada de trip_resolver)
   → mensaje confirmación con inline keyboard [✅] [✏️] [❌]
-  → usuario pulsa ✅ → POST /api/expenses
+  → usuario pulsa ✅ → PUT /api/expenses/{id} para confirmar (is_draft → False)
 ```
 
 ---
@@ -419,25 +419,18 @@ billable: bool              # DEFAULT True — facturable a empresa
 loyalty_card_id: UUID | None FK → loyalty_cards  # programa que acredita este gasto
 paperless_doc_id: int | None                      # ID del documento en Paperless-ngx
 
+# Campos OCR (Fase 3 — Flujo B)
+is_draft: bool              # DEFAULT False — True si creado por OCR pendiente de confirmar
+ocr_raw: str | None         # texto crudo devuelto por Haiku (para debug)
+ocr_confidence: float | None  # confianza autoevaluada por Haiku (0.0–1.0)
+
 created_at: datetime
 updated_at: datetime
 ```
 
-> No hay FK directa de Expense a Receipt. El vínculo es inverso: Receipt.expense_id → Expense.id.
-> paperless_doc_id se llena desde Receipt tras confirmar OCR (Flujo B), o directamente en Flujo A.
-
-### Receipt
-```python
-id: UUID PK
-expense_id: UUID | None FK → expenses   # null hasta que el usuario confirma el gasto
-paperless_doc_id: int | None            # ID en Paperless-ngx
-original_filename: str
-mime_type: str
-ocr_raw_text: str | None                # texto crudo devuelto por Haiku
-ocr_data: JSON | None                   # campos estructurados extraídos
-haiku_cost_usd: float | None            # coste de la llamada (monitoring)
-created_at: datetime
-```
+> El modelo `Receipt` **no existe**. El OCR escribe directamente sobre `Expense`.
+> `paperless_doc_id` se rellena en Flujo B (OCR) o directamente en Flujo A (manual con imagen).
+> Al hacer PUT /api/expenses/{id}, `is_draft` se pone a False automáticamente.
 
 ### ExchangeRate
 ```python
@@ -521,20 +514,18 @@ Foto/PDF   → POST /api/receipts/upload → OcrResultDto → confirmación
 ### Prompt caching
 System prompt del OCR con `cache_control: ephemeral`. Solo se paga completo en la primera llamada de cada ventana de 5 minutos.
 
-### OcrResultDto
-```json
-{
-  "receipt_id": "uuid",
-  "paperless_doc_id": 1042,
-  "merchant": "Le Bistrot Paris",
-  "date": "2023-10-14",
-  "amount": 84.50,
-  "currency": "EUR",
-  "category": "Dining",
-  "payment_method": "card",
-  "description": "Cena Le Bistrot Paris",
-  "confidence": 0.94
-}
+### Campos OCR en Expense (Flujo B)
+El endpoint `POST /api/receipts/upload` NO usa un DTO separado — devuelve `ExpenseRead` directamente.
+Los campos OCR se persisten en la tabla `expenses`:
+- `is_draft: bool` — True hasta que el usuario confirma con PUT
+- `ocr_raw: text | None` — texto crudo de la respuesta de Haiku (para debug)
+- `ocr_confidence: float | None` — confianza autoevaluada por Haiku (0.0–1.0)
+
+El modelo `Receipt` **no existe** — OCR escribe directamente sobre `Expense`.
+
+`ocr_service.extract()` devuelve un dataclass interno `OcrExtracted` (no schema Pydantic):
+```
+date, amount, currency, category, description, confidence, raw_text
 ```
 
 ---

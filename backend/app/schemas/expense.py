@@ -75,6 +75,8 @@ class ExpenseRead(BaseModel):
     billable: bool
     loyalty_card_id: UUID | None
     paperless_doc_id: int | None
+    is_draft: bool
+    ocr_confidence: float | None
     created_at: datetime
     updated_at: datetime
 

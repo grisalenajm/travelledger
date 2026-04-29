@@ -153,11 +153,12 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] `paperless_service.py` — credenciales per-user desde BD; upload_document, get_url, verify_connection; título {category}_{date}_{trip_slug}; etiqueta "travel" auto-creada en Paperless
 
 ### Backend
-- [ ] [!] Modelo Receipt + migration
-- [ ] [!] services/ocr_service.py — Haiku 4.5 Vision + prompt caching + Paperless upload
-- [ ] [!] Router POST /api/receipts/upload — Flujo B
+- [x] Migration 0005 — is_draft, ocr_raw, ocr_confidence en expenses
+- [x] [!] services/ocr_service.py — Haiku 4.5 Vision + prompt caching
+- [x] [!] Router POST /api/receipts/upload — Flujo B (crea Expense is_draft=True)
 - [x] Router POST /api/expenses con imagen — Flujo A (sin OCR, solo Paperless)
-- [ ] Tests con fixtures (mockear Anthropic API y Paperless)
+- [x] expense_service.update() → is_draft=False automáticamente
+- [x] Tests test_ocr.py (mock Anthropic + Paperless, 4 tests)
 
 ### Web
 - [x] /settings — página unificada: Perfil (nombre + currency_base) + Integraciones → Paperless (URL, token con toggle, verificar conexión)

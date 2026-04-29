@@ -99,6 +99,18 @@ resp = await client.post(url, headers=auth_header, files=multipart_fields)
 resp = await client.post(url, data={"title": title}, files={"document": ...})
 ```
 
+### Haiku OCR — limpiar markdown fences antes de json.loads()
+Haiku puede devolver JSON envuelto en ` ```json ... ``` `. Limpiar siempre antes de parsear:
+```python
+cleaned = raw_text.strip()
+if cleaned.startswith("```"):
+    cleaned = cleaned.split("```")[1]
+    if cleaned.startswith("json"):
+        cleaned = cleaned[4:]
+    cleaned = cleaned.strip()
+data = json.loads(cleaned[cleaned.find("{"):cleaned.rfind("}") + 1])
+```
+
 ### Pydantic v2 y date alias
 ```python
 # ❌ En Python 3.12, 'date' como nombre de campo en clase SQLAlchemy hace shadowing

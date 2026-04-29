@@ -123,11 +123,19 @@ async def extract(image_bytes: bytes, mime_type: str) -> OcrExtracted:
 
 def _parse_response(raw_text: str) -> OcrExtracted:
     try:
-        start = raw_text.find("{")
-        end = raw_text.rfind("}") + 1
+        # Haiku sometimes wraps the JSON in markdown code fences — strip them
+        cleaned = raw_text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```")[1]
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+            cleaned = cleaned.strip()
+
+        start = cleaned.find("{")
+        end = cleaned.rfind("}") + 1
         if start == -1 or end == 0:
             raise ValueError("No JSON object in response")
-        data = json.loads(raw_text[start:end])
+        data = json.loads(cleaned[start:end])
 
         parsed_date: date_t | None = None
         raw_date = data.get("date")

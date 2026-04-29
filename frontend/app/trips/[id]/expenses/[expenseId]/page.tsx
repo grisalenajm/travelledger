@@ -79,6 +79,7 @@ export default function ExpenseDetailPage() {
   const deleteExpense = useDeleteExpense()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [receiptObjectUrl, setReceiptObjectUrl] = useState<string | null>(null)
   const [receiptContentType, setReceiptContentType] = useState<string | null>(null)
 
   const receiptUrl = expense?.paperless_doc_id
@@ -87,9 +88,28 @@ export default function ExpenseDetailPage() {
 
   useEffect(() => {
     if (!receiptUrl) return
-    fetch(receiptUrl, { method: "HEAD" })
-      .then((r) => setReceiptContentType(r.headers.get("content-type")))
-      .catch(() => setReceiptContentType(null))
+    let objectUrl: string | null = null
+
+    fetch(receiptUrl)
+      .then(async (r) => {
+        const ct = r.headers.get("content-type") ?? ""
+        setReceiptContentType(ct)
+        if (ct.startsWith("image/")) {
+          const blob = await r.blob()
+          objectUrl = URL.createObjectURL(blob)
+          setReceiptObjectUrl(objectUrl)
+        } else if (ct.includes("pdf")) {
+          setReceiptObjectUrl(receiptUrl)
+        }
+      })
+      .catch(() => {
+        setReceiptContentType(null)
+        setReceiptObjectUrl(null)
+      })
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
   }, [receiptUrl])
 
   const {
@@ -362,7 +382,7 @@ export default function ExpenseDetailPage() {
                 className="relative w-24 h-24 rounded-xl overflow-hidden border border-outline-variant/20 hover:border-primary transition-colors hover:shadow-md group"
               >
                 <img
-                  src={receiptUrl}
+                  src={receiptObjectUrl ?? receiptUrl}
                   alt="Comprobante"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => console.error("Receipt image failed:", e)}
@@ -454,7 +474,7 @@ export default function ExpenseDetailPage() {
         >
           <div className="relative max-w-3xl max-h-[90vh] w-full">
             <img
-              src={receiptUrl}
+              src={receiptObjectUrl ?? receiptUrl ?? undefined}
               alt="Comprobante"
               className="w-full h-full object-contain rounded-xl"
               onClick={(e) => e.stopPropagation()}

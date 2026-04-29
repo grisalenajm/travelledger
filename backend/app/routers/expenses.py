@@ -2,7 +2,9 @@ from datetime import date as date_t
 from decimal import Decimal
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
@@ -92,3 +94,35 @@ async def get_receipt_url(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No receipt attached")
     url = await paperless_service.get_url(expense.paperless_doc_id, db, user.id)
     return {"url": url}
+
+
+@router.get("/{expense_id}/receipt-image")
+async def get_receipt_image(
+    expense_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    expense = await expense_service.get_or_404(db, expense_id, user.id)
+    if not expense.paperless_doc_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No receipt attached")
+
+    paperless_url, token = await paperless_service.get_credentials(db, user.id)
+    if not paperless_url or not token:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Paperless not configured")
+
+    image_url = f"{paperless_url.rstrip('/')}/api/documents/{expense.paperless_doc_id}/download/"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            image_url,
+            headers={"Authorization": f"Token {token}"},
+            follow_redirects=True,
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Receipt not found in Paperless")
+
+    content_type = resp.headers.get("content-type", "application/octet-stream")
+    return StreamingResponse(
+        iter([resp.content]),
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )

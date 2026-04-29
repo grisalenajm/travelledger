@@ -83,10 +83,7 @@ export default function ExpenseDetailPage() {
 
   useEffect(() => {
     if (expense?.paperless_doc_id) {
-      fetch(`/api/proxy/expenses/${expenseId}/receipt-url`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data: { url: string } | null) => setReceiptUrl(data?.url ?? null))
-        .catch(() => setReceiptUrl(null))
+      setReceiptUrl(`/api/proxy/expenses/${expenseId}/receipt-image`)
     }
   }, [expense?.paperless_doc_id, expenseId])
 

@@ -79,10 +79,18 @@ export default function ExpenseDetailPage() {
   const deleteExpense = useDeleteExpense()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [receiptContentType, setReceiptContentType] = useState<string | null>(null)
 
   const receiptUrl = expense?.paperless_doc_id
     ? `/api/proxy/expenses/${expenseId}/receipt-image`
     : null
+
+  useEffect(() => {
+    if (!receiptUrl) return
+    fetch(receiptUrl, { method: "HEAD" })
+      .then((r) => setReceiptContentType(r.headers.get("content-type")))
+      .catch(() => setReceiptContentType(null))
+  }, [receiptUrl])
 
   const {
     register,
@@ -346,23 +354,46 @@ export default function ExpenseDetailPage() {
             <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-3">
               Comprobante
             </p>
-            <button
-              type="button"
-              onClick={() => setLightboxOpen(true)}
-              className="relative w-24 h-24 rounded-xl overflow-hidden border border-outline-variant/20 hover:border-primary transition-colors hover:shadow-md group"
-            >
-              <img
-                src={receiptUrl}
-                alt="Comprobante"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => console.error("Receipt image failed:", e)}
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl">
-                  zoom_in
+
+            {receiptContentType?.startsWith("image/") ? (
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="relative w-24 h-24 rounded-xl overflow-hidden border border-outline-variant/20 hover:border-primary transition-colors hover:shadow-md group"
+              >
+                <img
+                  src={receiptUrl}
+                  alt="Comprobante"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => console.error("Receipt image failed:", e)}
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl">
+                    zoom_in
+                  </span>
+                </div>
+              </button>
+            ) : receiptContentType?.includes("pdf") ? (
+              <a
+                href={receiptUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/20 hover:border-primary hover:bg-surface-container-high transition-colors group"
+              >
+                <span className="material-symbols-outlined text-3xl text-error">
+                  picture_as_pdf
                 </span>
-              </div>
-            </button>
+                <div>
+                  <p className="text-sm font-medium text-on-surface">Ver factura PDF</p>
+                  <p className="text-xs text-on-surface-variant">Abre en Paperless</p>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant text-sm ml-2 group-hover:text-primary transition-colors">
+                  open_in_new
+                </span>
+              </a>
+            ) : (
+              <div className="w-24 h-24 rounded-xl bg-surface-container animate-pulse" />
+            )}
           </div>
         )}
 

@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 _URL_KEY = "paperless_url"
 _TOKEN_KEY = "paperless_token"
 
+
+class PaperlessDuplicateError(Exception):
+    pass
+
+
+class PaperlessUploadError(Exception):
+    pass
+
 CATEGORY_TO_CORRESPONDENT = {
     "Dining": "Comida",
     "Transport": "Transporte",
@@ -195,15 +203,18 @@ async def upload_document(
             )
             if task_resp.status_code == 200:
                 tasks = task_resp.json()
-                if tasks and tasks[0]["status"] == "SUCCESS":
-                    doc_id = tasks[0].get("related_document")
-                    if doc_id:
-                        return int(doc_id)
-                if tasks and tasks[0]["status"] == "FAILURE":
-                    raise HTTPException(
-                        status.HTTP_502_BAD_GATEWAY,
-                        "Paperless document processing failed",
-                    )
+                if tasks:
+                    task = tasks[0]
+                    task_status = task.get("status", "")
+                    result_text = task.get("result", "") or ""
+                    if task_status == "SUCCESS":
+                        doc_id = task.get("related_document")
+                        if doc_id:
+                            return int(doc_id)
+                    elif "duplicate" in result_text.lower():
+                        raise PaperlessDuplicateError(result_text)
+                    elif task_status == "FAILURE":
+                        raise PaperlessUploadError(result_text)
 
     logger.error("Paperless task %s timed out", task_id)
     raise HTTPException(

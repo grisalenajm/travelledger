@@ -4,6 +4,8 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
@@ -12,6 +14,7 @@ from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.expense import ExpenseRead
 from app.services import currency_service, ocr_service, paperless_service
+from app.services.paperless_service import PaperlessDuplicateError
 from app.services.trip_service import get_or_404 as get_trip_or_404
 
 logger = logging.getLogger(__name__)
@@ -57,6 +60,7 @@ async def upload_receipt(
     )
 
     paperless_doc_id: int | None = None
+    duplicate_warning = False
     try:
         paperless_doc_id = await paperless_service.upload_document(
             content,
@@ -70,6 +74,9 @@ async def upload_receipt(
                 "trip_name": trip.name,
             },
         )
+    except PaperlessDuplicateError as exc:
+        logger.warning("Paperless duplicate detected, continuing without doc_id: %s", exc)
+        duplicate_warning = True
     except Exception as exc:
         logger.warning("Paperless upload failed, continuing without: %s", exc)
 
@@ -104,4 +111,9 @@ async def upload_receipt(
     db.add(expense)
     await db.flush()
     await db.refresh(expense)
-    return expense
+
+    expense_data = jsonable_encoder(ExpenseRead.model_validate(expense))
+    response = JSONResponse(content=expense_data, status_code=status.HTTP_201_CREATED)
+    if duplicate_warning:
+        response.headers["X-Paperless-Warning"] = "duplicate"
+    return response

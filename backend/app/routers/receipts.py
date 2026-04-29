@@ -110,6 +110,7 @@ async def upload_receipt(
     )
     db.add(expense)
     await db.flush()
+    await db.commit()
     await db.refresh(expense)
 
     expense_data = jsonable_encoder(ExpenseRead.model_validate(expense))

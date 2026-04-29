@@ -54,6 +54,13 @@
 - `onError` en img oculta la sección si la URL no carga
 - Si no hay `paperless_doc_id`, la sección comprobante no existe (sin placeholder)
 
+### Fix: Proxy de imagen de comprobante (2026-04-30, commits 614ae64 + bc7321d)
+- **Problema:** `GET /receipt-url` devolvía URL interna `192.168.1.154:8004` — inaccesible desde el navegador del cliente
+- **Patrón:** Las URLs de Paperless son internas al NAS — nunca devolverlas al frontend
+- **Fix backend:** `GET /api/expenses/{id}/receipt-image` — descarga el documento de Paperless server-side con las credenciales del usuario y lo sirve como `StreamingResponse`
+- **Fix frontend:** `<img src="/api/proxy/expenses/{id}/receipt-image">` — asignación directa sin fetch+json previo
+- **Pendiente:** redeploy en LXC (SSH no disponible en esta sesión)
+
 ### Paperless — metadatos al subir imagen
 - Correspondent: resuelto por categoría via `name__iexact` → ✅ funciona
 - Document type: Invoice → ✅ funciona
@@ -72,6 +79,7 @@
 | Bug | Estado | Detalle |
 |-----|--------|---------|
 | `storage_path` ignorado por Paperless | ⏳ Posiblemente resuelto | Era consecuencia del encoding incorrecto en httpx. Fix aplicado (311aa7d) — verificar tras redeploy |
+| Imagen comprobante no cargaba en expense detail | ✅ Resuelto | La URL de Paperless (192.168.1.x) es inaccesible desde el browser. Fix: endpoint `/receipt-image` proxy server-side (commits 614ae64 + bc7321d) — pendiente redeploy |
 | `/register` sin confirm_password | ❌ Pendiente | Campo `confirm_password` ausente en formulario web |
 | Refresh token en bucle | ❌ Pendiente | NextAuth llama a /api/auth/refresh varias veces seguidas — race condition en callback jwt |
 | Paperless duplicado devolvía 502 | ✅ Resuelto | Ahora devuelve 201 con header X-Paperless-Warning: duplicate y el gasto se crea igualmente |
@@ -82,7 +90,7 @@
 
 | Fase | Estado | Detalle |
 |------|--------|---------|
-| Redeploy + verificar Paperless | Inmediato | `ssh root@192.168.1.125 "cd /opt/ledger && git pull origin main && docker compose up -d --build backend"` → subir gasto con imagen y verificar metadatos en Paperless |
+| Redeploy + verificar Paperless | Inmediato | `ssh -i ~/.ssh/<clave> root@192.168.1.125 "cd /opt/ledger && git pull origin main && docker compose up -d --build backend frontend"` → abrir gasto con imagen → verificar thumbnail visible y lightbox con imagen real |
 | Fase 1 Android | Pendiente | LoginScreen, AuthRepository, AuthInterceptor, TokenStore, SplashScreen |
 | Fase 2 Android | Pendiente | Room entities, repositories, pantallas |
 | Fase 3 OCR | Pendiente | ocr_service.py + Receipt model + router POST /api/receipts/upload |

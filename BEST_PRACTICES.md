@@ -240,6 +240,31 @@ CATEGORY_TO_CORRESPONDENT = {
 ### Bug conocido — storage_path ignorado (posiblemente resuelto)
 Paperless ignoraba el campo `storage_path` en `post_document/`. Causa probable: encoding incorrecto al mezclar `data=` y `files=` en httpx. Fix aplicado en commit 311aa7d (2026-04-29) — pendiente verificación tras redeploy.
 
+### URLs de Paperless son internas — nunca devolverlas al frontend
+Las URLs de Paperless apuntan a `192.168.1.154:8004` (NAS, red local). El browser del cliente no puede acceder a esa red.
+
+**Regla:** nunca devolver la URL de Paperless directamente al frontend. Usar siempre el endpoint proxy server-side:
+
+```python
+# ✅ CORRECTO — endpoint que hace de proxy con credenciales del usuario
+@router.get("/{expense_id}/receipt-image")
+async def get_receipt_image(...):
+    paperless_url, token = await paperless_service.get_credentials(db, user.id)
+    image_url = f"{paperless_url.rstrip('/')}/api/documents/{doc_id}/download/"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(image_url, headers={"Authorization": f"Token {token}"}, follow_redirects=True)
+    return StreamingResponse(iter([resp.content]), media_type=content_type, headers={"Cache-Control": "private, max-age=3600"})
+
+# ❌ INCORRECTO — URL interna devuelta al browser
+return {"url": "http://192.168.1.154:8004/api/documents/42/download/"}
+```
+
+En el frontend, usar la URL del proxy como `src` del `<img>` directamente:
+```typescript
+// ✅ — src apunta al proxy del backend, nunca a Paperless
+setReceiptUrl(`/api/proxy/expenses/${expenseId}/receipt-image`)
+```
+
 ---
 
 ## 🔄 Proveedores Externos

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -78,20 +78,15 @@ export default function ExpenseDetailPage() {
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [receiptLoading, setReceiptLoading] = useState(false)
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
-  const handleOpenReceipt = useCallback(async () => {
-    if (!expense?.paperless_doc_id) return
-    setReceiptLoading(true)
-    try {
-      const res = await fetch(`/api/proxy/expenses/${expenseId}/receipt-url`)
-      if (!res.ok) throw new Error("receipt-url failed")
-      const { url } = await res.json() as { url: string }
-      window.open(url, "_blank", "noopener,noreferrer")
-    } catch (e) {
-      console.error("Failed to open receipt", e)
-    } finally {
-      setReceiptLoading(false)
+  useEffect(() => {
+    if (expense?.paperless_doc_id) {
+      fetch(`/api/proxy/expenses/${expenseId}/receipt-url`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { url: string } | null) => setReceiptUrl(data?.url ?? null))
+        .catch(() => setReceiptUrl(null))
     }
   }, [expense?.paperless_doc_id, expenseId])
 
@@ -352,36 +347,30 @@ export default function ExpenseDetailPage() {
         </div>
 
         {/* Row 6 — Comprobante */}
-        <div className="mt-6">
-          <p className={FIELD_LABEL}>Comprobante</p>
-          {expense.paperless_doc_id ? (
+        {receiptUrl && (
+          <div className="mt-6 pt-6 border-t border-outline-variant/10">
+            <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-3">
+              Comprobante
+            </p>
             <button
               type="button"
-              onClick={handleOpenReceipt}
-              disabled={receiptLoading}
-              className="mt-3 w-full flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-4 text-left transition-colors hover:bg-surface-container disabled:opacity-60"
+              onClick={() => setLightboxOpen(true)}
+              className="relative w-24 h-24 rounded-xl overflow-hidden border border-outline-variant/20 hover:border-primary transition-colors hover:shadow-md group"
             >
-              <span className="material-symbols-outlined text-2xl leading-none select-none text-primary">
-                {receiptLoading ? "hourglass_empty" : "receipt_long"}
-              </span>
-              <span className="text-sm font-medium text-on-surface flex-1">
-                {receiptLoading ? "Abriendo…" : `Comprobante #${expense.paperless_doc_id}`}
-              </span>
-              <span className="material-symbols-outlined text-base text-on-surface-variant/60 leading-none">
-                open_in_new
-              </span>
+              <img
+                src={receiptUrl}
+                alt="Comprobante"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={() => setReceiptUrl(null)}
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl">
+                  zoom_in
+                </span>
+              </div>
             </button>
-          ) : (
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest px-4 py-4">
-              <span className="material-symbols-outlined text-2xl leading-none select-none text-on-surface-variant/40">
-                receipt_long
-              </span>
-              <span className="text-sm text-on-surface-variant">
-                Sin comprobante adjunto
-              </span>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
       </form>
 
@@ -431,6 +420,39 @@ export default function ExpenseDetailPage() {
 
         </div>
       </footer>
+
+      {/* Lightbox */}
+      {lightboxOpen && receiptUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] w-full">
+            <img
+              src={receiptUrl}
+              alt="Comprobante"
+              className="w-full h-full object-contain rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+            >
+              <span className="material-symbols-outlined text-lg">close</span>
+            </button>
+            <a
+              href={receiptUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-3 right-3 flex items-center gap-2 bg-black/50 text-white text-xs px-3 py-2 rounded-full hover:bg-black/70 transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">open_in_new</span>
+              Ver en Paperless
+            </a>
+          </div>
+        </div>
+      )}
 
     </div>
   )

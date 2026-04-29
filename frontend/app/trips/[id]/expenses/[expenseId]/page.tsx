@@ -229,6 +229,22 @@ export default function ExpenseDetailPage() {
         className="max-w-lg mx-auto px-5 pt-20 pb-28"
       >
 
+        {/* OCR draft banner */}
+        {expense.is_draft && (
+          <div className="flex items-center gap-2 mb-4 px-4 py-3
+                          bg-tertiary-fixed/30 rounded-xl border border-tertiary/10">
+            <span className="material-symbols-outlined text-tertiary text-sm">auto_awesome</span>
+            <p className="text-sm text-tertiary font-medium">
+              Datos extraídos automáticamente. Revisa y confirma.
+            </p>
+            {expense.ocr_confidence !== null && expense.ocr_confidence < 0.6 && (
+              <span className="ml-auto text-xs text-tertiary/70 shrink-0">
+                Baja confianza — revisa los campos
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Row 1 — Importe + Moneda */}
         <div className="grid grid-cols-2 gap-6">
           <div>

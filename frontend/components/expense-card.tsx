@@ -38,6 +38,14 @@ export function ExpenseCard({ expense, currencyBase, onDoubleClick }: ExpenseCar
       </span>
 
       <div className="min-w-0 flex-1">
+        {expense.is_draft && (
+          <span className="inline-flex items-center gap-1 bg-tertiary-fixed text-tertiary
+                           px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                           tracking-wider mb-1">
+            <span className="material-symbols-outlined text-[10px]">pending</span>
+            Pendiente
+          </span>
+        )}
         <p className="text-sm font-medium text-on-surface truncate">
           {expense.description || expense.category}
         </p>

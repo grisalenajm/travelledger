@@ -177,6 +177,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 - [ ] [!] expense_service.delete() — cascade borrado en Paperless
 - [x] Web: botón "Ver factura" en expense detail page (Comprobante clickable)
+- [x] Web: thumbnail + lightbox de comprobante en expense detail (con fetch receipt-url)
+- [x] Fix 1: Paperless duplicado no bloquea — X-Paperless-Warning header + toast aviso
 - [ ] Android: botón "Ver factura" con Intent.ACTION_VIEW
 
 ---

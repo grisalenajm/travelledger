@@ -7,7 +7,7 @@
 
 ## 📅 Última actualización
 - **Fecha:** 2026-04-29
-- **Sesión:** Fix 307 proxy/backend + metadatos Paperless + fix httpx multipart
+- **Sesión:** Fix 1 Paperless duplicado (X-Paperless-Warning header + toast) + Fix 2 thumbnail/lightbox comprobante
 
 ---
 
@@ -41,6 +41,19 @@
 - **Proxy URL sin trailing slash:** `pathSegments.join("/")` sin slash final
 - **Multipart proxy:** body como `arrayBuffer`, Content-Type preservado con boundary
 
+### Fix: Paperless duplicado (2026-04-29, commits a565016 + 5a990c5)
+- `PaperlessDuplicateError` y `PaperlessUploadError` en paperless_service.py
+- Polling loop detecta "duplicate" en result_text y lanza `PaperlessDuplicateError`
+- router receipts.py captura `PaperlessDuplicateError` → `duplicate_warning=True` → header `X-Paperless-Warning: duplicate` en JSONResponse
+- `useReceiptUpload` hook lee el header y llama `toast.warning(...)` — gasto se crea igualmente
+- Toast system mínimo: `hooks/use-toast.ts` + `components/ui/toaster.tsx` + `<Toaster />` en Providers
+
+### Fix: Thumbnail + lightbox en expense detail (2026-04-29, commit 5a990c5)
+- `expense/[expenseId]/page.tsx` hace GET receipt-url al cargar si hay `paperless_doc_id`
+- Muestra thumbnail 96×96 clickable → lightbox fullscreen con botón cerrar y "Ver en Paperless"
+- `onError` en img oculta la sección si la URL no carga
+- Si no hay `paperless_doc_id`, la sección comprobante no existe (sin placeholder)
+
 ### Paperless — metadatos al subir imagen
 - Correspondent: resuelto por categoría via `name__iexact` → ✅ funciona
 - Document type: Invoice → ✅ funciona
@@ -61,6 +74,7 @@
 | `storage_path` ignorado por Paperless | ⏳ Posiblemente resuelto | Era consecuencia del encoding incorrecto en httpx. Fix aplicado (311aa7d) — verificar tras redeploy |
 | `/register` sin confirm_password | ❌ Pendiente | Campo `confirm_password` ausente en formulario web |
 | Refresh token en bucle | ❌ Pendiente | NextAuth llama a /api/auth/refresh varias veces seguidas — race condition en callback jwt |
+| Paperless duplicado devolvía 502 | ✅ Resuelto | Ahora devuelve 201 con header X-Paperless-Warning: duplicate y el gasto se crea igualmente |
 
 ---
 

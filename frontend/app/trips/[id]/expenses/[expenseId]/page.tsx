@@ -78,14 +78,11 @@ export default function ExpenseDetailPage() {
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
-  useEffect(() => {
-    if (expense?.paperless_doc_id) {
-      setReceiptUrl(`/api/proxy/expenses/${expenseId}/receipt-image`)
-    }
-  }, [expense?.paperless_doc_id, expenseId])
+  const receiptUrl = expense?.paperless_doc_id
+    ? `/api/proxy/expenses/${expenseId}/receipt-image`
+    : null
 
   const {
     register,
@@ -358,7 +355,7 @@ export default function ExpenseDetailPage() {
                 src={receiptUrl}
                 alt="Comprobante"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={() => setReceiptUrl(null)}
+                onError={(e) => console.error("Receipt image failed:", e)}
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                 <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-xl">

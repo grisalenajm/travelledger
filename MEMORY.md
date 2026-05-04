@@ -1,4 +1,4 @@
-# MEMORY.md — Estado del Proyecto Ledger
+# MEMORY.md — Estado del Proyecto
 
 > **Actualizar este archivo después de cada sesión de trabajo.**
 > Los agentes deben leerlo al inicio y actualizarlo al finalizar.
@@ -6,142 +6,202 @@
 ---
 
 ## 📅 Última actualización
-- **Fecha:** 2026-04-30
-- **Sesión:** Fix thumbnail (useState→derivada), fix confirm_password register, TAREA 2 ocr strip verificada en código
+- **Fecha:** 2026-05-04
+- **Agente:** Claude Sonnet 4.6
+- **Sesión:** Sesión de diseño Android completa — 8 preguntas resueltas, documentos generados
 
 ---
 
-## ✅ Completado y funcionando en producción
+## ✅ Completado
 
-### Infraestructura
-- LXC 192.168.1.125 — backend :8000, frontend :3000, bot :8080
-- postgres-ledger en NAS 192.168.1.154:5433, DB `ledger`
-- Paperless-ngx en NAS :8004
-- Repo GitHub: https://github.com/grisalenajm/travelledger, rama `main`
-- Deploy: `git push origin main` → en LXC: `git pull && docker compose up -d --build [servicio]`
-- SSH: clave `id_claude` configurada en LXC (en esta máquina de dev usar la clave disponible)
+- [x] Arquitectura multiplataforma definida (Android + Web + Bot + Backend)
+- [x] CLAUDE.md — modelos de datos completos, flujos A/B, export bundle, TripLeg, LoyaltyCard
+- [x] MEMORY.md — actualizado
+- [x] BEST_PRACTICES.md — creado
+- [x] DESIGN_SYSTEM.md — creado con tokens completos (stitch de referencia)
+- [x] TODO.md — reorganizado con fases 0–9 + fases Android A1-A8
+- [x] **ANDROID_ARCHITECTURE.md** — creado (2026-05-04): todas las decisiones de diseño Android
+- [x] **ANDROID_TODO.md** — creado (2026-05-04): tareas atómicas phases A1-A8
+- [x] **ANDROID_BEST_PRACTICES.md** — creado (2026-05-04): convenciones Kotlin/Compose
+- [x] docker-compose.yml, docker-compose.dev.yml, .env.example, nas-postgres-ledger.yml
+- [x] **FASE 0 skeleton** — backend, frontend, bot listos y desplegados
+- [x] **FASE 1 Backend Auth** — desplegado y smoke-tested en producción
+- [x] **FASE 2 Backend** — trips/expenses/legs/loyalty-cards/currency; 27/27 tests
+- [x] **FASE 2 Web** — desplegado 2026-04-25/26 (todas las pantallas)
+- [x] **Settings API** — 2026-04-27 (modelo, migration 0004, service, router, paperless_service per-user)
+- [x] **FASE 1 Web Auth** — desplegado y verificado
 
-### Fases 0, 1, 2 — completadas sesiones anteriores
-- docker-compose.yml, docker-compose.dev.yml, .env.example, nas-postgres-ledger.yml
-- Auth: User model, bcrypt, JWT 30min/7d, routers auth + users, NextAuth, /login, /register
-- CRUD: LoyaltyCard, Trip, TripLeg, Expense, ExchangeRate — 27/27 tests backend
-- Web: dashboard, /trips, /trips/new, /trips/[id], /trips/[id]/edit
-- Web: expense detail + edición, loyalty cards CRUD, settings (perfil + Paperless)
-- Web: export CSV, imagen portada viaje, navbar, breadcrumbs, barra totales, selector días
+---
 
-### Fase 3 Backend OCR — completo
-- app/models/expense.py — campos: is_draft, ocr_raw, ocr_confidence
-- app/schemas/expense.py — ExpenseRead expone is_draft, ocr_confidence, paperless_doc_id
-- alembic 0005 — aplicada correctamente en producción
-- app/services/ocr_service.py — Haiku 4.5 Vision con prompt caching ephemeral
-  - Strip markdown fences implementado en `_parse_response` (líneas 127-131)
-  - Pendiente: verificar en producción que ocr_raw no contiene backticks
-- app/services/paperless_service.py — PaperlessDuplicateError, PaperlessUploadError
-- app/routers/receipts.py — POST /api/receipts/upload funciona end-to-end:
-  - Valida MIME por magic bytes
-  - OCR con Haiku → crea Expense is_draft=True
-  - Sube a Paperless → guarda paperless_doc_id
-  - Header X-Paperless-Warning: duplicate si es duplicado
-  - db.commit() en línea 113 (fix crítico)
-- app/routers/expenses.py — GET /api/expenses/{id}/receipt-image:
-  - Proxy server-side de imagen de Paperless
-  - Lee credenciales de BD via settings_service
-  - Devuelve StreamingResponse con la imagen
+## 🎨 Sesión de diseño Android (2026-05-04)
 
-### Fase 3 Frontend Web — completo
-- components/upload-receipt-modal.tsx — drag&drop, file picker, multipart POST
-- hooks/use-receipt-upload.ts — POST /api/proxy/receipts/upload, lee X-Paperless-Warning
-- app/trips/[id]/page.tsx — botón "Escanear factura" + UploadReceiptModal
-- components/expense-card.tsx — badge "Pendiente" si is_draft=true
-- app/trips/[id]/expenses/[expenseId]/page.tsx — formulario edición completo:
-  - Banner OCR draft con badge baja confianza
-  - **Thumbnail + lightbox:** receiptUrl derivada de expense.paperless_doc_id (commit 66368e5)
-  - onError con console.error (no oculta la imagen)
+### Decisiones tomadas — resumen ejecutivo
 
-### Fix: confirm_password en /register (commit ea1db99, 2026-04-30)
-- Schema Zod con refine: `data.password === data.confirm_password`
-- Campo confirm_password en JSX con validación
-- Destructurado antes del POST al backend (`{ confirm_password: _ignore, ...data }`)
+#### Producto y distribución
+| Decisión | Resultado |
+|---|---|
+| Modelo de distribución | **Camino 1** — App privada, APK firmado, no Google Play en MVP |
+| Apertura futura | Arquitectura preparada para multi-tenant (cada usuario su backend) sin cambios de código |
+| Seguridad de registro | **Invite code obligatorio** en `POST /api/auth/register` |
+| OCR | **Vía backend** (Anthropic key del servidor). BYOK en future evolution |
+| Export CSV/ZIP | **Solo online** vía backend. No se genera en cliente Android |
 
-### Fix: Thumbnail bug — useState/useEffect → variable derivada (commit 66368e5, 2026-04-30)
-- **Causa:** el useEffect corría después del render, por lo que el primer render veía receiptUrl=null
-- **Fix:** `const receiptUrl = expense?.paperless_doc_id ? \`/.../receipt-image\` : null`
-- **Patrón aprendido:** para valores derivados síncronos de props/state, NUNCA usar useState+useEffect
+#### UX — Pantallas y flujos
+| Pantalla | Decisión |
+|---|---|
+| Lista de viajes | **Variante C** — viaje activo como card hero + scroll de otros viajes |
+| Vista del trip | **Por días**, HorizontalPager + chip strip + progress bar global |
+| Quick Capture | **Pantalla completa** (no bottom sheet), importe XXL, auto-foco, categoría chips |
+| OCR — punto de entrada | Botón "📸 Escanear" en vista por días + botón en Quick Capture |
+| OCR — post-captura | **Preview foto + confirmación** antes de procesar ("¿Procesar esta foto?") |
+| OCR — procesado | **Pantalla dedicada estilo Concur**: thumbnail + scanning line + checks progresivos |
+| OCR — resultado | **Quick Capture pre-rellenada** (sin pantalla intermedia de Review) |
+| OCR — fecha detectada | Si dentro del trip → usar esa fecha; si fuera → fallback al día del contexto |
+| OCR — al guardar con fecha ≠ día visible | **Vista salta al día del gasto** al guardar |
+| OCR — moneda distinta al trip | **Respetar OCR** (no advertencia, el esquema soporta dos monedas) |
+| OCR — error/sin red | Pantalla error con [Continuar manualmente] y [Reintentar]. Foto encolada |
+| Captura galería | **Sí** — photo picker (imágenes + PDFs) |
+| Linterna | **Sí** — toggle en CameraScreen |
 
-### Fix: URLs de Paperless son internas (commits 614ae64 + bc7321d, 2026-04-30)
-- Las URLs 192.168.1.154:8004 no son accesibles desde el browser
-- Backend: GET /api/expenses/{id}/receipt-image hace proxy server-side con credenciales del usuario
-- Frontend: img.src apunta a /api/proxy/expenses/{id}/receipt-image
+#### Técnicas
+| Decisión | Resultado |
+|---|---|
+| UUIDs | **Generados en cliente Android** antes de persistir en Room |
+| Offline — crear viaje | **Sí** — offline-first con PendingOperation |
+| Offline — crear gasto | **Sí** — write-through con PendingOperation |
+| Offline — export CSV/ZIP | **No** — solo online via backend |
+| PendingOperation retención | 7 días en estado `done`, luego se borran |
+| Reintentos sync | Máx 5 intentos, backoff exponencial (1min → 5min → 15min → 1h → 6h) |
+| Trigger SyncWorker | Periódica 30min + on-demand al encolar + pull-to-refresh manual |
+| Orden de sync | Por dependencias (create_trip antes que create_expense de ese trip) |
+| Conflictos | Last write wins, sin diálogos |
+| Optimistic UI | **Siempre** — Room primero, red después |
+| Feedback sync al usuario | Indicador ☁️N en TopBar + banner si hay fallos + pantalla detalle en Settings |
 
-### Fix: Paperless duplicado (commits a565016 + 5a990c5, 2026-04-29)
-- Devuelve 201 + header X-Paperless-Warning: duplicate (no 502)
-- Toast warning en frontend vía useReceiptUpload hook
+#### Auth y onboarding
+| Decisión | Resultado |
+|---|---|
+| Primer arranque | **URL configurable en runtime** (no embebida). URL + invite code en ConfigScreen |
+| Endpoint validate-invite | Vive en el backend del usuario (no es un servicio central) |
+| Recordar sesión | **Opt-out por defecto** — sesión se mantiene hasta logout explícito |
+| Olvidé contraseña | **Future evolution** — no en MVP |
+| Comportamiento 401 | Refresh → si falla: logout suave, mantener Room, email pre-rellenado |
+| Logout | Con confirmación. Si hay PendingOps → preguntar si sincronizar antes |
+| Auto-login | **Sí** vía SplashScreen |
+| Biometría | **Future evolution** |
 
-### Fix: httpx multipart (commit 311aa7d, 2026-04-29)
-- Todo en `files=` con tuplas, nunca mezclar `data=` + `files=`
+#### Internacionalización
+| Decisión | Resultado |
+|---|---|
+| Idiomas | **Español + inglés** desde MVP (`values/` EN, `values-es/` ES) |
+| Formato fechas/números | Respetar **locale del dispositivo** |
+| Excepción CSV | Formato backend (punto decimal, ISO 8601) |
+| Símbolos moneda | Nativo cuando único; ISO cuando ambiguo (USD$, CAD$) |
+
+#### Permisos y sistema
+| Decisión | Resultado |
+|---|---|
+| FCM Push Notifications | **Future evolution** (Phase A8) |
+| Estrategia permisos | **Contextual** — pedir cuando el usuario entiende por qué |
+| Cámara | Pedir al pulsar "📸 Escanear" por primera vez |
+| Galería | Pedir al pulsar "🖼️ Galería" por primera vez |
+| Detección de red | NetworkMonitor con Flow + ConnectivityManager |
+| FileProvider | Configurado para export share sheet |
+
+---
+
+## 🔄 En Progreso
+
+- **FASE Android A1** — Foundation (pendiente implementación en Claude Code)
+- **FASE 3 Backend** — OCR (ocr_service.py + Receipt model + router upload)
+- **FASE Android A2** — Auth Flow (pendiente implementación)
+
+---
+
+## ⏳ Pendiente — resumen por fase
+
+- **FASE 0:** ✅ Completado (pendiente menor: README NAS, Android skeleton, seed SQL)
+- **FASE 1 Backend:** ✅ Completado — **PENDIENTE: cambios para Android** (invite_code, UUID opcional, idempotencia)
+- **FASE 1 Web:** ✅ Completado — **PENDIENTE: invite_code en /register, fix confirm_password**
+- **FASE 1 Android:** Phases A1 + A2 — no iniciadas
+- **FASE 2:** ✅ Completado (backend + web)
+- **FASE 2 Android:** Phases A3 + A4 — no iniciadas
+- **FASE 3:** OCR backend + web scan screens + Android Phase A5
+- **FASE 4:** Paperless cascade delete + Android "Ver factura"
+- **FASE 5:** Sync backend (push/pull endpoints) + Android SyncWorker completo
+- **FASE 6:** Export bundle + Android Phase A7
+- **FASE 7:** FCM push + polish + Android Phase A8
+- **FASE 8:** Bot Telegram completo
+- **FASE 9 (backlog):** OCR de vuelos para TripLeg, BYOK OCR Android, biometría
+
+---
+
+## 🔧 Fixes Aplicados
+
+### Fix 1 — Sync de código al LXC antes de build (2026-04-25)
+Antes de cualquier build, sincronizar via `tar + scp` o `git pull`. Los errores de ownership Windows→Linux son inofensivos.
+
+### Fix 2 — Proxy route faltante (2026-04-25)
+`app/api/proxy/[...path]/route.ts` era necesario. Sin él: 307 redirect → TanStack Query recibía errores silenciosos.
+
+### Fix 3 — lib/api.ts con URL relativa (2026-04-25)
+`API_BASE = ""` (vacío). Las llamadas son relativas (`/api/proxy/trips`), van al servidor Next.js, el proxy añade el token.
+
+### Fix 4 — Proveedor de tipos de cambio (2026-04-26)
+`exchangerate.host` dejó de funcionar sin key. Migrado a `open.er-api.com` (plan gratuito, solo tipos actuales).
 
 ---
 
 ## 🐛 Bugs Conocidos
 
-| Bug | Estado | Detalle |
-|-----|--------|---------|
-| OCR strip markdown en producción | ⏳ Pendiente verificar | Código correcto en ocr_service.py L127-131 — verificar con `ocr_raw` en BD tras subir factura |
-| `storage_path` ignorado por Paperless | ⏳ Posiblemente resuelto | Fix httpx multipart (311aa7d) — verificar tras redeploy |
-| Refresh token en bucle | ❌ Pendiente | NextAuth llama a /api/auth/refresh varias veces — race condition en callback jwt |
-| Thumbnail visible en producción | ⏳ Pendiente redeploy | Fix commiteado (66368e5) — necesita `docker compose up -d --build frontend` |
+- `/register` (web) no solicita confirmación de contraseña — campo `confirm_password` ausente `[Web]`
+- `/register` (web + Android) no envía `invite_code` — pendiente hasta implementar en backend `[Web]` `[And]` `[BE]`
 
 ---
 
-## ⏳ Pendiente por fase
-
-| Fase | Estado | Detalle |
-|------|--------|---------|
-| Redeploy frontend+backend | Inmediato | `git pull origin main && docker compose up -d --build frontend backend` en LXC → abrir gasto con paperless_doc_id → verificar thumbnail |
-| Verificar OCR strip | Inmediato tras redeploy | Ver sección bugs — subir factura y comprobar ocr_raw en BD |
-| Fase 1 Android | Pendiente | LoginScreen, AuthRepository, AuthInterceptor, TokenStore, SplashScreen |
-| Fase 2 Android | Pendiente | Room entities, repositories, pantallas |
-| Fase 4 Paperless | Pendiente | cascade delete al borrar gasto |
-| Fase 5 Sync Android | Pendiente | WorkManager + endpoints push/pull |
-| Fase 6 Export ZIP | Pendiente | CSV + ZIP imágenes de Paperless |
-| Fase 7 Polish | Pendiente | FCM, dark mode, i18n |
-| Fase 8 Bot Telegram | Pendiente | llm_service, handlers completos |
-
----
-
-## 🔑 Decisiones de Arquitectura
+## 🔑 Decisiones de Arquitectura y Producto
 
 | Decisión | Detalle | Razón |
 |----------|---------|-------|
-| BD dedicada en NAS | postgres-ledger puerto 5433 | Aislamiento |
-| Sin Postgres en LXC | Usar del NAS | 768 MB RAM |
-| Paperless-ngx vía API | Único almacén imágenes | Sin MinIO |
-| Haiku 4.5 OCR | Sin Tesseract | 0 MB RAM en LXC, calidad superior |
-| Dos monedas por gasto | amount + amount_base | Sin moneda intermedia |
-| primary_currency OBLIGATORIO | Default al crear gastos | UX fluida |
-| billable DEFAULT True | Corporativo por defecto | Caso uso principal |
-| TripLeg datetimes naive | Sin UTC | Hora del billete |
-| Flujo A vs B | Endpoints distintos | Manual nunca dispara OCR |
-| Proxy /api/proxy/* | Server-side Next.js | Evita CORS y vars build-time |
-| redirect_slashes=False | Todos los routers FastAPI | Evita 307 en POSTs |
-| open.er-api.com | Sin API key, gratuito | exchangerate.host requiere key |
-| Settings en BD | Paperless URL/token configurables | Sin .env para datos de usuario |
-| Rama main | Nunca master | Estándar GitHub |
-| httpx multipart files-only | Todo en `files=` con tuplas | data= + files= causa encoding incorrecto en Paperless |
-| receiptUrl como variable derivada | No useState+useEffect | El efecto corre tras el render, causaba un render extra con null |
+| BD dedicada en NAS | `postgres-ledger` contenedor propio, puerto 5433 | Aislamiento y backup granular |
+| Sin Postgres en LXC | Usar el del NAS | El LXC solo tiene 768 MB RAM |
+| Paperless-ngx vía API | Único almacén de imágenes | Reutilizar infra existente |
+| Haiku 4.5 para OCR | Sin Tesseract | 0 MB RAM en LXC, calidad superior |
+| Haiku 4.5 para bot | Sin Ollama | Sin GPU |
+| Dos monedas por gasto | `amount` + `amount_base` | Sin moneda intermedia |
+| `billable` DEFAULT True | Todo gasto es corporativo por defecto | Caso de uso principal |
+| Flujo A vs Flujo B | Dos endpoints distintos, intención explícita | OCR nunca dispara en Flujo A |
+| Export ZIP plano | Naming `{cat}_{date}_{slug}.ext` | Compatible con Concur/SAP |
+| **App Android privada** | APK firmado, invite_code, no Google Play MVP | Control total de acceso |
+| **UUIDs en cliente Android** | El cliente genera antes de persistir | Offline-first, idempotencia |
+| **URL backend configurable** | Sin hardcode, ConfigScreen en primer arranque | Portabilidad, apertura futura |
+| **Export Android solo online** | No se genera CSV/ZIP en cliente | Simplicidad, coherencia con backend |
+| **OCR Android vía backend** | No BYOK en MVP | Seguridad, coherencia |
 
 ---
 
 ## 📝 Notas de Contexto
 
-- **NAS:** 192.168.1.154 — postgres-ledger (5433), Paperless-ngx (8004), nginx-proxy-manager
-- **LXC:** 192.168.1.125 — proyecto en /opt/ledger
-- **Usuario principal BD:** 6f511736-ca98-4ccc-922a-89ff0d771571 — tiene credenciales Paperless
-- **Usuario secundario BD:** 8927ff6e-1d40-4c46-9e91-284dbc4f554b — sin credenciales
-- **Gasto de prueba:** expense_id: eff80490-8aa2-4c0d-8cb9-c70e3c899c93, paperless_doc_id: 684
-- **Paperless correspondents:** Comida(2), Transporte(1), Alojamiento(3), otros(11)
-- **Paperless document_types:** Invoice(1)
-- **Paperless storage_paths:** Viajes(1)
-- **Paperless tags:** travel(5)
-- **Proxy:** siempre /api/proxy/*, nunca :8000 desde navegador
-- **Decimales API:** FastAPI Decimal → string en JSON → usar Number() antes de toFixed()
+- **NAS UGREEN:** corre Paperless-ngx, postgres-vectorchord, nginx-proxy-manager, postgres-ledger.
+- **LXC Proxmox:** IP 192.168.1.125, Ubuntu 24.04, Docker. Despliega backend+frontend+bot.
+- **PostgreSQL Ledger:** 192.168.1.154:5433, DB `ledger`, usuario `ledger_user`.
+- **Moneda base del usuario:** configurable en Settings. Por defecto EUR. Caso principal: CHF.
+- **App Android:** Trabee Pocket con OCR corporativo. Captura en el terreno. Offline-first.
+- **Distribución Android:** APK firmado. Distribución privada (Firebase App Distribution o manual).
+- **Invite code:** variable de entorno `REGISTRATION_INVITE_CODE` en `.env` del backend. No embebido en APK.
+
+---
+
+## 📚 Documentos del Proyecto
+
+| Documento | Contenido |
+|---|---|
+| `CLAUDE.md` | Arquitectura general, modelos, contrato API |
+| `MEMORY.md` | Este archivo — estado actual del proyecto |
+| `TODO.md` | Tareas globales web/backend/bot |
+| `BEST_PRACTICES.md` | Convenciones backend/web |
+| `DESIGN_SYSTEM.md` | Tokens visuales, componentes, pantallas |
+| `DESIGN_SYSTEM_addendum.md` | Pantallas adicionales al stitch original |
+| `ANDROID_ARCHITECTURE.md` | Decisiones de diseño y arquitectura Android |
+| `ANDROID_TODO.md` | Tareas atómicas phases A1-A8 |
+| `ANDROID_BEST_PRACTICES.md` | Convenciones Kotlin/Compose |

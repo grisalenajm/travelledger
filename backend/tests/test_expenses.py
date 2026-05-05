@@ -26,7 +26,7 @@ async def test_create_expense_billable_defaults_to_true(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     res = await client.post(
         "/api/expenses",
-        json={
+        data={
             "trip_id": trip_id,
             "amount": "30.00",
             "currency": "EUR",
@@ -56,7 +56,7 @@ async def test_create_expense_converts_currency(client, auth_headers_chf):
     ):
         res = await client.post(
             "/api/expenses",
-            json={
+            data={
                 "trip_id": trip_id,
                 "amount": "100.00",
                 "currency": "EUR",
@@ -82,7 +82,7 @@ async def test_create_expense_same_currency_no_external_call(client, auth_header
     ) as mock_fetch:
         res = await client.post(
             "/api/expenses",
-            json={
+            data={
                 "trip_id": trip_id,
                 "amount": "50.00",
                 "currency": "EUR",  # == currency_base del usuario (EUR)
@@ -103,7 +103,7 @@ async def test_update_expense_recalculates_amount_base(client, auth_headers):
 
     create_res = await client.post(
         "/api/expenses",
-        json={
+        data={
             "trip_id": trip_id,
             "amount": "100.00",
             "currency": "EUR",
@@ -137,7 +137,7 @@ async def test_expenses_filtered_by_trip_id(client, auth_headers):
     for trip_id in [trip_a, trip_b]:
         await client.post(
             "/api/expenses",
-            json={
+            data={
                 "trip_id": trip_id,
                 "amount": "10.00",
                 "currency": "EUR",
@@ -147,7 +147,7 @@ async def test_expenses_filtered_by_trip_id(client, auth_headers):
             headers=auth_headers,
         )
 
-    res = await client.get(f"/api/expenses/?trip_id={trip_a}", headers=auth_headers)
+    res = await client.get(f"/api/expenses?trip_id={trip_a}", headers=auth_headers)
     assert res.status_code == 200
     expenses = res.json()
     assert len(expenses) == 1
@@ -160,7 +160,7 @@ async def test_create_expense_with_client_uuid(client, auth_headers):
     client_uuid = str(uuid.uuid4())
     res = await client.post(
         "/api/expenses",
-        json={
+        data={
             "id": client_uuid,
             "trip_id": trip_id,
             "amount": "40.00",
@@ -179,7 +179,7 @@ async def test_create_expense_without_uuid(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     res = await client.post(
         "/api/expenses",
-        json={
+        data={
             "trip_id": trip_id,
             "amount": "40.00",
             "currency": "EUR",
@@ -205,14 +205,14 @@ async def test_create_expense_idempotent(client, auth_headers):
         "date": "2026-06-07",
     }
 
-    r1 = await client.post("/api/expenses", json=payload, headers=auth_headers)
+    r1 = await client.post("/api/expenses", data=payload, headers=auth_headers)
     assert r1.status_code == 201
 
-    r2 = await client.post("/api/expenses", json=payload, headers=auth_headers)
+    r2 = await client.post("/api/expenses", data=payload, headers=auth_headers)
     assert r2.status_code in (200, 201)
     assert r2.json()["id"] == client_uuid
 
     # Solo un expense con ese UUID en la BD
-    all_expenses = await client.get(f"/api/expenses/?trip_id={trip_id}", headers=auth_headers)
+    all_expenses = await client.get(f"/api/expenses?trip_id={trip_id}", headers=auth_headers)
     matching = [e for e in all_expenses.json() if e["id"] == client_uuid]
     assert len(matching) == 1

@@ -42,12 +42,13 @@ async def create_expense(
     payment_method: str | None = Form(None),
     billable: bool = Form(True),
     loyalty_card_id: UUID | None = Form(None),
+    id: UUID | None = Form(None),
     image: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     data = ExpenseCreate(
-        trip_id=trip_id, amount=amount, currency=currency,
+        id=id, trip_id=trip_id, amount=amount, currency=currency,
         category=category, date=date, description=description,
         payment_method=payment_method, billable=billable,
         loyalty_card_id=loyalty_card_id,

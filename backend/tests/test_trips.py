@@ -71,8 +71,8 @@ async def test_trip_summary_percentage_correct(client, auth_headers):
 
     # Gasto de 50 EUR (50% del presupuesto)
     await client.post(
-        "/api/expenses/",
-        json={
+        "/api/expenses",
+        data={
             "trip_id": trip_id,
             "amount": "50.00",
             "currency": "EUR",
@@ -109,8 +109,8 @@ async def test_delete_trip_cascades_expenses(client, auth_headers):
     trip_id = trip_res.json()["id"]
 
     await client.post(
-        "/api/expenses/",
-        json={
+        "/api/expenses",
+        data={
             "trip_id": trip_id,
             "amount": "25.00",
             "currency": "EUR",
@@ -126,7 +126,7 @@ async def test_delete_trip_cascades_expenses(client, auth_headers):
 
     # Los gastos del trip ya no existen
     expenses = await client.get(
-        f"/api/expenses/?trip_id={trip_id}", headers=auth_headers
+        f"/api/expenses?trip_id={trip_id}", headers=auth_headers
     )
     assert expenses.json() == []
 

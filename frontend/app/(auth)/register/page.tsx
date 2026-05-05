@@ -39,7 +39,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, invite_code: process.env.NEXT_PUBLIC_INVITE_CODE ?? "" }),
       })
 
       if (res.status === 409) {

@@ -60,6 +60,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXT_PUBLIC_INVITE_CODE: ${NEXT_PUBLIC_INVITE_CODE}
       # Internal URL para SSR (dentro de la red Docker)
       API_INTERNAL_URL: http://backend:8000
     networks:

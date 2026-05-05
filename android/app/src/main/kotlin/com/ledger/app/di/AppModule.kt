@@ -101,4 +101,14 @@ object AppModule {
     @Singleton
     fun provideTripApi(@Named("authenticated") retrofit: Retrofit): com.ledger.app.data.remote.api.TripApi =
         retrofit.create(com.ledger.app.data.remote.api.TripApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideExpenseApi(@Named("authenticated") retrofit: Retrofit): com.ledger.app.data.remote.api.ExpenseApi =
+        retrofit.create(com.ledger.app.data.remote.api.ExpenseApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCurrencyApi(@Named("authenticated") retrofit: Retrofit): com.ledger.app.data.remote.api.CurrencyApi =
+        retrofit.create(com.ledger.app.data.remote.api.CurrencyApi::class.java)
 }

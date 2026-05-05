@@ -7,4 +7,10 @@ sealed class Screen(val route: String) {
     object Register : Screen("register")
     object Trips : Screen("trips")
     object CreateTrip : Screen("trips/create")
+    object TripDetail : Screen("trips/{tripId}") {
+        fun createRoute(tripId: String) = "trips/$tripId"
+    }
+    object QuickCapture : Screen("trips/{tripId}/capture/{day}") {
+        fun createRoute(tripId: String, day: String) = "trips/$tripId/capture/$day"
+    }
 }

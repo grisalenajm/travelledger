@@ -2,6 +2,7 @@ package com.ledger.app.di
 
 import android.content.Context
 import com.ledger.app.data.local.room.AppDatabase
+import com.ledger.app.data.local.room.dao.ExpenseDao
 import com.ledger.app.data.local.room.dao.PendingOperationDao
 import com.ledger.app.data.local.room.dao.TripDao
 import dagger.Module
@@ -23,6 +24,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideTripDao(db: AppDatabase): TripDao = db.tripDao()
+
+    @Provides
+    @Singleton
+    fun provideExpenseDao(db: AppDatabase): ExpenseDao = db.expenseDao()
 
     @Provides
     @Singleton

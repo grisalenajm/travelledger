@@ -1,14 +1,22 @@
 package com.ledger.app.presentation.navigation
 
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.ledger.app.presentation.screen.auth.login.LoginScreen
 import com.ledger.app.presentation.screen.auth.register.RegisterScreen
 import com.ledger.app.presentation.screen.config.ConfigScreen
+import com.ledger.app.presentation.screen.expense.capture.QuickCaptureScreen
 import com.ledger.app.presentation.screen.splash.SplashScreen
 import com.ledger.app.presentation.screen.trips.create.CreateTripScreen
+import com.ledger.app.presentation.screen.trips.detail.TripDetailScreen
 import com.ledger.app.presentation.screen.trips.list.TripsScreen
 
 @Composable
@@ -64,7 +72,9 @@ fun AppNavGraph(
         composable(Screen.Trips.route) {
             TripsScreen(
                 onNavigateToCreateTrip = { navController.navigate(Screen.CreateTrip.route) },
-                onNavigateToTripDetail = { /* TripDetailDestination — implemented in A6 */ },
+                onNavigateToTripDetail = { tripId ->
+                    navController.navigate(Screen.TripDetail.createRoute(tripId))
+                },
             )
         }
         composable(Screen.CreateTrip.route) {
@@ -75,6 +85,33 @@ fun AppNavGraph(
                     }
                 },
                 onNavigateUp = { navController.navigateUp() },
+            )
+        }
+        composable(
+            route = Screen.TripDetail.route,
+            arguments = listOf(navArgument("tripId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally { it } },
+            exitTransition = { slideOutHorizontally { it } },
+        ) {
+            TripDetailScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToQuickCapture = { tripId, day ->
+                    navController.navigate(Screen.QuickCapture.createRoute(tripId, day))
+                },
+                onNavigateToSummary = { /* SummaryDestination — A7 */ },
+            )
+        }
+        composable(
+            route = Screen.QuickCapture.route,
+            arguments = listOf(
+                navArgument("tripId") { type = NavType.StringType },
+                navArgument("day") { type = NavType.StringType },
+            ),
+            enterTransition = { slideInVertically { it } },
+            exitTransition = { slideOutVertically { it } },
+        ) {
+            QuickCaptureScreen(
+                onNavigateUp = { navController.popBackStack() },
             )
         }
     }

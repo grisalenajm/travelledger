@@ -2,9 +2,11 @@ package com.ledger.app.di
 
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.ledger.app.core.AuthEventBus
+import com.ledger.app.data.camera.CameraManager
 import com.ledger.app.data.local.datastore.ConfigStore
 import com.ledger.app.data.local.datastore.TokenStore
 import com.ledger.app.data.remote.api.AuthApi
+import com.ledger.app.data.remote.api.ReceiptApi
 import com.ledger.app.data.remote.interceptor.AuthInterceptor
 import dagger.Module
 import dagger.Provides
@@ -111,4 +113,9 @@ object AppModule {
     @Singleton
     fun provideCurrencyApi(@Named("authenticated") retrofit: Retrofit): com.ledger.app.data.remote.api.CurrencyApi =
         retrofit.create(com.ledger.app.data.remote.api.CurrencyApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideReceiptApi(@Named("authenticated") retrofit: Retrofit): ReceiptApi =
+        retrofit.create(ReceiptApi::class.java)
 }

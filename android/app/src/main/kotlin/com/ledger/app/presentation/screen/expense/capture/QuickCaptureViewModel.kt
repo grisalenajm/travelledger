@@ -7,6 +7,7 @@ import com.ledger.app.data.repository.CurrencyRepository
 import com.ledger.app.data.repository.TripRepository
 import com.ledger.app.domain.model.ExpenseCategory
 import com.ledger.app.domain.model.ExpenseForm
+import com.ledger.app.domain.model.OcrResultParcel
 import com.ledger.app.domain.usecase.expense.CreateExpenseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -46,8 +47,9 @@ class QuickCaptureViewModel @Inject constructor(
     private val createExpenseUseCase: CreateExpenseUseCase,
 ) : ViewModel() {
 
-    private val tripId: String = checkNotNull(savedStateHandle["tripId"])
+    val tripId: String = checkNotNull(savedStateHandle["tripId"])
     private val dayArg: String? = savedStateHandle["day"]
+    private val ocrResultJson: String? = savedStateHandle["ocrResult"]
 
     private val _uiState = MutableStateFlow(QuickCaptureUiState())
     val uiState: StateFlow<QuickCaptureUiState> = _uiState.asStateFlow()
@@ -57,6 +59,27 @@ class QuickCaptureViewModel @Inject constructor(
     init {
         loadTrip()
         observeAmountAndCurrencyChanges()
+        ocrResultJson?.let { json ->
+            runCatching {
+                kotlinx.serialization.json.Json.decodeFromString<OcrResultParcel>(json)
+            }.getOrNull()?.let { initFromOcr(it) }
+        }
+    }
+
+    fun initFromOcr(result: OcrResultParcel) {
+        _uiState.update { state ->
+            state.copy(
+                amount = result.amount?.toString() ?: state.amount,
+                currency = result.currency ?: state.currency,
+                category = result.category?.let {
+                    runCatching { ExpenseCategory.valueOf(it) }.getOrNull()
+                } ?: state.category,
+                description = result.description ?: state.description,
+                date = result.date?.let {
+                    runCatching { LocalDate.parse(it) }.getOrNull()
+                } ?: state.date,
+            )
+        }
     }
 
     private fun loadTrip() {

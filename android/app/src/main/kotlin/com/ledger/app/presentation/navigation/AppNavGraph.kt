@@ -1,5 +1,7 @@
 package com.ledger.app.presentation.navigation
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -13,7 +15,9 @@ import androidx.navigation.navArgument
 import com.ledger.app.presentation.screen.auth.login.LoginScreen
 import com.ledger.app.presentation.screen.auth.register.RegisterScreen
 import com.ledger.app.presentation.screen.config.ConfigScreen
+import com.ledger.app.presentation.screen.expense.camera.CameraScreen
 import com.ledger.app.presentation.screen.expense.capture.QuickCaptureScreen
+import com.ledger.app.presentation.screen.expense.processing.OcrProcessingScreen
 import com.ledger.app.presentation.screen.splash.SplashScreen
 import com.ledger.app.presentation.screen.trips.create.CreateTripScreen
 import com.ledger.app.presentation.screen.trips.detail.TripDetailScreen
@@ -98,6 +102,9 @@ fun AppNavGraph(
                 onNavigateToQuickCapture = { tripId, day ->
                     navController.navigate(Screen.QuickCapture.createRoute(tripId, day))
                 },
+                onNavigateToCamera = { tripId ->
+                    navController.navigate(Screen.Camera.createRoute(tripId))
+                },
                 onNavigateToSummary = { /* SummaryDestination — A7 */ },
             )
         }
@@ -106,12 +113,67 @@ fun AppNavGraph(
             arguments = listOf(
                 navArgument("tripId") { type = NavType.StringType },
                 navArgument("day") { type = NavType.StringType },
+                navArgument("ocrResult") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
             ),
             enterTransition = { slideInVertically { it } },
             exitTransition = { slideOutVertically { it } },
         ) {
             QuickCaptureScreen(
                 onNavigateUp = { navController.popBackStack() },
+                onNavigateToCamera = { tripId ->
+                    navController.navigate(Screen.Camera.createRoute(tripId))
+                },
+            )
+        }
+        composable(
+            route = Screen.Camera.route,
+            arguments = listOf(navArgument("tripId") { type = NavType.StringType }),
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() },
+        ) { backStackEntry ->
+            val tripId = backStackEntry.arguments?.getString("tripId") ?: return@composable
+            CameraScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToOcrProcessing = { imagePath ->
+                    navController.navigate(Screen.OcrProcessing.createRoute(tripId, imagePath))
+                },
+                onNavigateToQuickCaptureManual = {
+                    val day = java.time.LocalDate.now().toString()
+                    navController.navigate(Screen.QuickCapture.createRoute(tripId, day)) {
+                        popUpTo(Screen.Camera.createRoute(tripId)) { inclusive = true }
+                    }
+                },
+            )
+        }
+        composable(
+            route = Screen.OcrProcessing.route,
+            arguments = listOf(
+                navArgument("tripId") { type = NavType.StringType },
+                navArgument("imagePath") { type = NavType.StringType },
+            ),
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() },
+        ) {
+            OcrProcessingScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToQuickCapture = { tripId, ocrResultJson ->
+                    val day = java.time.LocalDate.now().toString()
+                    navController.navigate(
+                        Screen.QuickCapture.createRoute(tripId, day, ocrResultJson),
+                    ) {
+                        popUpTo(Screen.TripDetail.route)
+                    }
+                },
+                onNavigateToQuickCaptureManual = { tripId ->
+                    val day = java.time.LocalDate.now().toString()
+                    navController.navigate(Screen.QuickCapture.createRoute(tripId, day)) {
+                        popUpTo(Screen.TripDetail.route)
+                    }
+                },
             )
         }
     }

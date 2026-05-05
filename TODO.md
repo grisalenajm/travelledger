@@ -161,10 +161,10 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Router `/api/settings` — GET, PUT, POST /verify-paperless
 - [x] `paperless_service.py` — credenciales per-user desde BD
 
-### Backend
-- [ ] [!] Modelo Receipt + migration
-- [ ] [!] services/ocr_service.py — Haiku 4.5 Vision + prompt caching + Paperless upload
-- [ ] [!] Router POST /api/receipts/upload — Flujo B
+### Backend ✅
+- [x] Sin modelo Receipt — OCR escribe directamente en Expense (is_draft=True) per CLAUDE.md
+- [x] services/ocr_service.py — Haiku 4.5 Vision + prompt caching + Paperless upload
+- [x] Router POST /api/receipts/upload — Flujo B (devuelve ExpenseRead)
 - [x] Router POST /api/expenses con imagen — Flujo A (sin OCR, solo Paperless)
 - [ ] Tests con fixtures (mockear Anthropic API y Paperless)
 
@@ -176,7 +176,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 ### Android `[And]`
 > Ver `ANDROID_TODO.md` Phase A5 para desglose completo.
-- [ ] Phase A5 — Camera + OCR (CameraScreen, CameraX, OcrProcessingScreen)
+- [x] Phase A5 — Camera + OCR (CameraScreen, CameraX, OcrProcessingScreen) *(2026-05-06)*
 
 ---
 
@@ -247,7 +247,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 | A2 | Auth Flow | [ ] Pendiente |
 | A3 | Trip Management | [x] Completado 2026-05-05 |
 | A4 | Quick Capture | [x] Completado 2026-05-05 |
-| A5 | Camera + OCR | [ ] Pendiente |
+| A5 | Camera + OCR | [x] Completado 2026-05-06 |
 | A6 | Vista por Días + Detalle | [ ] Pendiente |
 | A7 | Summary + Export | [ ] Pendiente |
 | A8 | Polish + Future Evolution | [ ] Pendiente |

@@ -64,6 +64,7 @@ private val SUPPORTED_CURRENCIES = listOf("EUR", "USD", "GBP", "JPY", "CHF", "AR
 @Composable
 fun QuickCaptureScreen(
     onNavigateUp: () -> Unit,
+    onNavigateToCamera: (tripId: String) -> Unit = {},
     viewModel: QuickCaptureViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,7 +106,7 @@ fun QuickCaptureScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = { /* CameraDestination — A5 */ }) {
+                    IconButton(onClick = { onNavigateToCamera(viewModel.tripId) }) {
                         Icon(Icons.Default.PhotoCamera, contentDescription = "Escanear")
                     }
                     Button(

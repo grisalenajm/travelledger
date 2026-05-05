@@ -1,5 +1,7 @@
 package com.ledger.app.presentation.navigation
 
+import android.net.Uri
+
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
     object Config : Screen("config")
@@ -10,7 +12,21 @@ sealed class Screen(val route: String) {
     object TripDetail : Screen("trips/{tripId}") {
         fun createRoute(tripId: String) = "trips/$tripId"
     }
-    object QuickCapture : Screen("trips/{tripId}/capture/{day}") {
-        fun createRoute(tripId: String, day: String) = "trips/$tripId/capture/$day"
+    object QuickCapture : Screen("trips/{tripId}/capture/{day}?ocrResult={ocrResult}") {
+        fun createRoute(tripId: String, day: String, ocrResultJson: String? = null): String {
+            val base = "trips/$tripId/capture/$day"
+            return if (ocrResultJson != null) {
+                "$base?ocrResult=${Uri.encode(ocrResultJson)}"
+            } else {
+                base
+            }
+        }
+    }
+    object Camera : Screen("camera/{tripId}") {
+        fun createRoute(tripId: String) = "camera/$tripId"
+    }
+    object OcrProcessing : Screen("ocr/{tripId}?imagePath={imagePath}") {
+        fun createRoute(tripId: String, imagePath: String): String =
+            "ocr/$tripId?imagePath=${Uri.encode(imagePath)}"
     }
 }

@@ -53,6 +53,7 @@ import java.time.LocalDate
 fun TripDetailScreen(
     onNavigateUp: () -> Unit,
     onNavigateToQuickCapture: (tripId: String, day: String) -> Unit,
+    onNavigateToCamera: (tripId: String) -> Unit,
     onNavigateToSummary: (tripId: String) -> Unit,
     viewModel: TripDetailViewModel = hiltViewModel(),
 ) {
@@ -124,7 +125,7 @@ fun TripDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = { /* CameraDestination — A5 */ }) {
+                    IconButton(onClick = { onNavigateToCamera(trip.id) }) {
                         Icon(Icons.Default.PhotoCamera, contentDescription = "Escanear")
                     }
                     Button(

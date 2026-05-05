@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">Ledger</string>
+
+    <!-- Screen titles -->
+    <string name="title_login">Login</string>
+    <string name="title_register">Register</string>
+    <string name="title_config">Server Configuration</string>
+    <string name="title_trips">My Trips</string>
+    <string name="title_settings">Settings</string>
+
+    <!-- Field labels -->
+    <string name="label_email">Email</string>
+    <string name="label_password">Password</string>
+    <string name="label_confirm_password">Confirm Password</string>
+    <string name="label_name">Full Name</string>
+    <string name="label_currency">Base Currency</string>
+    <string name="label_server_url">Server URL</string>
+    <string name="label_invite_code">Invite Code</string>
+
+    <!-- Button labels -->
+    <string name="btn_login">Log In</string>
+    <string name="btn_register">Register</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_logout">Log Out</string>
+    <string name="btn_continue">Continue</string>
+
+    <!-- Error messages -->
+    <string name="error_invalid_credentials">Invalid email or password</string>
+    <string name="error_passwords_dont_match">Passwords do not match</string>
+    <string name="error_email_already_registered">Email is already registered</string>
+    <string name="error_invalid_invite_code">Invalid invite code</string>
+    <string name="error_connection_failed">Connection failed. Please check the server URL.</string>
+    <string name="session_expired">Your session has expired. Please log in again.</string>
+    <string name="error_fields_required">Please fill in all required fields.</string>
+    <string name="error_invalid_url">Invalid URL. Must start with http:// or https://</string>
+
+    <!-- Info/Success messages -->
+    <string name="msg_login_success">Welcome back!</string>
+    <string name="msg_register_success">Account created. Please log in.</string>
+    <string name="msg_config_saved">Configuration saved.</string>
+    <string name="msg_no_account">Don\'t have an account? Register</string>
+    <string name="msg_have_account">Already have an account? Log in</string>
+    <string name="hint_password_requirements">Minimum 12 characters, with uppercase, digit and special character</string>
+    <string name="hint_server_url">e.g. https://ledger.example.com</string>
+</resources>

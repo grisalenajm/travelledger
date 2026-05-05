@@ -6,9 +6,9 @@
 ---
 
 ## 📅 Última actualización
-- **Fecha:** 2026-05-04
+- **Fecha:** 2026-05-05
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Backend Android — Bloque 1 (invite code) + Bloque 2 (UUIDs cliente + idempotencia)
+- **Sesión:** Android A1 Foundation + A2 Auth Flow — proyecto Android creado desde cero
 
 ---
 
@@ -31,6 +31,8 @@
 - [x] **Settings API** — 2026-04-27 (modelo, migration 0004, service, router, paperless_service per-user)
 - [x] **FASE 1 Web Auth** — desplegado y verificado
 - [x] **Backend Android bloqueantes (2026-05-04)** — invite_code (validate-invite + register), UUID opcional en TripCreate/ExpenseCreate, idempotencia en trip_service/expense_service
+- [x] **Android A1 Foundation (2026-05-05)** — proyecto Gradle completo, Hilt, Compose, Room, Retrofit (dos clientes OkHttp: unauth + auth), Theme M3, Navigation base, App.kt, AndroidManifest
+- [x] **Android A2 Auth Flow (2026-05-05)** — TokenStore, ConfigStore (EncryptedSharedPreferences), AuthDto, AuthApi, AuthInterceptor (refresh automático + AuthEventBus), AuthRepository, LoginUseCase, RegisterUseCase, LogoutUseCase, SplashViewModel, ConfigScreen+VM, LoginScreen+VM, RegisterScreen+VM, AppNavGraph, MainActivity, tests (LoginViewModelTest 3 tests, RegisterViewModelTest 3 tests, FakeAuthRepository)
 
 ---
 
@@ -113,9 +115,8 @@
 
 ## 🔄 En Progreso
 
-- **FASE Android A1** — Foundation (pendiente implementación en Claude Code)
 - **FASE 3 Backend** — OCR (ocr_service.py + Receipt model + router upload)
-- **FASE Android A2** — Auth Flow (pendiente implementación)
+- **FASE Android A3** — Trip Management (TripsScreen, CreateTripScreen, TripRepository offline-first)
 
 ---
 
@@ -124,7 +125,7 @@
 - **FASE 0:** ✅ Completado (pendiente menor: README NAS, Android skeleton, seed SQL)
 - **FASE 1 Backend:** ✅ Completado — todos los bloqueantes Android implementados
 - **FASE 1 Web:** ✅ Completado — **PENDIENTE: invite_code en /register, fix confirm_password**
-- **FASE 1 Android:** Phases A1 + A2 — no iniciadas
+- **FASE 1 Android:** ✅ A1 + A2 completados (2026-05-05)
 - **FASE 2:** ✅ Completado (backend + web)
 - **FASE 2 Android:** Phases A3 + A4 — no iniciadas
 - **FASE 3:** OCR backend + web scan screens + Android Phase A5

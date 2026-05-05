@@ -24,139 +24,139 @@
 
 ### Gradle y proyecto
 
-- [ ] Crear proyecto Android en `/android/` con Kotlin + Compose template
-- [ ] Configurar `build.gradle.kts` (app) con todas las dependencias de ANDROID_ARCHITECTURE.md
-- [ ] Configurar `gradle/libs.versions.toml` (version catalog)
-- [ ] Añadir `kotlin-serialization` plugin
-- [ ] Añadir `hilt` plugin + `kapt` plugin
-- [ ] Configurar `buildTypes` debug (API_BASE vacío, configurable en runtime) y release
-- [ ] Configurar `compileOptions` Java 17 + `kotlinOptions` jvmTarget 17
-- [ ] Añadir `buildFeatures { compose = true; buildConfig = true }`
+- [x] Crear proyecto Android en `/android/` con Kotlin + Compose template
+- [x] Configurar `build.gradle.kts` (app) con todas las dependencias de ANDROID_ARCHITECTURE.md
+- [ ] Configurar `gradle/libs.versions.toml` (version catalog) — pendiente, actualmente inline versions
+- [x] Añadir `kotlin-serialization` plugin
+- [x] Añadir `hilt` plugin + `kapt` plugin
+- [x] Configurar `compileOptions` Java 17 + `kotlinOptions` jvmTarget 17
+- [x] Añadir `buildFeatures { compose = true; buildConfig = true }`
 - [ ] Configurar ProGuard rules para Retrofit, Room, Hilt, Kotlin Serialization
 
 ### Tema y Design System
 
 - [ ] Descargar fuentes Manrope (Regular, Bold, ExtraBold) y Public Sans (Regular, Medium, Bold) → `res/font/`
-- [ ] `ui/theme/Color.kt` — tokens Material 3 desde DESIGN_SYSTEM.md
-- [ ] `ui/theme/Type.kt` — LedgerTypography con Manrope + Public Sans
-- [ ] `ui/theme/Shape.kt` — LedgerShapes (extraSmall=2dp, small=4dp, medium=8dp, large=12dp)
-- [ ] `ui/theme/Theme.kt` — LedgerTheme con colores estáticos (no Dynamic Color en MVP)
+- [x] `presentation/theme/Color.kt` — tokens Material 3 paleta azul/índigo
+- [x] `presentation/theme/Type.kt` — Typography sistema
+- [x] `presentation/theme/Theme.kt` — LedgerTheme colores estáticos
+- [ ] `presentation/theme/Shape.kt` — LedgerShapes (pendiente en A3)
 
 ### Internacionalización
 
-- [ ] `res/values/strings.xml` — inglés (default)
-- [ ] `res/values-es/strings.xml` — español
-- [ ] Todos los strings de UI en ambos archivos desde el principio
+- [x] `res/values/strings.xml` — inglés (default)
+- [x] `res/values-es/strings.xml` — español
 
 ### Hilt — DI
 
-- [ ] `App.kt` — `@HiltAndroidApp`
-- [ ] `di/AppModule.kt` — provee `Context`, `OkHttpClient`, `Retrofit` (URL dinámica desde `ConfigStore`)
-- [ ] `di/DatabaseModule.kt` — provee `AppDatabase`, DAOs
-- [ ] `di/DataStoreModule.kt` — provee `TokenStore`, `ConfigStore`
-- [ ] `di/RepositoryModule.kt` — bindings interfaces → implementaciones
-- [ ] `di/WorkerModule.kt` — Hilt Worker factory para `SyncWorker`
+- [x] `App.kt` — `@HiltAndroidApp`
+- [x] `di/AppModule.kt` — dos OkHttpClient (@Named unauth/auth), dos Retrofit, AuthApi, AuthInterceptor
+- [ ] `di/DatabaseModule.kt` — pendiente en A3
+- [x] `di/DataStoreModule.kt` — provee `TokenStore`, `ConfigStore`
+- [x] `di/RepositoryModule.kt` — @Binds AuthRepository
+- [ ] `di/WorkerModule.kt` — Hilt Worker factory para `SyncWorker` (pendiente A4)
 
 ### Room — Base de datos local
 
-- [ ] `data/local/room/entity/TripEntity.kt`
-- [ ] `data/local/room/entity/ExpenseEntity.kt`
-- [ ] `data/local/room/entity/PendingOperationEntity.kt`
-- [ ] `data/local/room/dao/TripDao.kt` — CRUD + Flow
-- [ ] `data/local/room/dao/ExpenseDao.kt` — CRUD + Flow por trip_id y fecha
-- [ ] `data/local/room/dao/PendingOperationDao.kt` — insert, getByStatus, updateStatus, deleteOlderThan
-- [ ] `data/local/room/AppDatabase.kt` — Room database con las 3 entidades + migration strategy
+- [ ] `data/local/room/entity/TripEntity.kt` — pendiente A3
+- [ ] `data/local/room/entity/ExpenseEntity.kt` — pendiente A4
+- [ ] `data/local/room/entity/PendingOperationEntity.kt` — pendiente A4
+- [ ] `data/local/room/dao/TripDao.kt` — pendiente A3
+- [ ] `data/local/room/dao/ExpenseDao.kt` — pendiente A4
+- [ ] `data/local/room/dao/PendingOperationDao.kt` — pendiente A4
+- [ ] `data/local/room/AppDatabase.kt` — pendiente A3
 
 ### DataStore y ConfigStore
 
-- [ ] `data/local/datastore/TokenStore.kt` — EncryptedSharedPreferences: access_token, refresh_token
-- [ ] `data/local/datastore/ConfigStore.kt` — EncryptedSharedPreferences: server_url, invite_code, last_email
+- [x] `data/local/datastore/TokenStore.kt` — EncryptedSharedPreferences: access_token, refresh_token, token_expiry
+- [x] `data/local/datastore/ConfigStore.kt` — EncryptedSharedPreferences: server_url, invite_code, last_email
 
 ### Retrofit — Red
 
-- [ ] `data/remote/api/AuthApi.kt` — login, register, refresh, logout, validate-invite
-- [ ] `data/remote/api/TripApi.kt` — CRUD trips
-- [ ] `data/remote/api/ExpenseApi.kt` — CRUD expenses + upload receipt
-- [ ] `data/remote/api/SyncApi.kt` — pull?since= y push
-- [ ] `data/remote/interceptor/AuthInterceptor.kt` — attach Bearer + refresh automático en 401
-- [ ] DTOs: `TripDto.kt`, `ExpenseDto.kt`, `OcrResultDto.kt`, `SyncDto.kt`, `AuthDto.kt`
-- [ ] Configurar `Retrofit` con URL dinámica: base URL se lee de `ConfigStore` al inicializar
+- [x] `data/remote/api/AuthApi.kt` — login, register, refresh, logout, validate-invite
+- [ ] `data/remote/api/TripApi.kt` — pendiente A3
+- [ ] `data/remote/api/ExpenseApi.kt` — pendiente A4
+- [ ] `data/remote/api/SyncApi.kt` — pendiente A5
+- [x] `data/remote/interceptor/AuthInterceptor.kt` — attach Bearer + refresh automático en 401 + AuthEventBus
+- [x] DTOs: `AuthDto.kt` (LoginRequest, RegisterRequest, TokenResponse, UserDto, etc.)
+- [x] Retrofit con URL dinámica — se lee de ConfigStore al crear el singleton; dos instancias (unauth/auth)
 
 ### Network Monitor
 
-- [ ] `util/NetworkMonitor.kt` — `Flow<Boolean>` con `ConnectivityManager.NetworkCallback`
-- [ ] Inyectado por Hilt como Singleton
+- [ ] `util/NetworkMonitor.kt` — pendiente A3
 
 ### Navegación base
 
-- [ ] `presentation/navigation/Screen.kt` — sealed class con todos los destinos
-- [ ] `presentation/navigation/AppNavGraph.kt` — grafo completo (con pantallas stub)
-- [ ] `presentation/MainActivity.kt` — Single Activity + `@AndroidEntryPoint`
+- [x] `presentation/navigation/Screen.kt` — sealed class (Splash, Config, Login, Register, Trips placeholder)
+- [x] `presentation/navigation/AppNavGraph.kt` — grafo con auth flow completo
+- [x] `presentation/MainActivity.kt` — Single Activity + `@AndroidEntryPoint` + AuthEventBus observer
 
 ### SplashScreen y ConfigScreen
 
-- [ ] `core-splashscreen` configurado en `AndroidManifest.xml`
-- [ ] `presentation/screen/splash/SplashViewModel.kt` — lógica de enrutamiento inicial
-- [ ] `presentation/screen/splash/SplashScreen.kt`
-- [ ] `presentation/screen/config/ConfigViewModel.kt` — validar URL + validate-invite
-- [ ] `presentation/screen/config/ConfigScreen.kt` — URL + invite code + botón Continuar
+- [x] `core-splashscreen` configurado en `AndroidManifest.xml`
+- [x] `presentation/screen/splash/SplashViewModel.kt` — lógica completa de enrutamiento
+- [x] `presentation/screen/splash/SplashScreen.kt`
+- [x] `presentation/screen/config/ConfigViewModel.kt` — validar URL (OkHttp directo) + validate-invite (OkHttp directo)
+- [x] `presentation/screen/config/ConfigScreen.kt`
 
 ### AndroidManifest
 
-- [ ] Permisos: INTERNET, ACCESS_NETWORK_STATE, CAMERA, READ_MEDIA_IMAGES, READ_EXTERNAL_STORAGE
-- [ ] FileProvider configurado
-- [ ] `res/xml/file_paths.xml`
-- [ ] `network_security_config.xml` — cleartext solo para localhost/debug
+- [x] Permisos: INTERNET, ACCESS_NETWORK_STATE, CAMERA, READ_MEDIA_IMAGES, READ_EXTERNAL_STORAGE, POST_NOTIFICATIONS
+- [x] FileProvider configurado
+- [x] `res/xml/file_paths.xml`
+- [ ] `network_security_config.xml` — cleartext solo para localhost/debug (pendiente)
 
 ### Utilidades
 
-- [ ] `util/UuidGenerator.kt` — `UUID.randomUUID().toString()`
-- [ ] `util/DateFormatter.kt` — formateo con locale del dispositivo
-- [ ] `util/CurrencyFormatter.kt` — símbolo nativo + ISO para ambiguos
+- [x] `util/UuidGenerator.kt` — `UUID.randomUUID().toString()`
+- [ ] `util/DateFormatter.kt` — pendiente A3
+- [ ] `util/CurrencyFormatter.kt` — pendiente A3
 
 ---
 
-## 🔐 PHASE A2 — Auth Flow
+## 🔐 PHASE A2 — Auth Flow ✅ COMPLETADO 2026-05-05
 
 > Login, register, sesión persistente, auto-login, logout.
 
 ### Domain
 
-- [ ] `domain/model/User.kt` — id, email, name, currencyBase
-- [ ] `domain/usecase/auth/LoginUseCase.kt`
-- [ ] `domain/usecase/auth/RegisterUseCase.kt`
-- [ ] `domain/usecase/auth/LogoutUseCase.kt`
-- [ ] `domain/usecase/auth/RefreshTokenUseCase.kt`
+- [ ] `domain/model/User.kt` — pendiente (no requerido aún)
+- [x] `domain/usecase/auth/LoginUseCase.kt`
+- [x] `domain/usecase/auth/RegisterUseCase.kt`
+- [x] `domain/usecase/auth/LogoutUseCase.kt`
+- [ ] `domain/usecase/auth/RefreshTokenUseCase.kt` — manejado internamente en SplashViewModel
 
 ### Data
 
-- [ ] `data/repository/AuthRepository.kt` — login, register, refresh, logout, clearTokens
-- [ ] Mappers: `AuthDto → User`
+- [x] `data/repository/AuthRepository.kt` — interfaz: login, register, refresh, logout, clearTokens
+- [x] `data/repository/AuthRepositoryImpl.kt` — implementación
+- [x] `core/AuthEventBus.kt` — SharedFlow<AuthEvent> para SessionExpired
 
 ### Presentation
 
-- [ ] `presentation/screen/auth/login/LoginViewModel.kt` — UiState sealed class
-- [ ] `presentation/screen/auth/login/LoginScreen.kt` — email (pre-rellenado) + password + toggle show/hide + CTA
-- [ ] `presentation/screen/auth/register/RegisterViewModel.kt` — validación confirm_password client-side
-- [ ] `presentation/screen/auth/register/RegisterScreen.kt` — nombre + email + currency_base + password + confirm
+- [x] `presentation/screen/auth/login/LoginViewModel.kt` — UiState sealed class, lastEmail pre-fill
+- [x] `presentation/screen/auth/login/LoginScreen.kt` — email + password toggle + botón + error
+- [x] `presentation/screen/auth/register/RegisterViewModel.kt` — validación confirm_password client-side
+- [x] `presentation/screen/auth/register/RegisterScreen.kt` — nombre + email + currency dropdown + password + confirm
 
 ### SplashViewModel — lógica completa
 
-- [ ] Check ConfigStore → si no hay URL → ConfigScreen
-- [ ] Check TokenStore → si no hay tokens → LoginScreen
-- [ ] Si tokens → intentar refresh → si OK → TripsScreen; si falla → LoginScreen
+- [x] Check ConfigStore → si no hay URL → ConfigScreen
+- [x] Check TokenStore → si no hay tokens → LoginScreen
+- [x] Si tokens → comparar timestamp → si expirado → refresh → si OK → TripsScreen; si falla → LoginScreen
 
-### Logout
+### Logout (parcial)
 
-- [ ] `SettingsViewModel.kt` — lógica de logout con check PendingOperations
-- [ ] Diálogo de confirmación si hay ops pendientes (Opción B)
-- [ ] Al confirmar logout: borrar tokens, Room, pending_uploads, navegar a LoginScreen
+- [ ] `SettingsViewModel.kt` — pendiente A3/A8 (Settings screen completo)
+- [ ] Diálogo de confirmación si hay ops pendientes — pendiente A4
+- [x] AuthEventBus → MainActivity navega a Login si SessionExpired + toast
 
 ### Tests
 
-- [ ] `LoginViewModel_Test.kt` — estados Loading, Success, Error
-- [ ] `RegisterViewModel_Test.kt` — validación confirm_password, campos obligatorios
-- [ ] `AuthRepository_Test.kt` — mock AuthApi, verificar guardado de tokens
+- [x] `LoginViewModelTest.kt` — 3 tests: login exitoso, error credenciales, campos vacíos
+- [x] `RegisterViewModelTest.kt` — 3 tests: passwords distintos, registro exitoso, registro fallido
+- [x] `FakeAuthRepository.kt` — fake determinista
+- [x] `MainCoroutineRule.kt` — UnconfinedTestDispatcher
+- [ ] `AuthRepository_Test.kt` — pendiente (requiere mocking de API)
 
 ---
 

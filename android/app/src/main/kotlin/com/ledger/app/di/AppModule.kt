@@ -96,4 +96,9 @@ object AppModule {
     @Singleton
     fun provideAuthApi(@Named("unauthenticated") retrofit: Retrofit): AuthApi =
         retrofit.create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTripApi(@Named("authenticated") retrofit: Retrofit): com.ledger.app.data.remote.api.TripApi =
+        retrofit.create(com.ledger.app.data.remote.api.TripApi::class.java)
 }

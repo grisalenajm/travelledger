@@ -1,11 +1,6 @@
 package com.ledger.app.presentation.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,6 +8,8 @@ import com.ledger.app.presentation.screen.auth.login.LoginScreen
 import com.ledger.app.presentation.screen.auth.register.RegisterScreen
 import com.ledger.app.presentation.screen.config.ConfigScreen
 import com.ledger.app.presentation.screen.splash.SplashScreen
+import com.ledger.app.presentation.screen.trips.create.CreateTripScreen
+import com.ledger.app.presentation.screen.trips.list.TripsScreen
 
 @Composable
 fun AppNavGraph(
@@ -65,10 +62,20 @@ fun AppNavGraph(
             )
         }
         composable(Screen.Trips.route) {
-            // Placeholder — implemented in A3
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Trips — coming in A3")
-            }
+            TripsScreen(
+                onNavigateToCreateTrip = { navController.navigate(Screen.CreateTrip.route) },
+                onNavigateToTripDetail = { /* TripDetailDestination — implemented in A6 */ },
+            )
+        }
+        composable(Screen.CreateTrip.route) {
+            CreateTripScreen(
+                onCreated = {
+                    navController.navigate(Screen.Trips.route) {
+                        popUpTo(Screen.Trips.route) { inclusive = true }
+                    }
+                },
+                onNavigateUp = { navController.navigateUp() },
+            )
         }
     }
 }

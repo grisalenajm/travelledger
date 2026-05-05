@@ -24,7 +24,7 @@ TRIP_PAYLOAD = {
 
 
 async def _create_trip(client, headers):
-    res = await client.post("/api/trips/", json=TRIP_PAYLOAD, headers=headers)
+    res = await client.post("/api/trips", json=TRIP_PAYLOAD, headers=headers)
     assert res.status_code == 201
     return res.json()["id"]
 

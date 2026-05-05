@@ -16,7 +16,7 @@ TRIP_PAYLOAD = {
 
 
 async def _create_trip(client, headers, payload=None):
-    res = await client.post("/api/trips/", json=payload or TRIP_PAYLOAD, headers=headers)
+    res = await client.post("/api/trips", json=payload or TRIP_PAYLOAD, headers=headers)
     assert res.status_code == 201
     return res.json()["id"]
 
@@ -25,7 +25,7 @@ async def _create_trip(client, headers, payload=None):
 async def test_create_expense_billable_defaults_to_true(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     res = await client.post(
-        "/api/expenses/",
+        "/api/expenses",
         json={
             "trip_id": trip_id,
             "amount": "30.00",
@@ -55,7 +55,7 @@ async def test_create_expense_converts_currency(client, auth_headers_chf):
         return_value=Decimal("0.95"),  # 1 EUR = 0.95 CHF
     ):
         res = await client.post(
-            "/api/expenses/",
+            "/api/expenses",
             json={
                 "trip_id": trip_id,
                 "amount": "100.00",
@@ -81,7 +81,7 @@ async def test_create_expense_same_currency_no_external_call(client, auth_header
         new_callable=AsyncMock,
     ) as mock_fetch:
         res = await client.post(
-            "/api/expenses/",
+            "/api/expenses",
             json={
                 "trip_id": trip_id,
                 "amount": "50.00",
@@ -102,7 +102,7 @@ async def test_update_expense_recalculates_amount_base(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
 
     create_res = await client.post(
-        "/api/expenses/",
+        "/api/expenses",
         json={
             "trip_id": trip_id,
             "amount": "100.00",
@@ -136,7 +136,7 @@ async def test_expenses_filtered_by_trip_id(client, auth_headers):
 
     for trip_id in [trip_a, trip_b]:
         await client.post(
-            "/api/expenses/",
+            "/api/expenses",
             json={
                 "trip_id": trip_id,
                 "amount": "10.00",
@@ -159,7 +159,7 @@ async def test_create_expense_with_client_uuid(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     client_uuid = str(uuid.uuid4())
     res = await client.post(
-        "/api/expenses/",
+        "/api/expenses",
         json={
             "id": client_uuid,
             "trip_id": trip_id,
@@ -178,7 +178,7 @@ async def test_create_expense_with_client_uuid(client, auth_headers):
 async def test_create_expense_without_uuid(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     res = await client.post(
-        "/api/expenses/",
+        "/api/expenses",
         json={
             "trip_id": trip_id,
             "amount": "40.00",
@@ -205,10 +205,10 @@ async def test_create_expense_idempotent(client, auth_headers):
         "date": "2026-06-07",
     }
 
-    r1 = await client.post("/api/expenses/", json=payload, headers=auth_headers)
+    r1 = await client.post("/api/expenses", json=payload, headers=auth_headers)
     assert r1.status_code == 201
 
-    r2 = await client.post("/api/expenses/", json=payload, headers=auth_headers)
+    r2 = await client.post("/api/expenses", json=payload, headers=auth_headers)
     assert r2.status_code in (200, 201)
     assert r2.json()["id"] == client_uuid
 

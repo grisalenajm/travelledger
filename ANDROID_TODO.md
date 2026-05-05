@@ -160,41 +160,51 @@
 
 ---
 
-## ✈️ PHASE A3 — Trip Management
+## ✈️ PHASE A3 — Trip Management ✅ COMPLETADO 2026-05-05
 
 > Lista de viajes, crear viaje, active trip resolver. Offline-first.
 
 ### Domain
 
-- [ ] `domain/model/Trip.kt` — id, name, destination, startDate, endDate, primaryCurrency, budget, budgetCurrency, status
-- [ ] `domain/usecase/trip/GetTripsUseCase.kt` — Flow desde Room
-- [ ] `domain/usecase/trip/GetActiveTripUseCase.kt` — trip cuyo rango incluye today
-- [ ] `domain/usecase/trip/CreateTripUseCase.kt` — UUID en cliente + Room + encola op
+- [x] `domain/model/Trip.kt` — id, name, destination, startDate (LocalDate), endDate (LocalDate), primaryCurrency, budget, budgetCurrency, status (TripStatus enum)
+- [x] `domain/usecase/trip/GetTripsUseCase.kt` — Flow desde Room
+- [x] `domain/usecase/trip/GetActiveTripUseCase.kt` — trip cuyo rango incluye today (maxByOrNull startDate)
+- [x] `domain/usecase/trip/CreateTripUseCase.kt` — UUID en cliente + Room + encola op
+- [x] `domain/usecase/trip/DeleteTripUseCase.kt`
 
 ### Data
 
-- [ ] `data/repository/TripRepository.kt` — offline-first: Room como fuente, remote como sync
-- [ ] `TripEntity ↔ Trip` mappers
-- [ ] `TripDto ↔ TripEntity` mappers
+- [x] `data/local/room/entity/TripEntity.kt` + `PendingOperationEntity.kt`
+- [x] `data/local/room/dao/TripDao.kt` + `PendingOperationDao.kt`
+- [x] `data/local/room/AppDatabase.kt` — version 1, fallbackToDestructiveMigration
+- [x] `data/remote/api/TripApi.kt` — getTrips, createTrip, updateTrip, deleteTrip, getSummary
+- [x] `data/remote/api/dto/TripDto.kt` — TripDto, TripCreateDto, TripSummaryDto
+- [x] `data/repository/TripRepository.kt` — interfaz offline-first con observePendingOpsCount()
+- [x] `data/repository/TripRepositoryImpl.kt` — Room-first, PendingOperation, best-effort sync
+- [x] `TripEntity ↔ Trip` + `TripDto ↔ TripEntity` mappers en `TripMappers.kt`
+- [x] `di/DatabaseModule.kt` — AppDatabase, TripDao, PendingOperationDao providers
 
 ### Presentation
 
-- [ ] `presentation/screen/trips/list/TripsViewModel.kt`
-- [ ] `presentation/screen/trips/list/TripsScreen.kt` — Variante C (activo hero + scroll demás)
-- [ ] `presentation/screen/trips/create/CreateTripViewModel.kt` — UUID generado en cliente
-- [ ] `presentation/screen/trips/create/CreateTripScreen.kt` — nombre, destino, fechas, moneda, presupuesto
+- [x] `presentation/screen/trips/list/TripsViewModel.kt` — combine(trips, pendingCount) → TripsUiState, isRefreshing
+- [x] `presentation/screen/trips/list/TripsScreen.kt` — Variante C: hero card (activo) / LazyRow (varios) / CTA (ninguno), M3 PullToRefresh, pending badge
+- [x] `presentation/screen/trips/create/CreateTripViewModel.kt` — form state, UUID client-side, isFormValid stateIn
+- [x] `presentation/screen/trips/create/CreateTripScreen.kt` — DateRangePicker M3, ExposedDropdownMenu monedas, budget, status chips
+- [x] `presentation/navigation/Screen.kt` — añadido CreateTrip
+- [x] `presentation/navigation/AppNavGraph.kt` — TripsScreen y CreateTripScreen reales
 
 ### Componentes
 
-- [ ] `component/TripCard.kt` — hero card (activo) + card normal (otros)
-- [ ] `component/BudgetProgressBar.kt` — reutilizable en TripCard y TripDetailScreen
-- [ ] `component/SyncStatusIndicator.kt` — icono ☁️N en TopBar
+- [x] `component/TripCard.kt` — StatusChip (active=verde/draft=gris/closed=negro), BudgetProgressBar inline si activo
+- [x] `component/BudgetProgressBar.kt` — LinearProgressIndicator M3, color error si ≥100%
+- [ ] `component/SyncStatusIndicator.kt` — integrado inline en TopBar de TripsScreen (badge en Cloud icon)
 
 ### Tests
 
-- [ ] `TripsViewModel_Test.kt`
-- [ ] `CreateTripViewModel_Test.kt` — verifica que se genera UUID en cliente
-- [ ] `TripRepository_Test.kt` — offline create, Room cache
+- [x] `TripsViewModelTest.kt` — 3 tests: sin activos CTA vacío, con activo hero card, pull-to-refresh llama sync
+- [x] `CreateTripViewModelTest.kt` — 3 tests: campos vacíos botón off, UUID client-side, create exitoso navega
+- [x] `FakeTripRepository.kt` — fake determinista con setTrips, syncFromServerCalled
+- [ ] `TripRepository_Test.kt` — pendiente (requiere mocking de API)
 
 ---
 

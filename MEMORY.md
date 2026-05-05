@@ -8,7 +8,7 @@
 ## 📅 Última actualización
 - **Fecha:** 2026-05-05
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Android A1 Foundation + A2 Auth Flow — proyecto Android creado desde cero
+- **Sesión:** Web /register fix (invite_code) + Android A3 Trip Management
 
 ---
 
@@ -33,6 +33,8 @@
 - [x] **Backend Android bloqueantes (2026-05-04)** — invite_code (validate-invite + register), UUID opcional en TripCreate/ExpenseCreate, idempotencia en trip_service/expense_service
 - [x] **Android A1 Foundation (2026-05-05)** — proyecto Gradle completo, Hilt, Compose, Room, Retrofit (dos clientes OkHttp: unauth + auth), Theme M3, Navigation base, App.kt, AndroidManifest
 - [x] **Android A2 Auth Flow (2026-05-05)** — TokenStore, ConfigStore (EncryptedSharedPreferences), AuthDto, AuthApi, AuthInterceptor (refresh automático + AuthEventBus), AuthRepository, LoginUseCase, RegisterUseCase, LogoutUseCase, SplashViewModel, ConfigScreen+VM, LoginScreen+VM, RegisterScreen+VM, AppNavGraph, MainActivity, tests (LoginViewModelTest 3 tests, RegisterViewModelTest 3 tests, FakeAuthRepository)
+- [x] **Web /register fix (2026-05-05)** — invite_code enviado en POST (NEXT_PUBLIC_INVITE_CODE), añadido a .env.example y docker-compose.yml; frontend redesplegado en LXC
+- [x] **Android A3 Trip Management (2026-05-05)** — TripEntity+PendingOperationEntity, TripDao+PendingOperationDao, AppDatabase (v1), TripDto/TripCreateDto/TripSummaryDto, TripApi, TripMappers, Trip domain model, TripRepository offline-first (Room-first + PendingOperation + best-effort sync), 4 UseCases (GetTrips/GetActiveTrip/CreateTrip/DeleteTrip), TripsViewModel (combine+stateIn), CreateTripViewModel (UUID client-side), TripsScreen (hero card + pull-to-refresh M3 + pending badge), CreateTripScreen (DateRangePicker + currency dropdown), TripCard + BudgetProgressBar, DatabaseModule, 3 tests TripsViewModel + 3 tests CreateTripViewModel + FakeTripRepository
 
 ---
 
@@ -116,7 +118,7 @@
 ## 🔄 En Progreso
 
 - **FASE 3 Backend** — OCR (ocr_service.py + Receipt model + router upload)
-- **FASE Android A3** — Trip Management (TripsScreen, CreateTripScreen, TripRepository offline-first)
+- **FASE Android A4** — Quick Capture + ExpenseRepository + SyncWorker
 
 ---
 
@@ -124,8 +126,8 @@
 
 - **FASE 0:** ✅ Completado (pendiente menor: README NAS, Android skeleton, seed SQL)
 - **FASE 1 Backend:** ✅ Completado — todos los bloqueantes Android implementados
-- **FASE 1 Web:** ✅ Completado — **PENDIENTE: invite_code en /register, fix confirm_password**
-- **FASE 1 Android:** ✅ A1 + A2 completados (2026-05-05)
+- **FASE 1 Web:** ✅ Completado — fix /register invite_code desplegado (2026-05-05); NEXT_PUBLIC_INVITE_CODE pendiente de añadir al .env del LXC
+- **FASE 1 Android:** ✅ A1 + A2 + A3 completados (2026-05-05)
 - **FASE 2:** ✅ Completado (backend + web)
 - **FASE 2 Android:** Phases A3 + A4 — no iniciadas
 - **FASE 3:** OCR backend + web scan screens + Android Phase A5
@@ -156,8 +158,7 @@ Antes de cualquier build, sincronizar via `tar + scp` o `git pull`. Los errores 
 
 ## 🐛 Bugs Conocidos
 
-- `/register` (web) no solicita confirmación de contraseña — campo `confirm_password` ausente `[Web]`
-- `/register` (web) no envía `invite_code` — backend ya lo exige, web pendiente de añadir campo `[Web]`
+- `/register` (web) requiere añadir `NEXT_PUBLIC_INVITE_CODE` al .env del LXC para que funcione en prod `[Infra]`
 
 ## ⚠️ Pendiente de Infra
 

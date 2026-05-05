@@ -1,7 +1,7 @@
 from datetime import date as date_t, datetime
 from decimal import Decimal
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -20,6 +20,7 @@ VALID_CURRENCIES = {
 
 
 class ExpenseCreate(BaseModel):
+    id: UUID | None = None
     trip_id: UUID
     amount: Decimal = Field(gt=0)
     currency: str = Field(min_length=3, max_length=3)

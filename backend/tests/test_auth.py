@@ -2,10 +2,12 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
+from app.config import settings
 
 REGISTER_URL = "/api/auth/register"
 LOGIN_URL = "/api/auth/login"
 REFRESH_URL = "/api/auth/refresh"
+VALIDATE_INVITE_URL = "/api/auth/validate-invite"
 ME_URL = "/api/users/me"
 
 USER_PAYLOAD = {
@@ -13,6 +15,7 @@ USER_PAYLOAD = {
     "name": "Test User",
     "password": "TestPass1!secret",
     "currency_base": "EUR",
+    "invite_code": settings.REGISTRATION_INVITE_CODE,
 }
 
 
@@ -87,3 +90,39 @@ async def test_refresh_with_access_token_fails(client: AsyncClient):
 
     r = await client.post(REFRESH_URL, json={"refresh_token": access_token})
     assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_validate_invite_valid(client: AsyncClient):
+    r = await client.post(VALIDATE_INVITE_URL, json={"code": settings.REGISTRATION_INVITE_CODE})
+    assert r.status_code == 200
+    assert r.json() == {"valid": True}
+
+
+@pytest.mark.asyncio
+async def test_validate_invite_invalid(client: AsyncClient):
+    r = await client.post(VALIDATE_INVITE_URL, json={"code": "wrong-code"})
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_register_without_invite_code(client: AsyncClient):
+    payload = {k: v for k, v in USER_PAYLOAD.items() if k != "invite_code"}
+    payload["email"] = "noinvite@example.com"
+    r = await client.post(REGISTER_URL, json=payload)
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_register_with_wrong_invite_code(client: AsyncClient):
+    payload = {**USER_PAYLOAD, "email": "wronginvite@example.com", "invite_code": "wrong-code"}
+    r = await client.post(REGISTER_URL, json=payload)
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_register_with_correct_invite_code(client: AsyncClient):
+    payload = {**USER_PAYLOAD, "email": "correctinvite@example.com"}
+    r = await client.post(REGISTER_URL, json=payload)
+    assert r.status_code == 201
+    assert r.json()["email"] == "correctinvite@example.com"

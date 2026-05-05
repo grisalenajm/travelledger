@@ -8,7 +8,7 @@
 ## 📅 Última actualización
 - **Fecha:** 2026-05-04
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Sesión de diseño Android completa — 8 preguntas resueltas, documentos generados
+- **Sesión:** Backend Android — Bloque 1 (invite code) + Bloque 2 (UUIDs cliente + idempotencia)
 
 ---
 
@@ -30,6 +30,7 @@
 - [x] **FASE 2 Web** — desplegado 2026-04-25/26 (todas las pantallas)
 - [x] **Settings API** — 2026-04-27 (modelo, migration 0004, service, router, paperless_service per-user)
 - [x] **FASE 1 Web Auth** — desplegado y verificado
+- [x] **Backend Android bloqueantes (2026-05-04)** — invite_code (validate-invite + register), UUID opcional en TripCreate/ExpenseCreate, idempotencia en trip_service/expense_service
 
 ---
 
@@ -121,7 +122,7 @@
 ## ⏳ Pendiente — resumen por fase
 
 - **FASE 0:** ✅ Completado (pendiente menor: README NAS, Android skeleton, seed SQL)
-- **FASE 1 Backend:** ✅ Completado — **PENDIENTE: cambios para Android** (invite_code, UUID opcional, idempotencia)
+- **FASE 1 Backend:** ✅ Completado — todos los bloqueantes Android implementados
 - **FASE 1 Web:** ✅ Completado — **PENDIENTE: invite_code en /register, fix confirm_password**
 - **FASE 1 Android:** Phases A1 + A2 — no iniciadas
 - **FASE 2:** ✅ Completado (backend + web)
@@ -155,7 +156,11 @@ Antes de cualquier build, sincronizar via `tar + scp` o `git pull`. Los errores 
 ## 🐛 Bugs Conocidos
 
 - `/register` (web) no solicita confirmación de contraseña — campo `confirm_password` ausente `[Web]`
-- `/register` (web + Android) no envía `invite_code` — pendiente hasta implementar en backend `[Web]` `[And]` `[BE]`
+- `/register` (web) no envía `invite_code` — backend ya lo exige, web pendiente de añadir campo `[Web]`
+
+## ⚠️ Pendiente de Infra
+
+- Rate limit nginx-proxy-manager: `/api/auth/register` → 3 req/hora por IP (fuera de scope backend)
 
 ---
 

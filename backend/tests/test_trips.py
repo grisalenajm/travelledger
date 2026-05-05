@@ -1,4 +1,8 @@
+import uuid
+
 import pytest
+
+from app.config import settings
 
 TRIP_PAYLOAD = {
     "name": "Test Paris",
@@ -41,6 +45,7 @@ async def test_get_trips_returns_only_own(client, auth_headers):
             "name": "User B",
             "password": "TestPass1!secret",
             "currency_base": "EUR",
+            "invite_code": settings.REGISTRATION_INVITE_CODE,
         },
     )
     res_b = await client.post(
@@ -124,3 +129,37 @@ async def test_delete_trip_cascades_expenses(client, auth_headers):
         f"/api/expenses/?trip_id={trip_id}", headers=auth_headers
     )
     assert expenses.json() == []
+
+
+@pytest.mark.asyncio
+async def test_create_trip_with_client_uuid(client, auth_headers):
+    client_uuid = str(uuid.uuid4())
+    res = await client.post("/api/trips/", json={**TRIP_PAYLOAD, "id": client_uuid}, headers=auth_headers)
+    assert res.status_code == 201
+    assert res.json()["id"] == client_uuid
+
+
+@pytest.mark.asyncio
+async def test_create_trip_without_uuid(client, auth_headers):
+    res = await client.post("/api/trips/", json=TRIP_PAYLOAD, headers=auth_headers)
+    assert res.status_code == 201
+    # Debe ser un UUID válido generado por el backend
+    uuid.UUID(res.json()["id"])
+
+
+@pytest.mark.asyncio
+async def test_create_trip_idempotent(client, auth_headers):
+    client_uuid = str(uuid.uuid4())
+    payload = {**TRIP_PAYLOAD, "id": client_uuid}
+
+    r1 = await client.post("/api/trips/", json=payload, headers=auth_headers)
+    assert r1.status_code == 201
+
+    r2 = await client.post("/api/trips/", json=payload, headers=auth_headers)
+    assert r2.status_code in (200, 201)
+    assert r2.json()["id"] == client_uuid
+
+    # Solo un trip con ese UUID en la BD
+    all_trips = await client.get("/api/trips/", headers=auth_headers)
+    matching = [t for t in all_trips.json() if t["id"] == client_uuid]
+    assert len(matching) == 1

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -24,6 +24,7 @@ def _check_currency(v: str) -> str:
 
 
 class TripCreate(BaseModel):
+    id: UUID | None = None
     name: str = Field(max_length=100)
     description: str | None = None
     destination: str = Field(max_length=100)

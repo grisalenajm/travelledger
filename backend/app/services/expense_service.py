@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -42,6 +42,11 @@ async def list_expenses(
 async def create(
     db: AsyncSession, user: User, data: ExpenseCreate, image: UploadFile | None = None
 ) -> Expense:
+    if data.id is not None:
+        existing = await db.get(Expense, data.id)
+        if existing and existing.user_id == user.id:
+            return existing
+
     trip = await get_trip_or_404(db, data.trip_id, user.id)
 
     amount_base, rate_date = await currency_service.convert(
@@ -68,11 +73,12 @@ async def create(
             logger.warning("Paperless upload failed, continuing without: %s", e)
 
     expense = Expense(
+        id=data.id or uuid4(),
         user_id=user.id,
         amount_base=amount_base,
         rate_date=rate_date,
         paperless_doc_id=paperless_doc_id,
-        **data.model_dump(),
+        **data.model_dump(exclude={"id"}),
     )
     db.add(expense)
     await db.flush()

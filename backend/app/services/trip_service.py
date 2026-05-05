@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -25,7 +25,16 @@ async def list_trips(
 
 
 async def create(db: AsyncSession, user_id: UUID, data: TripCreate) -> Trip:
-    trip = Trip(user_id=user_id, **data.model_dump())
+    if data.id is not None:
+        existing = await db.get(Trip, data.id)
+        if existing and existing.user_id == user_id:
+            return existing
+
+    trip = Trip(
+        id=data.id or uuid4(),
+        user_id=user_id,
+        **data.model_dump(exclude={"id"}),
+    )
     db.add(trip)
     await db.flush()
     await db.refresh(trip)

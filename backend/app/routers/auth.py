@@ -3,9 +3,11 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.dependencies import get_current_user
 from app.core.limiter import limiter
 from app.core.security import (
@@ -25,9 +27,29 @@ security_logger = logging.getLogger("security")
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+class InviteValidate(BaseModel):
+    code: str
+
+
+@router.post("/validate-invite")
+async def validate_invite(data: InviteValidate):
+    """Valida el invite code sin crear usuario. Usado por la app Android en ConfigScreen."""
+    if data.code != settings.REGISTRATION_INVITE_CODE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid invite code",
+        )
+    return {"valid": True}
+
+
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def register(request: Request, payload: UserCreate, db: AsyncSession = Depends(get_db)):
+    if payload.invite_code != settings.REGISTRATION_INVITE_CODE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid invite code",
+        )
     existing = await db.execute(select(User).where(User.email == payload.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")

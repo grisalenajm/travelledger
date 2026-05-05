@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     BOT_API_KEY: str
 
+    REGISTRATION_INVITE_CODE: str = "change-me-in-production"
+
     FIREBASE_CREDENTIALS_PATH: str = "/app/secrets/firebase-credentials.json"
 
     ALLOWED_ORIGINS: str = "http://localhost:3000"

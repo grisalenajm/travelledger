@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
@@ -151,3 +152,67 @@ async def test_expenses_filtered_by_trip_id(client, auth_headers):
     expenses = res.json()
     assert len(expenses) == 1
     assert expenses[0]["trip_id"] == trip_a
+
+
+@pytest.mark.asyncio
+async def test_create_expense_with_client_uuid(client, auth_headers):
+    trip_id = await _create_trip(client, auth_headers)
+    client_uuid = str(uuid.uuid4())
+    res = await client.post(
+        "/api/expenses/",
+        json={
+            "id": client_uuid,
+            "trip_id": trip_id,
+            "amount": "40.00",
+            "currency": "EUR",
+            "category": "Dining",
+            "date": "2026-06-07",
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code == 201
+    assert res.json()["id"] == client_uuid
+
+
+@pytest.mark.asyncio
+async def test_create_expense_without_uuid(client, auth_headers):
+    trip_id = await _create_trip(client, auth_headers)
+    res = await client.post(
+        "/api/expenses/",
+        json={
+            "trip_id": trip_id,
+            "amount": "40.00",
+            "currency": "EUR",
+            "category": "Dining",
+            "date": "2026-06-07",
+        },
+        headers=auth_headers,
+    )
+    assert res.status_code == 201
+    uuid.UUID(res.json()["id"])
+
+
+@pytest.mark.asyncio
+async def test_create_expense_idempotent(client, auth_headers):
+    trip_id = await _create_trip(client, auth_headers)
+    client_uuid = str(uuid.uuid4())
+    payload = {
+        "id": client_uuid,
+        "trip_id": trip_id,
+        "amount": "40.00",
+        "currency": "EUR",
+        "category": "Dining",
+        "date": "2026-06-07",
+    }
+
+    r1 = await client.post("/api/expenses/", json=payload, headers=auth_headers)
+    assert r1.status_code == 201
+
+    r2 = await client.post("/api/expenses/", json=payload, headers=auth_headers)
+    assert r2.status_code in (200, 201)
+    assert r2.json()["id"] == client_uuid
+
+    # Solo un expense con ese UUID en la BD
+    all_expenses = await client.get(f"/api/expenses/?trip_id={trip_id}", headers=auth_headers)
+    matching = [e for e in all_expenses.json() if e["id"] == client_uuid]
+    assert len(matching) == 1

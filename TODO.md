@@ -83,15 +83,16 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Tests: test_auth_*, test_jwt_*
 
 ### Backend — cambios requeridos por Android `[BE]`
-- [ ] [!] Añadir `REGISTRATION_INVITE_CODE` a `.env` y `config.py`
-- [ ] [!] Crear endpoint `POST /api/auth/validate-invite` — valida code antes del formulario de registro
-- [ ] [!] Modificar `UserCreate` schema: añadir `invite_code: str` obligatorio
-- [ ] [!] Modificar `POST /api/auth/register`: validar `invite_code` en el body
-- [ ] [!] Modificar `TripCreate` schema: añadir `id: UUID | None = None`
-- [ ] [!] Modificar `trip_service.create()`: respetar `id` del cliente si viene, generar si no
-- [ ] [!] Modificar `ExpenseCreate` schema: añadir `id: UUID | None = None`
-- [ ] [!] Modificar `expense_service.create()`: respetar `id` del cliente si viene, generar si no
-- [ ] [!] Idempotencia: POST con UUID ya existente del mismo usuario → 200 con recurso existente (no 409)
+- [x] [!] Añadir `REGISTRATION_INVITE_CODE` a `.env.example` y `config.py` *(2026-05-04)*
+- [x] [!] Crear endpoint `POST /api/auth/validate-invite` — valida code antes del formulario de registro *(2026-05-04)*
+- [x] [!] Modificar `UserCreate` schema: añadir `invite_code: str` obligatorio *(2026-05-04)*
+- [x] [!] Modificar `POST /api/auth/register`: validar `invite_code` en el body *(2026-05-04)*
+- [x] [!] Modificar `TripCreate` schema: añadir `id: UUID | None = None` *(2026-05-04)*
+- [x] [!] Modificar `trip_service.create()`: respetar `id` del cliente si viene, generar si no *(2026-05-04)*
+- [x] [!] Modificar `ExpenseCreate` schema: añadir `id: UUID | None = None` *(2026-05-04)*
+- [x] [!] Modificar `expense_service.create()`: respetar `id` del cliente si viene, generar si no *(2026-05-04)*
+- [x] [!] Idempotencia: POST con UUID ya existente del mismo usuario → 200/201 con recurso existente (no 409) *(2026-05-04)*
+- [ ] Pendiente infra: rate limit en nginx-proxy-manager `/api/auth/register` → 3 req/hora por IP
 - [ ] Implementar `GET /api/sync/pull?since={timestamp}` — ver FASE 5
 - [ ] Implementar `POST /api/sync/push` idempotente — ver FASE 5
 

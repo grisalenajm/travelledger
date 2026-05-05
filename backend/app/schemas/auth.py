@@ -27,6 +27,7 @@ class UserCreate(BaseModel):
     name: str
     password: str
     currency_base: str = "EUR"
+    invite_code: str
 
     @field_validator("password")
     @classmethod

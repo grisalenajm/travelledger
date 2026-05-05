@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.config import settings
 from app.database import Base, get_db
 from app.main import app
 
@@ -61,6 +62,7 @@ async def auth_headers(client):
             "name": "Test User",
             "password": "TestPass1!secret",
             "currency_base": "EUR",
+            "invite_code": settings.REGISTRATION_INVITE_CODE,
         },
     )
     res = await client.post(
@@ -81,6 +83,7 @@ async def auth_headers_chf(client):
             "name": "CHF User",
             "password": "TestPass1!secret",
             "currency_base": "CHF",
+            "invite_code": settings.REGISTRATION_INVITE_CODE,
         },
     )
     res = await client.post(

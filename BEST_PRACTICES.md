@@ -267,6 +267,77 @@ setReceiptUrl(`/api/proxy/expenses/${expenseId}/receipt-image`)
 
 ---
 
+## 📱 Android — Patrones adicionales
+
+### Debounce para conversión live de moneda en QuickCapture
+```kotlin
+// ✅ CORRECTO — observar StateFlow con debounce para no llamar la API en cada tecla
+@OptIn(FlowPreview::class)
+private fun observeAmountAndCurrencyChanges() {
+    viewModelScope.launch {
+        uiState
+            .drop(1)                    // saltar el estado inicial
+            .debounce(500)              // 500ms sin cambios antes de llamar a la API
+            .distinctUntilChanged { old, new ->
+                old.amount == new.amount && old.currency == new.currency
+            }
+            .collect { state ->
+                updateConversion(state.amount, state.currency, state.date)
+            }
+    }
+}
+// El Job de conversión anterior se cancela si llega nueva entrada antes de que termine
+conversionJob?.cancel()
+conversionJob = viewModelScope.launch { /* llamada a CurrencyRepository */ }
+```
+
+### HiltWorkerFactory — WorkManager con Hilt
+
+Cuando se usa `@HiltWorker` + `@AssistedInject`, hay que:
+
+1. Implementar `Configuration.Provider` en `App.kt`:
+```kotlin
+@HiltAndroidApp
+class App : Application(), Configuration.Provider {
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
+}
+```
+
+2. Desactivar el inicializador por defecto en `AndroidManifest.xml`:
+```xml
+<provider
+    android:name="androidx.startup.InitializationProvider"
+    android:authorities="${applicationId}.androidx-startup"
+    android:exported="false"
+    tools:node="merge">
+    <meta-data
+        android:name="androidx.work.WorkManagerInitializer"
+        android:value="androidx.startup"
+        tools:node="remove" />
+</provider>
+```
+
+### HorizontalPager + DayChipStrip — sincronización bidireccional
+```kotlin
+// Pager → selectedDay
+LaunchedEffect(pagerState) {
+    snapshotFlow { pagerState.currentPage }.collect { page ->
+        days.getOrNull(page)?.let { viewModel.selectDay(it) }
+    }
+}
+// selectedDay → Pager (cuando el usuario toca un chip)
+LaunchedEffect(selectedDay) {
+    val idx = days.indexOf(selectedDay)
+    if (idx >= 0 && pagerState.currentPage != idx) {
+        pagerState.animateScrollToPage(idx)
+    }
+}
+```
+
+---
+
 ## 🔄 Proveedores Externos
 
 ### Tipos de cambio

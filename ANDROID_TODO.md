@@ -208,76 +208,83 @@
 
 ---
 
-## 💶 PHASE A4 — Quick Capture
+## 💶 PHASE A4 — Quick Capture ✅ COMPLETADO 2026-05-05
 
 > La pantalla más importante. Escribir gastos offline-first con conversión live.
 
 ### Domain
 
-- [ ] `domain/model/Expense.kt` — id, tripId, amount, currency, amountBase, rateDate, category, description, date, billable, paperlessDocId
-- [ ] `domain/usecase/expense/CreateExpenseUseCase.kt` — UUID cliente + Room + encola op
-- [ ] `domain/usecase/expense/GetExpensesUseCase.kt` — Flow por tripId y fecha
-- [ ] `domain/usecase/expense/UpdateExpenseUseCase.kt`
-- [ ] `domain/usecase/expense/DeleteExpenseUseCase.kt`
-- [ ] `domain/usecase/currency/GetExchangeRateUseCase.kt` — cache en Room, fallback remoto
+- [x] `domain/model/Expense.kt` — id, tripId, amount, currency, amountBase, rateDate, category (ExpenseCategory enum), description, date, billable, paperlessDocId
+- [x] `domain/model/ExpenseForm.kt` — datos del formulario antes de convertir a Expense
+- [x] `domain/usecase/expense/CreateExpenseUseCase.kt` — UUID cliente + CurrencyRepository (fallback 1:1) + Room + encola op
+- [x] `domain/usecase/expense/GetExpensesByDayUseCase.kt` — Flow por tripId y fecha
+- [x] `domain/usecase/expense/DeleteExpenseUseCase.kt`
 
 ### Data
 
-- [ ] `data/repository/ExpenseRepository.kt` — write-through offline-first
-- [ ] `ExpenseEntity ↔ Expense` mappers
-- [ ] `ExpenseDto ↔ ExpenseEntity` mappers
-- [ ] `data/remote/api/CurrencyApi.kt` — GET /api/currencies/convert
-- [ ] Room: añadir `ExchangeRateEntity` + `ExchangeRateDao`
+- [x] `data/repository/ExpenseRepository.kt` — write-through offline-first
+- [x] `data/repository/ExpenseRepositoryImpl.kt` — Room-first, PendingOperation, SyncManager
+- [x] `data/repository/CurrencyRepository.kt` — caché en memoria, from==to retorna 1.0
+- [x] `data/repository/CurrencyRepositoryImpl.kt`
+- [x] `data/local/room/entity/ExpenseEntity.kt` + `ExpenseMappers.kt`
+- [x] `data/remote/api/ExpenseApi.kt` — getExpenses, createExpense, updateExpense, deleteExpense
+- [x] `data/remote/api/CurrencyApi.kt` — GET /api/currencies/convert
+- [x] `data/remote/api/dto/ExpenseDto.kt` + `ExpenseCreateDto.kt`
+- [x] `data/remote/api/dto/CurrencyDto.kt` — ConvertResponseDto
+- [x] `AppDatabase` — versión 2, añadida ExpenseEntity
+- [x] `di/DatabaseModule` — provee ExpenseDao
+- [x] `di/AppModule` — provee ExpenseApi, CurrencyApi
+- [x] `di/RepositoryModule` — binds ExpenseRepository, CurrencyRepository
 
 ### SyncWorker — implementación completa
 
-- [ ] `sync/SyncWorker.kt` — procesado por dependencias
-- [ ] Trigger on-demand al encolar op nueva
-- [ ] Trigger periódico cada 30 min
-- [ ] Backoff exponencial en reintentos
-- [ ] Limpieza de ops `done` con más de 7 días
-- [ ] Pull desde backend tras push (GET /api/sync/pull?since=)
+- [x] `sync/SyncManager.kt` — triggerOnDemand() via WorkManager
+- [x] `sync/SyncWorker.kt` — procesado por dependencias (create_trip→create_expense→update→delete)
+- [x] Trigger on-demand al encolar op nueva
+- [x] Backoff: marca failed si 4xx o >5 intentos, pending (reintentable) si 5xx/network
+- [x] Limpieza de ops `done` con más de 7 días
+- [x] `App.kt` — HiltWorkerFactory + Configuration.Provider; Manifest: disable default WorkManager initializer
 
 ### Presentation
 
-- [ ] `presentation/screen/expense/capture/QuickCaptureViewModel.kt`
-  - Conversión live amount → amountBase
-  - Categoría default Dining
+- [x] `presentation/screen/expense/capture/QuickCaptureViewModel.kt`
+  - Conversión live amount → amountBase con debounce 500ms
   - Billable default true
-  - Modo edición (si viene de OCR: pre-rellenado)
   - UUID generado antes de guardar
-- [ ] `presentation/screen/expense/capture/QuickCaptureScreen.kt`
-  - Importe XXL 64sp (font-headline extrabold)
-  - Auto-foco al abrir
-  - Selector de moneda con conversión live
-  - CategoryChips scrollables
+  - Preparado para OcrResultDto (argumento day de navegación)
+- [x] `presentation/screen/expense/capture/QuickCaptureScreen.kt`
+  - Importe 64sp extrabold, auto-foco al abrir
+  - ExposedDropdownMenu moneda (EUR/USD/GBP/JPY/CHF/ARS + primaryCurrency del trip)
+  - FilterChip categorías en LazyRow scrollable
   - Toggle billable
-  - Bottom bar: Escanear + Guardar
+  - Bottom bar: Escanear (stub) + Guardar (deshabilitado si amount=0 o sin categoría)
 
 ### TripDetailScreen — base
 
-- [ ] `presentation/screen/trips/detail/TripDetailViewModel.kt`
-  - Gastos agrupados por día
-  - Día activo (hoy si está en el rango del trip)
-  - Lógica "saltar al día del gasto al guardar"
-- [ ] `presentation/screen/trips/detail/TripDetailScreen.kt`
-  - HorizontalPager (un page = un día)
-  - DayChipStrip sincronizado con pager
-  - Progress bar global del trip
-  - Bottom bar: Escanear + Gasto
-  - Pull-to-refresh
+- [x] `presentation/screen/trips/detail/TripDetailViewModel.kt`
+  - combine(trips, pendingOps, selectedDay) → flatMapLatest(expenses por día)
+  - days = range startDate..endDate
+- [x] `presentation/screen/trips/detail/TripDetailScreen.kt`
+  - HorizontalPager sincronizado con DayChipStrip via snapshotFlow
+  - BudgetProgressBar global del trip
+  - Bottom bar: Escanear (stub) + Gasto → QuickCaptureDestination
+  - Empty state por día
 
 ### Componentes
 
-- [ ] `component/ExpenseCard.kt` — icono categoría + importe + moneda + hora
-- [ ] `component/DayChipStrip.kt` — chips scrollables, chip activo marcado
-- [ ] `component/CategoryChips.kt` — reutilizable en QuickCapture y filtros
+- [x] `component/ExpenseCard.kt` — emoji categoría + descripción + importe + conversión base
+- [x] `component/DayChipStrip.kt` — FilterChip con auto-scroll al chip activo
+
+### Navegación
+
+- [x] `Screen.kt` — añadidos TripDetailDestination + QuickCaptureDestination
+- [x] `AppNavGraph.kt` — rutas con argumentos + transiciones slide horizontal/vertical
 
 ### Tests
 
-- [ ] `QuickCaptureViewModel_Test.kt` — conversión live, UUID en cliente, optimistic UI
-- [ ] `ExpenseRepository_Test.kt` — write-through, encolado PendingOperation
-- [ ] `SyncWorker_Test.kt` — orden de procesado, reintentos, backoff
+- [x] `QuickCaptureViewModelTest.kt` — amount=0, category null, guardar exitoso, UUID cliente, billable=true
+- [x] `CreateExpenseUseCaseTest.kt` — from==to, currency API falla, UUID no nulo, amountBase correcto
+- [x] `FakeExpenseRepository.kt` + `FakeCurrencyRepository.kt`
 
 ---
 

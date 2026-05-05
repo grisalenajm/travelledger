@@ -148,8 +148,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 ### Android `[And]`
 > Ver `ANDROID_TODO.md` Phase A3 y A4 para desglose completo.
-- [ ] Phase A3 — Trip Management (TripsScreen, CreateTrip, TripRepository offline-first)
-- [ ] Phase A4 — Quick Capture (QuickCaptureScreen, ExpenseRepository, SyncWorker)
+- [x] Phase A3 — Trip Management (TripsScreen, CreateTrip, TripRepository offline-first) *(2026-05-05)*
+- [x] Phase A4 — Quick Capture (QuickCaptureScreen, ExpenseRepository, SyncWorker) *(2026-05-05)*
 
 ---
 
@@ -245,8 +245,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 |---|---|---|
 | A1 | Foundation | [ ] Pendiente |
 | A2 | Auth Flow | [ ] Pendiente |
-| A3 | Trip Management | [ ] Pendiente |
-| A4 | Quick Capture | [ ] Pendiente |
+| A3 | Trip Management | [x] Completado 2026-05-05 |
+| A4 | Quick Capture | [x] Completado 2026-05-05 |
 | A5 | Camera + OCR | [ ] Pendiente |
 | A6 | Vista por Días + Detalle | [ ] Pendiente |
 | A7 | Summary + Export | [ ] Pendiente |

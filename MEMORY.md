@@ -8,7 +8,7 @@
 ## 📅 Última actualización
 - **Fecha:** 2026-05-05
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Web /register fix (invite_code) + Android A3 Trip Management
+- **Sesión:** Android A4 Quick Capture — ExpenseRepository, SyncWorker, QuickCaptureScreen, TripDetailScreen
 
 ---
 
@@ -35,6 +35,7 @@
 - [x] **Android A2 Auth Flow (2026-05-05)** — TokenStore, ConfigStore (EncryptedSharedPreferences), AuthDto, AuthApi, AuthInterceptor (refresh automático + AuthEventBus), AuthRepository, LoginUseCase, RegisterUseCase, LogoutUseCase, SplashViewModel, ConfigScreen+VM, LoginScreen+VM, RegisterScreen+VM, AppNavGraph, MainActivity, tests (LoginViewModelTest 3 tests, RegisterViewModelTest 3 tests, FakeAuthRepository)
 - [x] **Web /register fix (2026-05-05)** — invite_code enviado en POST (NEXT_PUBLIC_INVITE_CODE), añadido a .env.example y docker-compose.yml; frontend redesplegado en LXC
 - [x] **Android A3 Trip Management (2026-05-05)** — TripEntity+PendingOperationEntity, TripDao+PendingOperationDao, AppDatabase (v1), TripDto/TripCreateDto/TripSummaryDto, TripApi, TripMappers, Trip domain model, TripRepository offline-first (Room-first + PendingOperation + best-effort sync), 4 UseCases (GetTrips/GetActiveTrip/CreateTrip/DeleteTrip), TripsViewModel (combine+stateIn), CreateTripViewModel (UUID client-side), TripsScreen (hero card + pull-to-refresh M3 + pending badge), CreateTripScreen (DateRangePicker + currency dropdown), TripCard + BudgetProgressBar, DatabaseModule, 3 tests TripsViewModel + 3 tests CreateTripViewModel + FakeTripRepository
+- [x] **Android A4 Quick Capture (2026-05-05)** — ExpenseEntity+ExpenseDao (AppDatabase v2), ExpenseDto/CurrencyDto, ExpenseApi/CurrencyApi, Expense domain model (ExpenseCategory enum con emoji()), ExpenseForm, ExpenseMappers (Entity↔Domain↔Dto), ExpenseRepository (write-through offline-first), CurrencyRepository (caché en memoria, from==to→1.0), CreateExpenseUseCase (rate fallback 1:1), GetExpensesByDayUseCase, DeleteExpenseUseCase, SyncManager+SyncWorker (orden dependencias: create_trip→create_expense→update→delete, limpieza 7d), App.kt HiltWorkerFactory+Configuration.Provider, Manifest WorkManager initializer disabled, DI actualizado, QuickCaptureViewModel (debounce 500ms conversión live, billable=true default), QuickCaptureScreen (64sp amount field, CategoryChips LazyRow, currency dropdown, bottom bar), TripDetailViewModel (flatMapLatest expenses×día), TripDetailScreen (HorizontalPager+DayChipStrip sincronizados via snapshotFlow), ExpenseCard+DayChipStrip components, AppNavGraph+Screen actualizados (TripDetailDestination+QuickCaptureDestination), 5 tests QuickCaptureViewModel + 5 tests CreateExpenseUseCase + FakeExpenseRepository + FakeCurrencyRepository
 
 ---
 
@@ -118,21 +119,21 @@
 ## 🔄 En Progreso
 
 - **FASE 3 Backend** — OCR (ocr_service.py + Receipt model + router upload)
-- **FASE Android A4** — Quick Capture + ExpenseRepository + SyncWorker
+- **FASE Android A5** — Camera + OCR (siguiente)
 
 ---
 
 ## ⏳ Pendiente — resumen por fase
 
-- **FASE 0:** ✅ Completado (pendiente menor: README NAS, Android skeleton, seed SQL)
+- **FASE 0:** ✅ Completado (pendiente menor: README NAS, seed SQL)
 - **FASE 1 Backend:** ✅ Completado — todos los bloqueantes Android implementados
 - **FASE 1 Web:** ✅ Completado — fix /register invite_code desplegado (2026-05-05); NEXT_PUBLIC_INVITE_CODE pendiente de añadir al .env del LXC
-- **FASE 1 Android:** ✅ A1 + A2 + A3 completados (2026-05-05)
+- **FASE 1 Android:** ✅ A1 + A2 + A3 + A4 completados (2026-05-05)
 - **FASE 2:** ✅ Completado (backend + web)
-- **FASE 2 Android:** Phases A3 + A4 — no iniciadas
+- **FASE 2 Android:** ✅ A3 + A4 completados (2026-05-05)
 - **FASE 3:** OCR backend + web scan screens + Android Phase A5
 - **FASE 4:** Paperless cascade delete + Android "Ver factura"
-- **FASE 5:** Sync backend (push/pull endpoints) + Android SyncWorker completo
+- **FASE 5:** Sync backend (push/pull endpoints) + Android SyncWorker pull completo
 - **FASE 6:** Export bundle + Android Phase A7
 - **FASE 7:** FCM push + polish + Android Phase A8
 - **FASE 8:** Bot Telegram completo

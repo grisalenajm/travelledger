@@ -45,7 +45,7 @@ class TripsViewModel @Inject constructor(
             !trip.endDate.isBefore(today)
         }
         val others = trips.filterNot { it in active }
-        TripsUiState.Success(active, others, pendingCount)
+        TripsUiState.Success(active, others, pendingCount) as TripsUiState
     }
         .catch { e -> emit(TripsUiState.Error(e.localizedMessage ?: "Error al cargar viajes")) }
         .stateIn(

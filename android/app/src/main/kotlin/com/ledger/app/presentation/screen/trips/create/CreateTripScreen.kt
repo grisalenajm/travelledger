@@ -135,8 +135,8 @@ fun CreateTripScreen(
             // Date range
             val dateText = when {
                 form.startDateMillis != null && form.endDateMillis != null -> {
-                    val start = LocalDate.ofEpochDay(form.startDateMillis / 86_400_000L)
-                    val end = LocalDate.ofEpochDay(form.endDateMillis / 86_400_000L)
+                    val start = LocalDate.ofEpochDay(form.startDateMillis!! / 86_400_000L)
+                    val end = LocalDate.ofEpochDay(form.endDateMillis!! / 86_400_000L)
                     "${start.format(DATE_FMT)} — ${end.format(DATE_FMT)}"
                 }
                 else -> "Seleccionar fechas *"

@@ -6,6 +6,7 @@ import com.ledger.app.data.camera.CameraManager
 import com.ledger.app.data.local.datastore.ConfigStore
 import com.ledger.app.data.local.datastore.TokenStore
 import com.ledger.app.data.remote.api.AuthApi
+import com.ledger.app.data.remote.api.ExportApi
 import com.ledger.app.data.remote.api.ReceiptApi
 import com.ledger.app.data.remote.interceptor.AuthInterceptor
 import com.ledger.app.data.remote.interceptor.DynamicUrlInterceptor
@@ -129,4 +130,9 @@ object AppModule {
     @Singleton
     fun provideReceiptApi(@Named("authenticated") retrofit: Retrofit): ReceiptApi =
         retrofit.create(ReceiptApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideExportApi(@Named("authenticated") retrofit: Retrofit): ExportApi =
+        retrofit.create(ExportApi::class.java)
 }

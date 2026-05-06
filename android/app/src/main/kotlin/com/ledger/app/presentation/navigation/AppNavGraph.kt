@@ -22,6 +22,7 @@ import com.ledger.app.presentation.screen.expense.detail.ExpenseDetailScreen
 import com.ledger.app.presentation.screen.expense.processing.OcrProcessingScreen
 import com.ledger.app.presentation.screen.splash.SplashScreen
 import com.ledger.app.presentation.screen.trips.create.CreateTripScreen
+import com.ledger.app.presentation.screen.summary.SummaryScreen
 import com.ledger.app.presentation.screen.trips.detail.TripDetailScreen
 import com.ledger.app.presentation.screen.trips.list.TripsScreen
 
@@ -107,7 +108,9 @@ fun AppNavGraph(
                 onNavigateToCamera = { tripId ->
                     navController.navigate(Screen.Camera.createRoute(tripId))
                 },
-                onNavigateToSummary = { /* SummaryDestination — A7 */ },
+                onNavigateToSummary = { tripId ->
+                    navController.navigate(Screen.Summary.createRoute(tripId))
+                },
                 onNavigateToExpenseDetail = { expenseId ->
                     navController.navigate(Screen.ExpenseDetail.createRoute(expenseId))
                 },
@@ -192,6 +195,16 @@ fun AppNavGraph(
             ExpenseDetailScreen(
                 onNavigateUp = { navController.navigateUp() },
                 viewModel = hiltViewModel(),
+            )
+        }
+        composable(
+            route = Screen.Summary.route,
+            arguments = listOf(navArgument("tripId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally { it } },
+            exitTransition = { slideOutHorizontally { it } },
+        ) {
+            SummaryScreen(
+                onNavigateUp = { navController.navigateUp() },
             )
         }
     }

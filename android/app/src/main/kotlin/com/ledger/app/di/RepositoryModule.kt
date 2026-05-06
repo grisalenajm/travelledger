@@ -4,6 +4,8 @@ import com.ledger.app.data.repository.AuthRepository
 import com.ledger.app.data.repository.AuthRepositoryImpl
 import com.ledger.app.data.repository.CurrencyRepository
 import com.ledger.app.data.repository.CurrencyRepositoryImpl
+import com.ledger.app.data.repository.ExportRepository
+import com.ledger.app.data.repository.ExportRepositoryImpl
 import com.ledger.app.data.repository.ExpenseRepository
 import com.ledger.app.data.repository.ExpenseRepositoryImpl
 import com.ledger.app.data.repository.TripRepository
@@ -33,4 +35,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCurrencyRepository(impl: CurrencyRepositoryImpl): CurrencyRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindExportRepository(impl: ExportRepositoryImpl): ExportRepository
 }

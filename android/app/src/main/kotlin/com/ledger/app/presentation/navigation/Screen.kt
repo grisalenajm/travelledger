@@ -34,4 +34,7 @@ sealed class Screen(val route: String) {
         fun createRoute(tripId: String, imagePath: String): String =
             "ocr/$tripId?imagePath=${Uri.encode(imagePath)}"
     }
+    object Summary : Screen("trips/{tripId}/summary") {
+        fun createRoute(tripId: String) = "trips/$tripId/summary"
+    }
 }

@@ -82,7 +82,7 @@
 
 ### Network Monitor
 
-- [ ] `util/NetworkMonitor.kt` — pendiente A3
+- [x] `util/NetworkMonitor.kt` — implementado en A7 (callbackFlow + ConnectivityManager)
 
 ### Navegación base
 
@@ -379,34 +379,35 @@
 
 ---
 
-## 📈 PHASE A7 — Summary + Export
+## 📈 PHASE A7 — Summary + Export ✅ COMPLETADO 2026-05-06
 
 > SummaryScreen con gráfico + export CSV/ZIP vía backend.
 
 ### SummaryScreen
 
-- [ ] `presentation/screen/summary/SummaryViewModel.kt`
+- [x] `presentation/screen/summary/SummaryViewModel.kt`
   - Totales por categoría (calculados desde Room)
   - Breakdown por moneda
   - Totales billable vs personal
   - Detectar si hay red para habilitar/deshabilitar export
-- [ ] `presentation/screen/summary/SummaryScreen.kt`
+- [x] `presentation/screen/summary/SummaryScreen.kt`
   - Donut chart (Compose Canvas — no librería externa)
   - Breakdown por categoría con porcentajes
   - Breakdown por moneda
   - Totales billable / personal
-  - Botones Exportar CSV y Exportar ZIP (deshabilitados si offline)
+  - Botones Exportar CSV (funcional online) y Exportar ZIP (siempre deshabilitado, "próximamente")
 
 ### Export
 
-- [ ] `data/repository/ExportRepository.kt` — download CSV/ZIP del backend
-- [ ] `util/FileShareUtil.kt` — guardar en `cacheDir/exports/` + Intent.ACTION_SEND vía FileProvider
-- [ ] `domain/usecase/export/ExportCsvUseCase.kt`
-- [ ] `domain/usecase/export/ExportZipUseCase.kt`
+- [x] `data/remote/api/ExportApi.kt` — GET /api/reports/export/{tripId}?format=csv con @Streaming
+- [x] `data/repository/ExportRepository.kt` + `ExportRepositoryImpl.kt`
+- [x] `util/FileShareUtil.kt` — cacheDir/exports/ + FileProvider + Intent.ACTION_SEND
+- [x] `util/NetworkMonitor.kt` — callbackFlow + ConnectivityManager
+- [x] `domain/usecase/export/ExportCsvUseCase.kt`
 
 ### Tests
 
-- [ ] `SummaryViewModel_Test.kt` — cálculos de totales desde Room mock
+- [x] `SummaryViewModelTest.kt` — 5 tests: totales offline, orden categorías, split billable, export bloqueado offline, export llama repositorio
 
 ---
 

@@ -15,6 +15,7 @@ data class Expense(
     val billable: Boolean,
     val loyaltyCardId: String?,
     val paperlessDocId: Int?,
+    val isDraft: Boolean = false,
 )
 
 enum class ExpenseCategory {

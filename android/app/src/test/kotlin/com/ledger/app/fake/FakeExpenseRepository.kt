@@ -12,8 +12,10 @@ class FakeExpenseRepository : ExpenseRepository {
     private val _expenses = MutableStateFlow<List<Expense>>(emptyList())
 
     var createResult: Result<Expense>? = null
+    var updateResult: Result<Expense>? = null
     var deleteResult: Result<Unit> = Result.success(Unit)
     var lastCreated: Expense? = null
+    var lastUpdated: Expense? = null
 
     fun setExpenses(expenses: List<Expense>) {
         _expenses.value = expenses
@@ -25,10 +27,25 @@ class FakeExpenseRepository : ExpenseRepository {
     override fun getExpensesByTrip(tripId: String): Flow<List<Expense>> =
         _expenses.map { list -> list.filter { it.tripId == tripId } }
 
+    override suspend fun getById(id: String): Expense? =
+        _expenses.value.find { it.id == id }
+
+    override suspend fun fetchById(id: String): Expense? =
+        _expenses.value.find { it.id == id }
+
     override suspend fun create(expense: Expense): Result<Expense> {
         lastCreated = expense
         val result = createResult ?: Result.success(expense)
         if (result.isSuccess) _expenses.value = _expenses.value + expense
+        return result
+    }
+
+    override suspend fun update(expense: Expense): Result<Expense> {
+        lastUpdated = expense
+        val result = updateResult ?: Result.success(expense)
+        if (result.isSuccess) {
+            _expenses.value = _expenses.value.map { if (it.id == expense.id) expense else it }
+        }
         return result
     }
 

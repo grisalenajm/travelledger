@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ledger.app.domain.model.toParcel
 import com.ledger.app.domain.usecase.expense.ProcessReceiptUseCase
 import com.ledger.app.util.UuidGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,8 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
 import java.net.ConnectException
@@ -34,10 +31,7 @@ data class OcrProcessingUiState(
 )
 
 sealed class OcrEvent {
-    data class NavigateToQuickCapture(
-        val tripId: String,
-        val ocrResultJson: String,
-    ) : OcrEvent()
+    data class NavigateToExpenseDetail(val expenseId: String) : OcrEvent()
     data class NavigateToQuickCaptureManual(val tripId: String) : OcrEvent()
 }
 
@@ -65,13 +59,10 @@ class OcrProcessingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = OcrProcessingUiState(step = OcrStep.Saving)
 
-            // Copy image to pending_uploads dir
             val pendingDir = File(context.filesDir, "pending_uploads").also { it.mkdirs() }
             val operationId = UuidGenerator.generate()
             val destFile = File(pendingDir, "$operationId.jpg")
-            runCatching {
-                File(imagePath).copyTo(destFile, overwrite = true)
-            }
+            runCatching { File(imagePath).copyTo(destFile, overwrite = true) }
 
             _uiState.update { it.copy(step = OcrStep.Uploading) }
             delay(300)
@@ -80,9 +71,7 @@ class OcrProcessingViewModel @Inject constructor(
             processReceiptUseCase(destFile, tripId)
                 .onSuccess { ocrResult ->
                     _uiState.update { it.copy(step = OcrStep.Done) }
-                    val parcel = ocrResult.toParcel()
-                    val json = Json.encodeToString(parcel)
-                    _events.send(OcrEvent.NavigateToQuickCapture(tripId, json))
+                    _events.send(OcrEvent.NavigateToExpenseDetail(ocrResult.expenseId))
                 }
                 .onFailure { e ->
                     val isOffline = e is UnknownHostException ||

@@ -51,7 +51,7 @@ import java.io.File
 @Composable
 fun OcrProcessingScreen(
     onNavigateUp: () -> Unit,
-    onNavigateToQuickCapture: (tripId: String, ocrResultJson: String) -> Unit,
+    onNavigateToExpenseDetail: (expenseId: String) -> Unit,
     onNavigateToQuickCaptureManual: (tripId: String) -> Unit,
     viewModel: OcrProcessingViewModel = hiltViewModel(),
 ) {
@@ -60,8 +60,8 @@ fun OcrProcessingScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is OcrEvent.NavigateToQuickCapture ->
-                    onNavigateToQuickCapture(event.tripId, event.ocrResultJson)
+                is OcrEvent.NavigateToExpenseDetail ->
+                    onNavigateToExpenseDetail(event.expenseId)
                 is OcrEvent.NavigateToQuickCaptureManual ->
                     onNavigateToQuickCaptureManual(event.tripId)
             }

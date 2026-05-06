@@ -18,6 +18,7 @@ fun ExpenseEntity.toDomain(): Expense = Expense(
     billable = billable,
     loyaltyCardId = loyaltyCardId,
     paperlessDocId = paperlessDocId,
+    isDraft = isDraft,
 )
 
 fun Expense.toEntity(syncPending: Boolean = false): ExpenseEntity = ExpenseEntity(
@@ -34,6 +35,7 @@ fun Expense.toEntity(syncPending: Boolean = false): ExpenseEntity = ExpenseEntit
     loyaltyCardId = loyaltyCardId,
     paperlessDocId = paperlessDocId,
     syncPending = syncPending,
+    isDraft = isDraft,
     updatedAt = System.currentTimeMillis(),
 )
 
@@ -50,5 +52,6 @@ fun ExpenseDto.toEntity(): ExpenseEntity = ExpenseEntity(
     billable = billable,
     loyaltyCardId = loyalty_card_id,
     paperlessDocId = paperless_doc_id,
+    isDraft = is_draft,
     syncPending = false,
 )

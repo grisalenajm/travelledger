@@ -71,14 +71,13 @@ class OcrProcessingViewModelTest {
     }
 
     @Test
-    fun `OCR exitoso - emite NavigateToQuickCapture con tripId y json no vacio`() = runTest {
+    fun `OCR exitoso - emite NavigateToExpenseDetail con expenseId correcto`() = runTest {
         val viewModel = buildViewModel()
         coroutineRule.testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.events.test {
-            val event = awaitItem() as OcrEvent.NavigateToQuickCapture
-            assertEquals(testTripId, event.tripId)
-            assertTrue(event.ocrResultJson.isNotBlank())
+            val event = awaitItem() as OcrEvent.NavigateToExpenseDetail
+            assertEquals("expense-draft-1", event.expenseId)
             cancelAndIgnoreRemainingEvents()
         }
     }

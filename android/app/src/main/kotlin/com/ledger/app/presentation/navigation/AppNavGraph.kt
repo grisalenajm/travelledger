@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,6 +18,7 @@ import com.ledger.app.presentation.screen.auth.register.RegisterScreen
 import com.ledger.app.presentation.screen.config.ConfigScreen
 import com.ledger.app.presentation.screen.expense.camera.CameraScreen
 import com.ledger.app.presentation.screen.expense.capture.QuickCaptureScreen
+import com.ledger.app.presentation.screen.expense.detail.ExpenseDetailScreen
 import com.ledger.app.presentation.screen.expense.processing.OcrProcessingScreen
 import com.ledger.app.presentation.screen.splash.SplashScreen
 import com.ledger.app.presentation.screen.trips.create.CreateTripScreen
@@ -106,6 +108,9 @@ fun AppNavGraph(
                     navController.navigate(Screen.Camera.createRoute(tripId))
                 },
                 onNavigateToSummary = { /* SummaryDestination — A7 */ },
+                onNavigateToExpenseDetail = { expenseId ->
+                    navController.navigate(Screen.ExpenseDetail.createRoute(expenseId))
+                },
             )
         }
         composable(
@@ -160,10 +165,9 @@ fun AppNavGraph(
         ) {
             OcrProcessingScreen(
                 onNavigateUp = { navController.navigateUp() },
-                onNavigateToQuickCapture = { tripId, ocrResultJson ->
-                    val day = java.time.LocalDate.now().toString()
+                onNavigateToExpenseDetail = { expenseId ->
                     navController.navigate(
-                        Screen.QuickCapture.createRoute(tripId, day, ocrResultJson),
+                        Screen.ExpenseDetail.createRoute(expenseId, isOcrDraft = true)
                     ) {
                         popUpTo(Screen.TripDetail.route)
                     }
@@ -174,6 +178,20 @@ fun AppNavGraph(
                         popUpTo(Screen.TripDetail.route)
                     }
                 },
+            )
+        }
+        composable(
+            route = Screen.ExpenseDetail.route,
+            arguments = listOf(
+                navArgument("expenseId") { type = NavType.StringType },
+                navArgument("isOcrDraft") { type = NavType.BoolType; defaultValue = false },
+            ),
+            enterTransition = { slideInHorizontally { it } },
+            exitTransition = { slideOutHorizontally { it } },
+        ) {
+            ExpenseDetailScreen(
+                onNavigateUp = { navController.navigateUp() },
+                viewModel = hiltViewModel(),
             )
         }
     }

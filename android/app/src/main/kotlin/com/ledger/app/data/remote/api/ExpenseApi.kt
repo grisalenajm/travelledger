@@ -15,6 +15,9 @@ interface ExpenseApi {
     @GET("api/expenses")
     suspend fun getExpenses(@Query("trip_id") tripId: String): List<ExpenseDto>
 
+    @GET("api/expenses/{id}")
+    suspend fun getExpense(@Path("id") id: String): ExpenseDto
+
     @POST("api/expenses")
     suspend fun createExpense(@Body body: ExpenseCreateDto): ExpenseDto
 

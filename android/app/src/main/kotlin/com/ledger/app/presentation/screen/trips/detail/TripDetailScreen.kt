@@ -1,6 +1,7 @@
 package com.ledger.app.presentation.screen.trips.detail
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,9 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -27,26 +29,33 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ledger.app.domain.model.Expense
+import com.ledger.app.domain.model.ExpenseCategory
 import com.ledger.app.presentation.component.BudgetProgressBar
 import com.ledger.app.presentation.component.DayChipStrip
 import com.ledger.app.presentation.component.ExpenseCard
-import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -55,9 +64,24 @@ fun TripDetailScreen(
     onNavigateToQuickCapture: (tripId: String, day: String) -> Unit,
     onNavigateToCamera: (tripId: String) -> Unit,
     onNavigateToSummary: (tripId: String) -> Unit,
+    onNavigateToExpenseDetail: (expenseId: String) -> Unit,
     viewModel: TripDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.pendingDeleteExpense) {
+        if (uiState.pendingDeleteExpense == null) return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = "Gasto eliminado",
+            actionLabel = "Deshacer",
+            duration = SnackbarDuration.Short,
+        )
+        when (result) {
+            SnackbarResult.ActionPerformed -> viewModel.cancelDelete()
+            SnackbarResult.Dismissed -> viewModel.confirmDelete()
+        }
+    }
 
     if (uiState.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -80,14 +104,12 @@ fun TripDetailScreen(
     val initialPage = days.indexOf(selectedDay).coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = initialPage) { days.size }
 
-    // Sync pager → selectedDay
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             days.getOrNull(page)?.let { viewModel.selectDay(it) }
         }
     }
 
-    // Sync selectedDay → pager (when chip tapped)
     LaunchedEffect(selectedDay) {
         val idx = days.indexOf(selectedDay)
         if (idx >= 0 && pagerState.currentPage != idx) {
@@ -101,7 +123,7 @@ fun TripDetailScreen(
                 title = { Text(trip.name, maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
@@ -129,9 +151,7 @@ fun TripDetailScreen(
                         Icon(Icons.Default.PhotoCamera, contentDescription = "Escanear")
                     }
                     Button(
-                        onClick = {
-                            onNavigateToQuickCapture(trip.id, selectedDay.toString())
-                        },
+                        onClick = { onNavigateToQuickCapture(trip.id, selectedDay.toString()) },
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Text(" Gasto")
@@ -139,6 +159,7 @@ fun TripDetailScreen(
                 }
             }
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -160,14 +181,34 @@ fun TripDetailScreen(
                 DayChipStrip(
                     days = days,
                     selectedDay = selectedDay,
-                    onDaySelected = { day ->
-                        viewModel.selectDay(day)
-                    },
+                    onDaySelected = { viewModel.selectDay(it) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                FilterChip(
+                    selected = uiState.selectedCategory == null,
+                    onClick = { viewModel.selectCategory(null) },
+                    label = { Text("Todos") },
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+                ExpenseCategory.entries.forEach { cat ->
+                    FilterChip(
+                        selected = uiState.selectedCategory == cat,
+                        onClick = { viewModel.selectCategory(cat) },
+                        label = { Text("${cat.emoji()} ${cat.name}") },
+                        modifier = Modifier.padding(end = 6.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
 
             if (days.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -178,21 +219,16 @@ fun TripDetailScreen(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                 ) { page ->
-                    val day = days.getOrNull(page)
-                    if (day == null) {
-                        Box(Modifier.fillMaxSize())
-                        return@HorizontalPager
-                    }
+                    val day = days.getOrNull(page) ?: return@HorizontalPager
                     val isCurrentPage = day == selectedDay
                     DayPage(
                         expenses = if (isCurrentPage) uiState.expensesForDay else emptyList(),
                         totalForDay = if (isCurrentPage) uiState.totalForDay else 0.0,
                         currency = uiState.currencyBase,
-                        day = day,
                         userCurrencyBase = uiState.currencyBase,
-                        onAddExpense = {
-                            onNavigateToQuickCapture(trip.id, day.toString())
-                        },
+                        onExpenseClick = { onNavigateToExpenseDetail(it.id) },
+                        onExpenseLongClick = { viewModel.requestDelete(it) },
+                        onAddExpense = { onNavigateToQuickCapture(trip.id, day.toString()) },
                     )
                 }
             }
@@ -205,8 +241,9 @@ private fun DayPage(
     expenses: List<Expense>,
     totalForDay: Double,
     currency: String,
-    day: LocalDate,
     userCurrencyBase: String,
+    onExpenseClick: (Expense) -> Unit,
+    onExpenseLongClick: (Expense) -> Unit,
     onAddExpense: () -> Unit,
 ) {
     if (expenses.isEmpty()) {
@@ -214,17 +251,17 @@ private fun DayPage(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(32.dp),
             ) {
-                Text(
-                    "Sin gastos este día",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("💸", fontSize = 48.sp)
+                Text("Sin gastos este día", style = MaterialTheme.typography.titleMedium)
                 Text(
                     "Pulsa + para añadir",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onAddExpense) { Text("Añadir gasto") }
             }
         }
     } else {
@@ -236,6 +273,8 @@ private fun DayPage(
                 ExpenseCard(
                     expense = expense,
                     userCurrencyBase = userCurrencyBase,
+                    onClick = { onExpenseClick(expense) },
+                    onLongClick = { onExpenseLongClick(expense) },
                 )
             }
             item {

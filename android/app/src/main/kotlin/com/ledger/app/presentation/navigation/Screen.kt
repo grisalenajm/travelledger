@@ -9,6 +9,11 @@ sealed class Screen(val route: String) {
     object Register : Screen("register")
     object Trips : Screen("trips")
     object CreateTrip : Screen("trips/create")
+    object Settings : Screen("settings")
+    object ExpenseDetail : Screen("expense/detail/{expenseId}?isOcrDraft={isOcrDraft}") {
+        fun createRoute(expenseId: String, isOcrDraft: Boolean = false) =
+            "expense/detail/$expenseId?isOcrDraft=$isOcrDraft"
+    }
     object TripDetail : Screen("trips/{tripId}") {
         fun createRoute(tripId: String) = "trips/$tripId"
     }

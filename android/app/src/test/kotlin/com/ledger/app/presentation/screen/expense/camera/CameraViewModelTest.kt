@@ -10,8 +10,7 @@ import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertInstanceOf
-import org.junit.Assert.assertTrue
+import kotlin.test.assertIs
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -39,7 +38,7 @@ class CameraViewModelTest {
     @Test
     fun `estado inicial es Preview`() = runTest {
         viewModel.uiState.test {
-            assertInstanceOf(CameraUiState.Preview::class.java, awaitItem())
+            assertIs<CameraUiState.Preview>(awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -55,7 +54,7 @@ class CameraViewModelTest {
         }
 
         viewModel.uiState.test {
-            assertInstanceOf(CameraUiState.Preview::class.java, awaitItem())
+            assertIs<CameraUiState.Preview>(awaitItem())
             viewModel.onCapture(tempFolder.root)
             val captured = awaitItem() as CameraUiState.Captured
             assertEquals(capturedFile, captured.file)
@@ -81,7 +80,7 @@ class CameraViewModelTest {
             // May be Captured or Preview depending on timing — just call retake
             viewModel.onRetake()
             val afterRetake = awaitItem()
-            assertInstanceOf(CameraUiState.Preview::class.java, afterRetake)
+            assertIs<CameraUiState.Preview>(afterRetake)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -105,7 +104,7 @@ class CameraViewModelTest {
             awaitItem() // Preview
             viewModel.onProcess(file)
             val processing = awaitItem()
-            assertInstanceOf(CameraUiState.Processing::class.java, processing)
+            assertIs<CameraUiState.Processing>(processing)
             cancelAndIgnoreRemainingEvents()
         }
     }

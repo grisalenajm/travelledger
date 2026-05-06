@@ -16,6 +16,7 @@ data class ExpenseDto(
     val billable: Boolean,
     val loyalty_card_id: String?,
     val paperless_doc_id: Int?,
+    val is_draft: Boolean = false,
     val created_at: String,
     val updated_at: String,
 )

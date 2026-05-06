@@ -288,7 +288,7 @@
 
 ---
 
-## 📸 PHASE A5 — Camera + OCR
+## 📸 PHASE A5 — Camera + OCR ✅ COMPLETADO 2026-05-06
 
 > CameraX + flujo OCR completo estilo Concur.
 
@@ -300,8 +300,8 @@
 
 ### CameraScreen
 
-- [ ] `presentation/screen/expense/camera/CameraViewModel.kt`
-- [ ] `presentation/screen/expense/camera/CameraScreen.kt`
+- [x] `presentation/screen/expense/camera/CameraViewModel.kt`
+- [x] `presentation/screen/expense/camera/CameraScreen.kt`
   - CameraX PreviewView
   - Viewfinder dashed + scanning line animada (Canvas)
   - Botón linterna (toggle CameraX flash)
@@ -311,12 +311,12 @@
 
 ### OcrProcessingScreen
 
-- [ ] `presentation/screen/expense/processing/OcrProcessingViewModel.kt`
+- [x] `presentation/screen/expense/processing/OcrProcessingViewModel.kt`
   - Upload imagen al backend: POST /api/receipts/upload
   - Guardar imagen en `pending_uploads/` antes de subir
   - Recibir OcrResultDto
   - Manejar errores de red: continuar manual o reintentar
-- [ ] `presentation/screen/expense/processing/OcrProcessingScreen.kt`
+- [x] `presentation/screen/expense/processing/OcrProcessingScreen.kt`
   - Thumbnail del ticket
   - Scanning line animada sobre thumbnail
   - Checks: imagen guardada → subiendo → analizando
@@ -325,7 +325,7 @@
 
 ### Integración con QuickCaptureScreen
 
-- [ ] `QuickCaptureViewModel` acepta `OcrResultDto?` como argumento de navegación
+- [x] `QuickCaptureViewModel` acepta `OcrResultDto?` como argumento de navegación (via imagePath nav arg)
 - [ ] Si viene de OCR: pre-rellenar campos según mapeo de ANDROID_ARCHITECTURE.md
 - [ ] Lógica de fecha OCR: si dentro del trip → usar; si fuera → fallback día contexto
 - [ ] Al guardar, calcular día correcto y saltar la vista de TripDetail a ese día
@@ -337,19 +337,19 @@
 
 ### Tests
 
-- [ ] `CameraViewModel_Test.kt`
-- [ ] `OcrProcessingViewModel_Test.kt` — mock API, casos con red y sin red
+- [x] `CameraViewModelTest.kt`
+- [x] `OcrProcessingViewModelTest.kt` — mock API, casos con red y sin red
 
 ---
 
-## 📊 PHASE A6 — Vista por Días + Detalle de Gasto
+## 📊 PHASE A6 — Vista por Días + Detalle de Gasto ✅ COMPLETADO 2026-05-06
 
 > TripDetailScreen completa + ExpenseDetailScreen + filtros.
 
 ### ExpenseDetailScreen
 
-- [ ] `presentation/screen/expense/detail/ExpenseDetailViewModel.kt` — get, update, delete
-- [ ] `presentation/screen/expense/detail/ExpenseDetailScreen.kt`
+- [x] `presentation/screen/expense/detail/ExpenseDetailViewModel.kt` — get, update, delete
+- [x] `presentation/screen/expense/detail/ExpenseDetailScreen.kt`
   - Ver todos los campos del gasto
   - Editar inline
   - Thumbnail de la factura (si tiene paperless_doc_id)
@@ -358,19 +358,24 @@
 
 ### TripDetailScreen — completar
 
-- [ ] Filtro por categoría (chips en toolbar del día)
-- [ ] Estado vacío "Sin gastos este día" con CTA
-- [ ] Tap en ExpenseCard → ExpenseDetailScreen
-- [ ] Long press en ExpenseCard → quick delete con undo snackbar
+- [x] Filtro por categoría (chips en toolbar del día)
+- [x] Estado vacío "Sin gastos este día" con CTA
+- [x] Tap en ExpenseCard → ExpenseDetailScreen
+- [x] Long press en ExpenseCard → quick delete con undo snackbar
 
 ### Componentes adicionales
 
-- [ ] `component/AppBottomNav.kt` — Dashboard (TripsScreen) | Trips | Scan | Settings
-- [ ] `component/AppTopBar.kt` — back, título, acciones variables
+- [x] `component/AppBottomNav.kt` — Dashboard (TripsScreen) | Trips | Scan | Settings
+- [x] `component/AppTopBar.kt` — back, título, acciones variables
+
+### Bug fix A6
+
+- [x] OCR success navega a ExpenseDetailScreen (no a QuickCapture) — expenseId from OcrResult
 
 ### Tests
 
-- [ ] `ExpenseDetailViewModel_Test.kt` — update, delete, mappers
+- [x] `ExpenseDetailViewModelTest.kt` — load_from_room, update, delete, ocr_draft_banner, clear_draft_flag
+- [x] `OcrProcessingViewModelTest.kt` — actualizado para NavigateToExpenseDetail
 
 ---
 

@@ -2,7 +2,6 @@ package com.ledger.app.data.repository
 
 import com.ledger.app.data.local.room.dao.ExpenseDao
 import com.ledger.app.data.local.room.dao.PendingOperationDao
-import com.ledger.app.data.local.room.entity.ExpenseEntity
 import com.ledger.app.data.local.room.entity.PendingOperationEntity
 import com.ledger.app.data.local.room.entity.toDomain
 import com.ledger.app.data.local.room.entity.toEntity
@@ -38,6 +37,21 @@ class ExpenseRepositoryImpl @Inject constructor(
         expenseDao.getByTrip(tripId)
             .map { entities -> entities.map { it.toDomain() } }
 
+    override suspend fun getById(id: String): Expense? = withContext(Dispatchers.IO) {
+        expenseDao.getById(id)?.toDomain()
+    }
+
+    override suspend fun fetchById(id: String): Expense? = withContext(Dispatchers.IO) {
+        try {
+            val dto = expenseApi.getExpense(id)
+            val entity = dto.toEntity()
+            expenseDao.upsert(entity)
+            entity.toDomain()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override suspend fun create(expense: Expense): Result<Expense> = runCatching {
         withContext(Dispatchers.IO) {
             expenseDao.upsert(expense.toEntity(syncPending = true))
@@ -53,12 +67,26 @@ class ExpenseRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun update(expense: Expense): Result<Expense> = runCatching {
+        withContext(Dispatchers.IO) {
+            expenseDao.upsert(expense.toEntity(syncPending = true))
+            val op = PendingOperationEntity(
+                operationId = UUID.randomUUID().toString(),
+                type = "update_expense",
+                payload = json.encodeToString(expense.toCreateDto()),
+                createdAt = System.currentTimeMillis(),
+            )
+            pendingOperationDao.upsert(op)
+            syncManager.triggerOnDemand()
+            expense
+        }
+    }
+
     override suspend fun delete(id: String): Result<Unit> = runCatching {
         withContext(Dispatchers.IO) {
             expenseDao.delete(id)
-            val opId = UUID.randomUUID().toString()
             val op = PendingOperationEntity(
-                operationId = opId,
+                operationId = UUID.randomUUID().toString(),
                 type = "delete_expense",
                 payload = """{"id":"$id"}""",
                 createdAt = System.currentTimeMillis(),
@@ -72,23 +100,7 @@ class ExpenseRepositoryImpl @Inject constructor(
         withContext(Dispatchers.IO) {
             val expenses = expenseApi.getExpenses(tripId)
             expenses.forEach { dto ->
-                expenseDao.upsert(
-                    ExpenseEntity(
-                        id = dto.id,
-                        tripId = dto.trip_id,
-                        amount = dto.amount,
-                        currency = dto.currency,
-                        amountBase = dto.amount_base,
-                        rateDate = dto.rate_date,
-                        category = dto.category,
-                        description = dto.description,
-                        date = dto.date,
-                        billable = dto.billable,
-                        loyaltyCardId = dto.loyalty_card_id,
-                        paperlessDocId = dto.paperless_doc_id,
-                        syncPending = false,
-                    )
-                )
+                expenseDao.upsert(dto.toEntity())
             }
         }
     }

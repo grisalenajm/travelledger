@@ -18,6 +18,7 @@ data class ExpenseEntity(
     val loyaltyCardId: String?,
     val paperlessDocId: Int?,
     val syncPending: Boolean = false,
+    val isDraft: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )

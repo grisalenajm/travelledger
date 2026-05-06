@@ -6,17 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.ledger.app.data.repository.ExpenseRepository
 import com.ledger.app.data.repository.TripRepository
 import com.ledger.app.domain.model.Expense
+import com.ledger.app.domain.model.ExpenseCategory
 import com.ledger.app.domain.model.Trip
+import com.ledger.app.domain.usecase.expense.DeleteExpenseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -31,6 +31,8 @@ data class TripDetailUiState(
     val totalForDay: Double = 0.0,
     val currencyBase: String = "EUR",
     val pendingOpsCount: Int = 0,
+    val selectedCategory: ExpenseCategory? = null,
+    val pendingDeleteExpense: Expense? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
 )
@@ -40,11 +42,14 @@ class TripDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val tripRepository: TripRepository,
     private val expenseRepository: ExpenseRepository,
+    private val deleteExpenseUseCase: DeleteExpenseUseCase,
 ) : ViewModel() {
 
     private val tripId: String = checkNotNull(savedStateHandle["tripId"])
 
     private val _selectedDay = MutableStateFlow(LocalDate.now())
+    private val _selectedCategory = MutableStateFlow<ExpenseCategory?>(null)
+    private val _pendingDeleteExpense = MutableStateFlow<Expense?>(null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<TripDetailUiState> = combine(
@@ -52,8 +57,7 @@ class TripDetailViewModel @Inject constructor(
         tripRepository.observePendingOpsCount(),
         _selectedDay,
     ) { trips, pendingCount, selectedDay ->
-        val trip = trips.find { it.id == tripId }
-        Triple(trip, pendingCount, selectedDay)
+        Triple(trips.find { it.id == tripId }, pendingCount, selectedDay)
     }.flatMapLatest { (trip, pendingCount, selectedDay) ->
         if (trip == null) {
             flowOf(TripDetailUiState(isLoading = false, error = "Viaje no encontrado"))
@@ -61,15 +65,22 @@ class TripDetailViewModel @Inject constructor(
             val days = generateDays(trip.startDate, trip.endDate)
             val effectiveDay = if (days.contains(selectedDay)) selectedDay
                                else days.firstOrNull() ?: selectedDay
-            expenseRepository.getExpensesByDay(tripId, effectiveDay).map { expenses ->
+            combine(
+                expenseRepository.getExpensesByDay(tripId, effectiveDay),
+                _selectedCategory,
+                _pendingDeleteExpense,
+            ) { expenses, cat, pendingDelete ->
+                val filtered = if (cat == null) expenses else expenses.filter { it.category == cat }
                 TripDetailUiState(
                     trip = trip,
                     selectedDay = effectiveDay,
                     days = days,
-                    expensesForDay = expenses,
+                    expensesForDay = filtered,
                     totalForDay = expenses.sumOf { it.amountBase },
                     currencyBase = trip.budgetCurrency,
                     pendingOpsCount = pendingCount,
+                    selectedCategory = cat,
+                    pendingDeleteExpense = pendingDelete,
                     isLoading = false,
                 )
             }
@@ -82,6 +93,26 @@ class TripDetailViewModel @Inject constructor(
 
     fun selectDay(day: LocalDate) {
         _selectedDay.value = day
+    }
+
+    fun selectCategory(cat: ExpenseCategory?) {
+        _selectedCategory.value = cat
+    }
+
+    fun requestDelete(expense: Expense) {
+        _pendingDeleteExpense.value = expense
+    }
+
+    fun cancelDelete() {
+        _pendingDeleteExpense.value = null
+    }
+
+    fun confirmDelete() {
+        val expense = _pendingDeleteExpense.value ?: return
+        _pendingDeleteExpense.value = null
+        viewModelScope.launch {
+            deleteExpenseUseCase(expense.id)
+        }
     }
 
     fun refresh() {

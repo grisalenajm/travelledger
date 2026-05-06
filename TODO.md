@@ -182,7 +182,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 ## 🔵 FASE 4 — Paperless-ngx integración `[OCR]` `[Web]` `[And]`
 
-- [ ] [!] expense_service.delete() — cascade borrado en Paperless
+- [x] [!] expense_service.delete() — cascade borrado en Paperless *(2026-05-06)*
 - [x] Web: botón "Ver factura" en expense detail page
 - [ ] Android: botón "Ver factura" con Intent.ACTION_VIEW
 
@@ -202,9 +202,9 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 ## 🟤 FASE 6 — Reports & Export Bundle `[BE]` `[Web]` `[And]`
 
-- [ ] export_service.py — CSV (BOM UTF-8) + ZIP con imágenes de Paperless
-- [ ] Naming ZIP: {category}_{date}_{merchant-slug}.{ext} (plano, sin subcarpetas)
-- [ ] Router: GET /api/reports/trip/{id}, /export/{id}?format=csv, /export/{id}/bundle
+- [x] export_service.py — CSV (BOM UTF-8) + ZIP con imágenes de Paperless *(2026-05-06)*
+- [x] Naming ZIP: {category}_{date}_{merchant-slug}.{ext} (plano, sin subcarpetas) *(2026-05-06)*
+- [x] Router: GET /api/reports/trip/{id}, /export/{id}?format=csv, /export/{id}/bundle *(2026-05-06)*
 - [ ] Web: modal export con toggle billable + date range + botones CSV y ZIP
 - [ ] Android: Phase A7 — SummaryScreen + export vía backend + FileProvider share sheet
 

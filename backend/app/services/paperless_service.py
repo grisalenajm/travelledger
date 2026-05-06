@@ -221,3 +221,39 @@ async def upload_document(
         status.HTTP_504_GATEWAY_TIMEOUT,
         "Paperless document processing timed out",
     )
+
+
+async def download_document(
+    paperless_url: str,
+    token: str,
+    doc_id: int,
+) -> tuple[bytes, str]:
+    url = f"{paperless_url.rstrip('/')}/api/documents/{doc_id}/download/"
+    logger.info("Paperless download — doc_id=%s url=%s", doc_id, url)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            url,
+            headers={"Authorization": f"Token {token}"},
+            follow_redirects=True,
+        )
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "application/octet-stream").split(";")[0]
+        return resp.content, content_type
+
+
+async def delete_document(
+    paperless_url: str,
+    token: str,
+    doc_id: int,
+) -> None:
+    url = f"{paperless_url.rstrip('/')}/api/documents/{doc_id}/"
+    logger.info("Paperless delete — doc_id=%s", doc_id)
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.delete(
+            url,
+            headers={"Authorization": f"Token {token}"},
+        )
+        if resp.status_code == 404:
+            logger.warning("Paperless delete — doc_id=%s ya no existe", doc_id)
+            return
+        resp.raise_for_status()

@@ -127,5 +127,22 @@ async def update(
 
 async def delete(db: AsyncSession, expense_id: UUID, user_id: UUID) -> None:
     expense = await get_or_404(db, expense_id, user_id)
-    # paperless_doc_id cascade delete → se implementa en Fase 4
+    if expense.paperless_doc_id:
+        try:
+            paperless_url, token = await paperless_service.get_credentials(db, user_id)
+            if paperless_url and token:
+                await paperless_service.delete_document(
+                    paperless_url=paperless_url,
+                    token=token,
+                    doc_id=expense.paperless_doc_id,
+                )
+                logger.info(
+                    "Paperless delete — doc_id=%s para expense=%s",
+                    expense.paperless_doc_id, expense_id,
+                )
+        except Exception as e:
+            logger.warning(
+                "Paperless delete falló para doc_id=%s: %s — continuando con borrado local",
+                expense.paperless_doc_id, e,
+            )
     await db.delete(expense)

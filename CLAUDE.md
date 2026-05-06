@@ -603,3 +603,4 @@ pytest-asyncio>=0.23
 14. `billable` por defecto es `True` en todo gasto nuevo.
 15. Las imágenes se empaquetan en memoria — nunca se escriben a disco en el servidor.
 16. La BD de Ledger es **exclusivamente** `postgres-ledger` (puerto 5433) — no usar otros Postgres del NAS.
+17. Android Retrofit: nunca hardcodear la URL base. Leer siempre de ConfigStore vía `DynamicUrlInterceptor`. Si ConfigStore no tiene URL → navegar a ConfigScreen, no usar fallback localhost.

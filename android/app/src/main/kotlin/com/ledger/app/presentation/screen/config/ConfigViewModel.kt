@@ -26,9 +26,9 @@ sealed class ConfigUiState {
 @HiltViewModel
 class ConfigViewModel @Inject constructor(
     private val configStore: ConfigStore,
-    // AuthApi NOT injected here — at config time, no URL is set in Retrofit yet.
-    // All validation calls use the raw OkHttpClient against the user-provided URL.
-    @Named("unauthenticated") private val okHttpClient: OkHttpClient,
+    // AuthApi NOT injected here — validation calls go directly to the user-provided URL.
+    // Must use @Named("raw") to bypass DynamicUrlInterceptor (which reads ConfigStore).
+    @Named("raw") private val okHttpClient: OkHttpClient,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ConfigUiState>(ConfigUiState.Idle)

@@ -258,6 +258,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 - `/register` (web) no solicita confirmación de contraseña — campo `confirm_password` ausente `[Web]`
 - `/register` (web) no envía `invite_code` — pendiente hasta implementar invite code en backend `[Web]` `[BE]`
+- ~~Android: Retrofit singleton inicializado con localhost antes de leer ConfigStore~~ **RESUELTO (2026-05-06)** — `DynamicUrlInterceptor` + `@Named("raw")` OkHttpClient `[And]`
+- Android: expenses OCR quedan huérfanos — QuickCapture crea expense nuevo en lugar de actualizar el draft `is_draft=True` del OCR. Resolver en A6. `[And]`
 
 ---
 

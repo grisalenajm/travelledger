@@ -350,6 +350,32 @@ LaunchedEffect(selectedDay) {
 
 ---
 
+## 📱 Android — Build y Deploy (Windows)
+
+```bash
+# Compilar APK debug
+C:\gradle\gradle-8.2\bin\gradle.bat assembleDebug
+
+# Instalar en emulador (desinstalar primero si ya existe)
+& "C:\Users\grisa\AppData\Local\Android\Sdk\platform-tools\adb.exe" uninstall com.ledger.app
+& "C:\Users\grisa\AppData\Local\Android\Sdk\platform-tools\adb.exe" install app\build\outputs\apk\debug\app-debug.apk
+
+# Si gradlew.bat falla con NoClassDefFoundError:
+# Usar gradle directo: C:\gradle\gradle-8.2\bin\gradle.bat
+```
+
+**Emulador:** Pixel 10, API 36.1. AVD en `D:\android\avd\` (C: sin espacio suficiente).
+**HTTP en desarrollo:** `android:usesCleartextTraffic="true"` en AndroidManifest.xml — solo debug.
+**NAS caído:** después de reiniciar, esperar a que `postgres-ledger` arranque antes de `docker compose restart backend`.
+
+### Retrofit — URL dinámica
+Nunca hardcodear la URL base en el momento de crear Retrofit. Usar `DynamicUrlInterceptor`:
+- El interceptor lee `ConfigStore.getServerUrl()` en cada petición y reescribe `scheme/host/port`.
+- Retrofit usa `baseUrl("http://localhost/")` como placeholder irrelevante.
+- `ConfigViewModel` debe inyectar `@Named("raw")` OkHttpClient (sin interceptor) para que sus llamadas de validación vayan a la URL que el usuario está configurando, no a ConfigStore.
+
+---
+
 ## 📝 Git
 
 ```bash

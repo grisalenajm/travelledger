@@ -6,9 +6,9 @@
 ---
 
 ## 📅 Última actualización
-- **Fecha:** 2026-05-05
+- **Fecha:** 2026-05-06
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Android A4 Quick Capture — ExpenseRepository, SyncWorker, QuickCaptureScreen, TripDetailScreen
+- **Sesión:** Android A5 Camera + OCR + fix Retrofit DynamicUrlInterceptor + APK debug emulador
 
 ---
 
@@ -36,6 +36,8 @@
 - [x] **Web /register fix (2026-05-05)** — invite_code enviado en POST (NEXT_PUBLIC_INVITE_CODE), añadido a .env.example y docker-compose.yml; frontend redesplegado en LXC
 - [x] **Android A3 Trip Management (2026-05-05)** — TripEntity+PendingOperationEntity, TripDao+PendingOperationDao, AppDatabase (v1), TripDto/TripCreateDto/TripSummaryDto, TripApi, TripMappers, Trip domain model, TripRepository offline-first (Room-first + PendingOperation + best-effort sync), 4 UseCases (GetTrips/GetActiveTrip/CreateTrip/DeleteTrip), TripsViewModel (combine+stateIn), CreateTripViewModel (UUID client-side), TripsScreen (hero card + pull-to-refresh M3 + pending badge), CreateTripScreen (DateRangePicker + currency dropdown), TripCard + BudgetProgressBar, DatabaseModule, 3 tests TripsViewModel + 3 tests CreateTripViewModel + FakeTripRepository
 - [x] **Android A4 Quick Capture (2026-05-05)** — ExpenseEntity+ExpenseDao (AppDatabase v2), ExpenseDto/CurrencyDto, ExpenseApi/CurrencyApi, Expense domain model (ExpenseCategory enum con emoji()), ExpenseForm, ExpenseMappers (Entity↔Domain↔Dto), ExpenseRepository (write-through offline-first), CurrencyRepository (caché en memoria, from==to→1.0), CreateExpenseUseCase (rate fallback 1:1), GetExpensesByDayUseCase, DeleteExpenseUseCase, SyncManager+SyncWorker (orden dependencias: create_trip→create_expense→update→delete, limpieza 7d), App.kt HiltWorkerFactory+Configuration.Provider, Manifest WorkManager initializer disabled, DI actualizado, QuickCaptureViewModel (debounce 500ms conversión live, billable=true default), QuickCaptureScreen (64sp amount field, CategoryChips LazyRow, currency dropdown, bottom bar), TripDetailViewModel (flatMapLatest expenses×día), TripDetailScreen (HorizontalPager+DayChipStrip sincronizados via snapshotFlow), ExpenseCard+DayChipStrip components, AppNavGraph+Screen actualizados (TripDetailDestination+QuickCaptureDestination), 5 tests QuickCaptureViewModel + 5 tests CreateExpenseUseCase + FakeExpenseRepository + FakeCurrencyRepository
+- [x] **Android A5 Camera + OCR (2026-05-06)** — CameraManager (CameraX singleton), ReceiptApi (multipart upload), OcrResult domain model + OcrResultParcel (JSON navigation), CameraScreen (viewfinder, scanning line animada, galería photo picker, permisos 2-strike), OcrProcessingScreen (steps progresivos: upload→OCR→confirm, offline/error handling con reintentar/manual). Adaptación: backend devuelve ExpenseRead directamente en `/api/receipts/upload` (no OcrResultDto separado). Pendiente A6: expenses OCR quedan huérfanos — QuickCapture crea expense nuevo en lugar de actualizar el draft OCR.
+- [x] **APK debug compilado y probado en emulador (2026-05-06)** — `android:usesCleartextTraffic="true"` añadido a AndroidManifest.xml para HTTP en desarrollo. Fix Retrofit: DynamicUrlInterceptor reescribe host/port en cada petición leyendo ConfigStore, elimina fallback localhost. Build: Gradle 8.2 (`C:\gradle\gradle-8.2\bin\gradle.bat assembleDebug`), JDK 17, Android SDK `C:\Users\grisa\AppData\Local\Android\Sdk`. Install: `adb install app\build\outputs\apk\debug\app-debug.apk`. Emulador: Pixel 10 API 36.1, AVD en D:\android\avd\ (C: sin espacio).
 
 ---
 
@@ -118,8 +120,7 @@
 
 ## 🔄 En Progreso
 
-- **FASE 3 Backend** — OCR (ocr_service.py + Receipt model + router upload)
-- **FASE Android A5** — Camera + OCR (siguiente)
+- **FASE Android A6** — Vista por Días mejorada + Detalle de gasto (siguiente)
 
 ---
 
@@ -160,6 +161,8 @@ Antes de cualquier build, sincronizar via `tar + scp` o `git pull`. Los errores 
 ## 🐛 Bugs Conocidos
 
 - `/register` (web) requiere añadir `NEXT_PUBLIC_INVITE_CODE` al .env del LXC para que funcione en prod `[Infra]`
+- **Android: Retrofit fallback a localhost** — el singleton se creaba con `runBlocking { configStore.getServerUrl() } ?: "http://localhost:8000/"` en AppModule, por lo que si ConfigStore no tenía URL en el momento del boot de Hilt, quedaba fijado en localhost. **RESUELTO (2026-05-06):** `DynamicUrlInterceptor` reescribe `scheme/host/port` en cada petición leyendo ConfigStore al vuelo. ConfigViewModel usa `@Named("raw")` OkHttpClient (sin interceptor) para que sus llamadas de validación vayan a la URL del usuario, no a ConfigStore. `[CRÍTICO — impide login]`
+- **Android: expenses OCR huérfanos en A5** — cuando OcrProcessingScreen navega a QuickCapture, éste crea un expense nuevo en lugar de actualizar el draft `is_draft=True` creado por OCR. Resolver en A6.
 
 ## ⚠️ Pendiente de Infra
 
@@ -197,6 +200,8 @@ Antes de cualquier build, sincronizar via `tar + scp` o `git pull`. Los errores 
 - **App Android:** Trabee Pocket con OCR corporativo. Captura en el terreno. Offline-first.
 - **Distribución Android:** APK firmado. Distribución privada (Firebase App Distribution o manual).
 - **Invite code:** variable de entorno `REGISTRATION_INVITE_CODE` en `.env` del backend. No embebido en APK.
+- **NAS UGREEN — reinicio:** después de reiniciar el NAS, el backend queda en estado unhealthy hasta que `postgres-ledger` arranca completamente. Solución: esperar a que `nc -zv 192.168.1.154 5433` responda y luego `docker compose restart backend` en el LXC.
+- **Emulador Android — red:** el emulador usa la red WiFi del PC. No puede acceder a `192.168.1.125` si el PC no está en la red local. Verificar conectividad con `curl http://192.168.1.125:8000/health` desde PowerShell antes de probar la app.
 
 ---
 

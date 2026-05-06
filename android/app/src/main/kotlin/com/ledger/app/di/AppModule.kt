@@ -8,11 +8,11 @@ import com.ledger.app.data.local.datastore.TokenStore
 import com.ledger.app.data.remote.api.AuthApi
 import com.ledger.app.data.remote.api.ReceiptApi
 import com.ledger.app.data.remote.interceptor.AuthInterceptor
+import com.ledger.app.data.remote.interceptor.DynamicUrlInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -34,12 +34,29 @@ object AppModule {
 
     @Provides
     @Singleton
-    @Named("unauthenticated")
-    fun provideUnauthOkHttp(): OkHttpClient = OkHttpClient.Builder()
+    fun provideDynamicUrlInterceptor(configStore: ConfigStore): DynamicUrlInterceptor =
+        DynamicUrlInterceptor(configStore)
+
+    // Raw client — no URL rewriting, used by ConfigViewModel for validation calls
+    @Provides
+    @Singleton
+    @Named("raw")
+    fun provideRawOkHttp(): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
+
+    @Provides
+    @Singleton
+    @Named("unauthenticated")
+    fun provideUnauthOkHttp(dynamicUrlInterceptor: DynamicUrlInterceptor): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor(dynamicUrlInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
 
     @Provides
     @Singleton
@@ -52,30 +69,29 @@ object AppModule {
     @Provides
     @Singleton
     @Named("authenticated")
-    fun provideAuthOkHttp(authInterceptor: AuthInterceptor): OkHttpClient =
-        OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
+    fun provideAuthOkHttp(
+        authInterceptor: AuthInterceptor,
+        dynamicUrlInterceptor: DynamicUrlInterceptor,
+    ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(dynamicUrlInterceptor)
+        .addInterceptor(authInterceptor)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
+    // Dummy base URL — DynamicUrlInterceptor rewrites scheme/host/port at request time
     @Provides
     @Singleton
     @Named("unauthenticated")
     fun provideUnauthRetrofit(
         @Named("unauthenticated") okHttpClient: OkHttpClient,
         json: Json,
-        configStore: ConfigStore,
-    ): Retrofit {
-        val baseUrl = runBlocking { configStore.getServerUrl() } ?: "http://localhost:8000/"
-        val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-        return Retrofit.Builder()
-            .baseUrl(normalizedUrl)
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    ): Retrofit = Retrofit.Builder()
+        .baseUrl("http://localhost/")
+        .client(okHttpClient)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
 
     @Provides
     @Singleton
@@ -83,16 +99,11 @@ object AppModule {
     fun provideAuthRetrofit(
         @Named("authenticated") okHttpClient: OkHttpClient,
         json: Json,
-        configStore: ConfigStore,
-    ): Retrofit {
-        val baseUrl = runBlocking { configStore.getServerUrl() } ?: "http://localhost:8000/"
-        val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-        return Retrofit.Builder()
-            .baseUrl(normalizedUrl)
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    ): Retrofit = Retrofit.Builder()
+        .baseUrl("http://localhost/")
+        .client(okHttpClient)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
 
     @Provides
     @Singleton

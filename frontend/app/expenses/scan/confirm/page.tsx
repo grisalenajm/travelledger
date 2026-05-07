@@ -1,7 +1,6 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
+import { Suspense } from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useExpense, useUpdateExpense } from "@/hooks/use-expenses"
@@ -10,13 +9,7 @@ import { toast } from "@/hooks/use-toast"
 import type { ExpenseCategory } from "@/types/index"
 
 const CATEGORIES: ExpenseCategory[] = [
-  "Dining",
-  "Lodging",
-  "Transport",
-  "Culture",
-  "Shopping",
-  "Health",
-  "Other",
+  "Dining", "Lodging", "Transport", "Culture", "Shopping", "Health", "Other",
 ]
 
 const COMMON_CURRENCIES = [
@@ -37,14 +30,12 @@ interface ConfidenceBadge {
 
 function getConfidenceBadge(confidence: number | null): ConfidenceBadge | null {
   if (confidence === null) return null
-  if (confidence >= 0.85)
-    return { label: "Alta confianza", cls: "bg-green-100 text-green-800" }
-  if (confidence >= 0.6)
-    return { label: "Revisar campos", cls: "bg-yellow-100 text-yellow-800" }
+  if (confidence >= 0.85) return { label: "Alta confianza", cls: "bg-green-100 text-green-800" }
+  if (confidence >= 0.6) return { label: "Revisar campos", cls: "bg-yellow-100 text-yellow-800" }
   return { label: "Baja confianza — revisa con cuidado", cls: "bg-red-100 text-red-800" }
 }
 
-export default function ScanConfirmPage() {
+function ConfirmPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const expenseId = searchParams.get("expenseId") ?? ""
@@ -190,8 +181,6 @@ export default function ScanConfirmPage() {
 
   return (
     <main className="min-h-screen bg-background pb-32">
-
-      {/* Fixed header */}
       <header className="fixed top-0 inset-x-0 z-20 h-14 bg-surface border-b border-outline-variant/20 flex items-center px-4">
         <button
           type="button"
@@ -208,8 +197,6 @@ export default function ScanConfirmPage() {
       </header>
 
       <div className="max-w-screen-xl mx-auto px-6 pt-20">
-
-        {/* OCR confidence badge */}
         {badge && (
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-label font-bold mb-6 ${badge.cls}`}>
             <span className="material-symbols-outlined text-sm">auto_awesome</span>
@@ -220,10 +207,7 @@ export default function ScanConfirmPage() {
           </div>
         )}
 
-        {/* Asymmetric grid: image 5 / form 7 */}
         <div className="md:grid md:grid-cols-12 md:gap-8">
-
-          {/* Receipt preview */}
           <div className="md:col-span-5 mb-8 md:mb-0 md:sticky md:top-20 md:self-start">
             {receiptProxyUrl ? (
               receiptContentType?.startsWith("image/") ? (
@@ -240,7 +224,7 @@ export default function ScanConfirmPage() {
                   )}
                 </div>
               ) : receiptContentType?.includes("pdf") ? (
-                <a
+                
                   href={receiptProxyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -254,18 +238,13 @@ export default function ScanConfirmPage() {
               )
             ) : (
               <div className="flex flex-col items-center justify-center h-64 rounded-xl bg-surface-container-low border-2 border-dashed border-outline-variant/30 text-on-surface-variant">
-                <span className="material-symbols-outlined text-5xl mb-3 opacity-40">
-                  image_not_supported
-                </span>
+                <span className="material-symbols-outlined text-5xl mb-3 opacity-40">image_not_supported</span>
                 <p className="text-sm">Sin imagen adjunta</p>
               </div>
             )}
           </div>
 
-          {/* Edit form */}
           <div className="md:col-span-7">
-
-            {/* Amount — extra large */}
             <label htmlFor="amount" className={FIELD_LABEL}>Importe</label>
             <input
               id="amount"
@@ -278,7 +257,6 @@ export default function ScanConfirmPage() {
               className="block w-full border-0 border-b-2 border-outline-variant bg-transparent pb-2 text-5xl font-headline font-extrabold text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary focus:outline-none"
             />
 
-            {/* Currency */}
             <label htmlFor="currency" className={FIELD_LABEL}>Moneda</label>
             <select
               id="currency"
@@ -291,7 +269,6 @@ export default function ScanConfirmPage() {
               ))}
             </select>
 
-            {/* Category chips */}
             <p className={FIELD_LABEL}>Categoría</p>
             <div className="flex flex-wrap gap-2 mt-2">
               {CATEGORIES.map((cat) => (
@@ -311,7 +288,6 @@ export default function ScanConfirmPage() {
               ))}
             </div>
 
-            {/* Date */}
             <label htmlFor="date" className={FIELD_LABEL}>Fecha</label>
             <input
               id="date"
@@ -321,7 +297,6 @@ export default function ScanConfirmPage() {
               className={FIELD_INPUT}
             />
 
-            {/* Description */}
             <label htmlFor="description" className={FIELD_LABEL}>Descripción</label>
             <input
               id="description"
@@ -332,7 +307,6 @@ export default function ScanConfirmPage() {
               className={FIELD_INPUT}
             />
 
-            {/* Billable toggle */}
             <div className="mt-6 pt-4 flex items-center justify-between border-t border-outline-variant/20">
               <div>
                 <p className="text-sm font-medium text-on-surface">Facturable</p>
@@ -340,12 +314,10 @@ export default function ScanConfirmPage() {
               </div>
               <Switch checked={billable} onCheckedChange={setBillable} />
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* Sticky save button */}
       <footer className="fixed bottom-0 inset-x-0 z-20 bg-surface/80 backdrop-blur-xl border-t border-outline-variant/20">
         <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
           <button
@@ -366,7 +338,18 @@ export default function ScanConfirmPage() {
           </button>
         </div>
       </footer>
-
     </main>
+  )
+}
+
+export default function ScanConfirmPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    }>
+      <ConfirmPageContent />
+    </Suspense>
   )
 }

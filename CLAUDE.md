@@ -6,6 +6,33 @@
 
 ---
 
+## 🎯 Visión de Producto vs MVP
+
+### Visión original
+Herramienta global de gestión de viajes: itinerarios, logística, integración con proveedores (vuelos, hoteles, transporte), herramienta corporativa completa.
+
+### MVP actual (intencional)
+- Captura y gestión de gastos de viaje
+- OCR de facturas con Claude Haiku
+- Exportación para reembolso corporativo
+
+La simplificación es deliberada. Las funciones de gestión de viaje más amplias están en FASE 9 backlog — no descartadas, solo pospuestas.
+
+### Loyalty Cards — ubicación en UI
+Las tarjetas de viajero frecuente (frequent flyer, hotel, tren) pertenecen a **Configuración de usuario**, no al flujo de gastos.
+
+- CRUD en: `/settings` web · `SettingsScreen` Android
+- Selector en: formulario de gasto (referencia a las tarjetas ya configuradas)
+- **No** crear pantallas de gestión de tarjetas dentro de Trips ni Expenses
+
+Estado actual:
+| Cliente | CRUD | Selector en formulario |
+|---------|------|------------------------|
+| Web | ✅ `/settings/cards` | ✅ `add-expense-modal.tsx` |
+| Android | ✗ pendiente (A8) | ✗ pendiente (A8) |
+
+---
+
 ## 🗺️ Visión General
 
 **Ledger** es una app de gestión de gastos de viaje con tres clientes activos que comparten un único backend:

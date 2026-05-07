@@ -233,7 +233,9 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 ## 🗂️ FASE 9 — Backlog
 
 - [ ] OCR de confirmaciones de vuelo → crear TripLeg automático
-- [ ] Android Phase A8: TripLegs, Loyalty Cards, BYOK OCR, biometría
+- [ ] Android Phase A8: TripLegs, BYOK OCR, biometría
+- [ ] Android A8 — `LoyaltyCardsScreen` en `SettingsScreen` (CRUD, no en Trips/Expenses)
+- [ ] Android A8 — selector loyalty card en `QuickCaptureScreen` y `ExpenseDetailScreen`
 - `[✗]` Integración Uber — descartada
 
 ---

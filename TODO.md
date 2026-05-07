@@ -249,7 +249,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 | A3 | Trip Management | [x] Completado 2026-05-05 |
 | A4 | Quick Capture | [x] Completado 2026-05-05 |
 | A5 | Camera + OCR | [x] Completado 2026-05-06 |
-| A6 | Vista por Días + Detalle | [ ] Pendiente |
+| A6 | Vista por Días + Detalle | [x] Completado 2026-05-07 |
 | A7 | Summary + Export | [x] Completado 2026-05-07 |
 | A8 | Polish + Future Evolution | [ ] Pendiente |
 
@@ -260,7 +260,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - `/register` (web) no solicita confirmación de contraseña — campo `confirm_password` ausente `[Web]`
 - `/register` (web) no envía `invite_code` — pendiente hasta implementar invite code en backend `[Web]` `[BE]`
 - ~~Android: Retrofit singleton inicializado con localhost antes de leer ConfigStore~~ **RESUELTO (2026-05-06)** — `DynamicUrlInterceptor` + `@Named("raw")` OkHttpClient `[And]`
-- Android: expenses OCR quedan huérfanos — QuickCapture crea expense nuevo en lugar de actualizar el draft `is_draft=True` del OCR. Resolver en A6. `[And]`
+- ~~Android: expenses OCR quedan huérfanos~~ **RESUELTO (2026-05-07)** — `OcrProcessingViewModel` navega a `ExpenseDetailScreen` en lugar de `QuickCapture`; `UpdateExpenseUseCase` limpia `isDraft` al confirmar `[And]`
 
 ---
 

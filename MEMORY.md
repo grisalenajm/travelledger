@@ -6,9 +6,9 @@
 ---
 
 ## 📅 Última actualización
-- **Fecha:** 2026-05-06
+- **Fecha:** 2026-05-07
 - **Agente:** Claude Sonnet 4.6
-- **Sesión:** Android A5 Camera + OCR + fix Retrofit DynamicUrlInterceptor + APK debug emulador
+- **Sesión:** FASE 6 backend export CSV/ZIP + Web FASE 3 scan screens + bugs FormData + Suspense + SSH LXC
 
 ---
 
@@ -38,6 +38,12 @@
 - [x] **Android A4 Quick Capture (2026-05-05)** — ExpenseEntity+ExpenseDao (AppDatabase v2), ExpenseDto/CurrencyDto, ExpenseApi/CurrencyApi, Expense domain model (ExpenseCategory enum con emoji()), ExpenseForm, ExpenseMappers (Entity↔Domain↔Dto), ExpenseRepository (write-through offline-first), CurrencyRepository (caché en memoria, from==to→1.0), CreateExpenseUseCase (rate fallback 1:1), GetExpensesByDayUseCase, DeleteExpenseUseCase, SyncManager+SyncWorker (orden dependencias: create_trip→create_expense→update→delete, limpieza 7d), App.kt HiltWorkerFactory+Configuration.Provider, Manifest WorkManager initializer disabled, DI actualizado, QuickCaptureViewModel (debounce 500ms conversión live, billable=true default), QuickCaptureScreen (64sp amount field, CategoryChips LazyRow, currency dropdown, bottom bar), TripDetailViewModel (flatMapLatest expenses×día), TripDetailScreen (HorizontalPager+DayChipStrip sincronizados via snapshotFlow), ExpenseCard+DayChipStrip components, AppNavGraph+Screen actualizados (TripDetailDestination+QuickCaptureDestination), 5 tests QuickCaptureViewModel + 5 tests CreateExpenseUseCase + FakeExpenseRepository + FakeCurrencyRepository
 - [x] **Android A5 Camera + OCR (2026-05-06)** — CameraManager (CameraX singleton), ReceiptApi (multipart upload), OcrResult domain model + OcrResultParcel (JSON navigation), CameraScreen (viewfinder, scanning line animada, galería photo picker, permisos 2-strike), OcrProcessingScreen (steps progresivos: upload→OCR→confirm, offline/error handling con reintentar/manual). Adaptación: backend devuelve ExpenseRead directamente en `/api/receipts/upload` (no OcrResultDto separado). Pendiente A6: expenses OCR quedan huérfanos — QuickCapture crea expense nuevo en lugar de actualizar el draft OCR.
 - [x] **APK debug compilado y probado en emulador (2026-05-06)** — `android:usesCleartextTraffic="true"` añadido a AndroidManifest.xml para HTTP en desarrollo. Fix Retrofit: DynamicUrlInterceptor reescribe host/port en cada petición leyendo ConfigStore, elimina fallback localhost. Build: Gradle 8.2 (`C:\gradle\gradle-8.2\bin\gradle.bat assembleDebug`), JDK 17, Android SDK `C:\Users\grisa\AppData\Local\Android\Sdk`. Install: `adb install app\build\outputs\apk\debug\app-debug.apk`. Emulador: Pixel 10 API 36.1, AVD en D:\android\avd\ (C: sin espacio).
+- [x] **FASE 6 backend export (2026-05-07)** — `export_service.py` genera CSV (BOM UTF-8) + ZIP con imágenes de Paperless en memoria (`io.BytesIO`). `paperless_service.download_document()` + `paperless_service.delete_document()`. `expense_service.delete()` cascade delete silencioso en Paperless. Router `reports.py`: `GET /api/reports/trip/{id}`, `GET /api/reports/export/{id}?format=csv`, `GET /api/reports/export/{id}/bundle`. 9 tests pasando.
+- [x] **Web FASE 3 scan screens (2026-05-07)** — `app/expenses/scan/page.tsx` (drag&drop + file picker + cámara móvil), `app/expenses/scan/confirm/page.tsx` (revisión OCR + layout 5/7), `hooks/use-ocr.ts` (`useUploadReceipt` con FormData + `useMutation`), `app/globals.css` (animación `scanning-line`), botón "Escanear ticket" en `app/trips/[id]/page.tsx`.
+- [x] **Android A7 Summary + Export (2026-05-07)** — `SummaryScreen` con donut chart Canvas, `NetworkMonitor`, `FileShareUtil`, `ExportRepository`, `ExportCsvUseCase`. Botón ZIP deshabilitado (`enabled=false`) — endpoint backend existe, activar cuando se integre `ExportZipUseCase`.
+- [x] **SSH en LXC configurado (2026-05-07)** — clave ED25519 generada en `/root/.ssh/id_ed25519`, añadida a GitHub SSH Keys, remote cambiado a SSH: `git remote set-url origin git@github.com:grisalenajm/travelledger.git`. El LXC hace push sin password.
+- [x] **Bug fix — useSearchParams sin Suspense (2026-05-07)** — Next.js 14 build falla en producción (exit code 1) si `useSearchParams()` se usa fuera de `<Suspense>`. Fix: extraer contenido a componente interno, `export default` solo envuelve con `<Suspense>`. Afectaba a `scan/page.tsx` y `scan/confirm/page.tsx`. Documentado en BEST_PRACTICES.md.
+- [x] **Bug fix — useCreateExpense enviaba JSON, backend espera FormData (2026-05-07)** — `POST /api/expenses` usa `Form(...)` en FastAPI (no `Body`). El hook enviaba `Content-Type: application/json` → 422. Fix: `useCreateExpense` construye `FormData` y usa `api.postForm()` añadido a `lib/api.ts`. Documentado en BEST_PRACTICES.md.
 
 ---
 
@@ -121,6 +127,7 @@
 ## 🔄 En Progreso
 
 - **FASE Android A6** — Vista por Días mejorada + Detalle de gasto (siguiente)
+- **Android A7 ZIP** — botón ZIP deshabilitado, pendiente activar con `enabled=isOnline` + `ExportZipUseCase`
 
 ---
 
@@ -132,10 +139,10 @@
 - **FASE 1 Android:** ✅ A1 + A2 + A3 + A4 completados (2026-05-05)
 - **FASE 2:** ✅ Completado (backend + web)
 - **FASE 2 Android:** ✅ A3 + A4 completados (2026-05-05)
-- **FASE 3:** OCR backend + web scan screens + Android Phase A5
-- **FASE 4:** Paperless cascade delete + Android "Ver factura"
+- **FASE 3:** ✅ Completado (backend + web + Android A5)
+- **FASE 4:** ✅ Cascade delete backend completado; pendiente Android "Ver factura"
 - **FASE 5:** Sync backend (push/pull endpoints) + Android SyncWorker pull completo
-- **FASE 6:** Export bundle + Android Phase A7
+- **FASE 6:** ✅ Backend completado; pendiente Web modal export + Android A7 ZIP activar
 - **FASE 7:** FCM push + polish + Android Phase A8
 - **FASE 8:** Bot Telegram completo
 - **FASE 9 (backlog):** OCR de vuelos para TripLeg, BYOK OCR Android, biometría

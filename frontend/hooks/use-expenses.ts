@@ -28,7 +28,19 @@ export function useRecentExpenses(limit = 10) {
 export function useCreateExpense() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: ExpenseCreate) => api.post<Expense>("/api/proxy/expenses/", data),
+    mutationFn: (data: ExpenseCreate) => {
+      const form = new FormData()
+      form.append("trip_id", data.trip_id)
+      form.append("amount", String(data.amount))
+      form.append("currency", data.currency)
+      form.append("category", data.category)
+      form.append("date", data.date)
+      if (data.description) form.append("description", data.description)
+      if (data.payment_method) form.append("payment_method", data.payment_method)
+      form.append("billable", String(data.billable))
+      if (data.loyalty_card_id) form.append("loyalty_card_id", data.loyalty_card_id)
+      return api.postForm<Expense>("/api/proxy/expenses", form)
+    },
     onSuccess: (expense) => {
       qc.invalidateQueries({ queryKey: ["expenses", expense.trip_id] })
       qc.invalidateQueries({ queryKey: ["trips", expense.trip_id, "summary"] })

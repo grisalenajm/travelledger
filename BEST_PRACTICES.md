@@ -219,6 +219,34 @@ export default function Page() {
 }
 ```
 
+### Endpoints FastAPI con Form(...) requieren FormData en el cliente
+Si el router FastAPI usa `Form(...)` en lugar de `Body(...)`, el cliente web DEBE enviar `FormData`, nunca `JSON.stringify`.
+Verificar antes de escribir el hook: `grep "Form(...)" backend/app/routers/expenses.py`
+
+El endpoint `POST /api/expenses` usa `Form(...)` porque acepta imagen opcional. Usar `api.postForm()` de `lib/api.ts`:
+
+```typescript
+// ✅ CORRECTO
+mutationFn: (data: ExpenseCreate) => {
+  const form = new FormData()
+  form.append("trip_id", data.trip_id)
+  form.append("amount", String(data.amount))
+  form.append("currency", data.currency)
+  // ... resto de campos
+  return api.postForm("/api/proxy/expenses", form)
+},
+
+// ❌ INCORRECTO — 422 en todos los campos porque backend espera Form, no JSON
+mutationFn: (data: ExpenseCreate) =>
+  api.post("/api/proxy/expenses", data),
+```
+
+`api.postForm()` en `lib/api.ts`:
+```typescript
+postForm: (path: string, form: FormData) =>
+  request(path, { method: "POST", body: form }),
+```
+
 ### SessionProvider — Navbar dentro de Providers
 ```tsx
 // ✅ CORRECTO — Navbar es hijo de Providers (tiene acceso a useSession)

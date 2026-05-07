@@ -170,6 +170,7 @@ DELETE /api/trips/{id}/legs/{leg_id}  → borrar
 GET    /api/expenses?trip_id=         → lista gastos (filtros: billable, category, from, to)
 POST   /api/expenses                  → Flujo A: crear gasto manual (multipart, imagen opcional)
                                         NO dispara OCR aunque haya imagen
+                                        ⚠ Usa Form(...) en FastAPI — el cliente DEBE enviar FormData, nunca JSON
 GET    /api/expenses/{id}             → detalle
 PUT    /api/expenses/{id}             → actualizar
 DELETE /api/expenses/{id}             → borrar + cascade Paperless

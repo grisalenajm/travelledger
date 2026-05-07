@@ -1,6 +1,7 @@
 "use client"
 
-import { Suspense, useState, useRef, useEffect } from "react"
+import { Suspense } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTrips } from "@/hooks/use-trips"
 import { useUploadReceipt } from "@/hooks/use-ocr"
@@ -94,8 +95,6 @@ function ScanPageContent() {
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
-
-        {/* Header */}
         <div>
           <button
             type="button"
@@ -111,7 +110,6 @@ function ScanPageContent() {
           </p>
         </div>
 
-        {/* Drop zone */}
         <div
           role={isUploading ? undefined : "button"}
           tabIndex={isUploading ? undefined : 0}
@@ -133,7 +131,6 @@ function ScanPageContent() {
           style={{ minHeight: "260px" }}
         >
           {isUploading && <div className="scanning-line" />}
-
           <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
             {isUploading ? (
               <>
@@ -143,38 +140,22 @@ function ScanPageContent() {
                 <p className="font-headline text-base font-bold text-on-surface mb-1">
                   Analizando tu factura…
                 </p>
-                <p className="text-sm text-on-surface-variant">
-                  Extrayendo campos con IA
-                </p>
+                <p className="text-sm text-on-surface-variant">Extrayendo campos con IA</p>
               </>
             ) : preview ? (
               <>
-                <img
-                  src={preview}
-                  alt="Vista previa"
-                  className="max-h-40 object-contain rounded-xl mb-3"
-                />
-                <p className="text-sm text-on-surface-variant truncate max-w-full">
-                  {selectedFile?.name}
-                </p>
+                <img src={preview} alt="Vista previa" className="max-h-40 object-contain rounded-xl mb-3" />
+                <p className="text-sm text-on-surface-variant truncate max-w-full">{selectedFile?.name}</p>
               </>
             ) : selectedFile && !preview ? (
               <>
-                <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3">
-                  picture_as_pdf
-                </span>
-                <p className="text-sm text-on-surface-variant truncate max-w-full">
-                  {selectedFile.name}
-                </p>
+                <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3">picture_as_pdf</span>
+                <p className="text-sm text-on-surface-variant truncate max-w-full">{selectedFile.name}</p>
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3">
-                  upload_file
-                </span>
-                <p className="font-body text-on-surface font-medium mb-1">
-                  Arrastra tu factura aquí
-                </p>
+                <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3">upload_file</span>
+                <p className="font-body text-on-surface font-medium mb-1">Arrastra tu factura aquí</p>
                 <p className="text-sm text-on-surface-variant">o haz clic para seleccionar</p>
               </>
             )}
@@ -185,7 +166,6 @@ function ScanPageContent() {
           Formatos aceptados: JPG · PNG · WebP · PDF
         </p>
 
-        {/* Action buttons */}
         <div className="flex flex-col gap-3">
           <button
             type="button"
@@ -207,7 +187,6 @@ function ScanPageContent() {
           </button>
         </div>
 
-        {/* Trip selector */}
         <div>
           <p className="text-[10px] font-label font-bold tracking-widest uppercase text-on-surface-variant mb-2">
             Viaje
@@ -231,7 +210,6 @@ function ScanPageContent() {
           )}
         </div>
 
-        {/* Hidden file inputs */}
         <input
           ref={fileInputRef}
           type="file"

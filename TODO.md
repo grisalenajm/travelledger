@@ -206,7 +206,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 - [x] Naming ZIP: {category}_{date}_{merchant-slug}.{ext} (plano, sin subcarpetas) *(2026-05-06)*
 - [x] Router: GET /api/reports/trip/{id}, /export/{id}?format=csv, /export/{id}/bundle *(2026-05-06)*
 - [ ] Web: modal export con toggle billable + date range + botones CSV y ZIP
-- [ ] Android: Phase A7 — SummaryScreen + export vía backend + FileProvider share sheet
+- [x] Android: Phase A7 — SummaryScreen + export vía backend + FileProvider share sheet *(2026-05-07)*
+  - [ ] Android A7 ZIP — activar botón: cambiar `enabled=false` → `enabled=isOnline` + conectar `ExportZipUseCase`
 
 ---
 
@@ -243,13 +244,13 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 
 | Phase | Nombre | Estado |
 |---|---|---|
-| A1 | Foundation | [ ] Pendiente |
-| A2 | Auth Flow | [ ] Pendiente |
+| A1 | Foundation | [x] Completado 2026-05-05 |
+| A2 | Auth Flow | [x] Completado 2026-05-05 |
 | A3 | Trip Management | [x] Completado 2026-05-05 |
 | A4 | Quick Capture | [x] Completado 2026-05-05 |
 | A5 | Camera + OCR | [x] Completado 2026-05-06 |
 | A6 | Vista por Días + Detalle | [ ] Pendiente |
-| A7 | Summary + Export | [ ] Pendiente |
+| A7 | Summary + Export | [x] Completado 2026-05-07 |
 | A8 | Polish + Future Evolution | [ ] Pendiente |
 
 ---

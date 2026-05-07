@@ -1,8 +1,6 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useExpense, useUpdateExpense } from "@/hooks/use-expenses"
 import { Switch } from "@/components/ui/switch"
@@ -44,7 +42,7 @@ function getConfidenceBadge(confidence: number | null): ConfidenceBadge | null {
   return { label: "Baja confianza — revisa con cuidado", cls: "bg-red-100 text-red-800" }
 }
 
-export default function ScanConfirmPage() {
+function ConfirmPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const expenseId = searchParams.get("expenseId") ?? ""
@@ -368,5 +366,17 @@ export default function ScanConfirmPage() {
       </footer>
 
     </main>
+  )
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    }>
+      <ConfirmPageContent />
+    </Suspense>
   )
 }

@@ -1,8 +1,6 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
-import { useState, useRef, useEffect } from "react"
+import { Suspense, useState, useRef, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTrips } from "@/hooks/use-trips"
 import { useUploadReceipt } from "@/hooks/use-ocr"
@@ -10,7 +8,7 @@ import { toast } from "@/hooks/use-toast"
 
 type UploadStep = "idle" | "preview" | "uploading"
 
-export default function ScanPage() {
+function ScanPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const preselectedTripId = searchParams.get("tripId")
@@ -251,5 +249,17 @@ export default function ScanPage() {
         />
       </div>
     </main>
+  )
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    }>
+      <ScanPageContent />
+    </Suspense>
   )
 }

@@ -187,6 +187,38 @@ const amount = Number(expense.amount).toFixed(2)
 const amount = expense.amount.toFixed(2)
 ```
 
+### Next.js 14 — useSearchParams requiere Suspense
+Cualquier componente que use `useSearchParams()` DEBE estar envuelto en `<Suspense>`.
+El patrón correcto es extraer el contenido a un componente interno y que el `export default` solo contenga el `<Suspense>`.
+El build falla en producción (exit code 1) si no se hace. **No usar `export const dynamic = "force-dynamic"`** como sustituto — puede interactuar mal con el caché de Docker BuildKit en LXC.
+
+```tsx
+// ✅ CORRECTO
+import { Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+
+function PageContent() {
+  const searchParams = useSearchParams()
+  // ... contenido
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>}>
+      <PageContent />
+    </Suspense>
+  )
+}
+
+// ❌ INCORRECTO — el build falla en prod
+export default function Page() {
+  const searchParams = useSearchParams()  // sin Suspense
+  // ...
+}
+```
+
 ### SessionProvider — Navbar dentro de Providers
 ```tsx
 // ✅ CORRECTO — Navbar es hijo de Providers (tiene acceso a useSession)

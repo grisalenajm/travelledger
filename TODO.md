@@ -171,8 +171,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
 ### Web
 - [x] /settings — página unificada: Perfil + Integraciones → Paperless
 - [x] hooks/use-settings.ts
-- [ ] /expenses/scan — drag&drop + file + cámara
-- [ ] /expenses/scan/confirm — layout 5/7, pre-rellenado OCR
+- [x] /expenses/scan — drag&drop + file + cámara *(2026-05-07)*
+- [x] /expenses/scan/confirm — layout 5/7, pre-rellenado OCR *(2026-05-07)*
 
 ### Android `[And]`
 > Ver `ANDROID_TODO.md` Phase A5 para desglose completo.

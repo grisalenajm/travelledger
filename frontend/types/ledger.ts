@@ -57,6 +57,7 @@ export interface ExpenseUpdate {
   payment_method?: "card" | "cash" | "transfer" | "other" | null
   billable?: boolean
   loyalty_card_id?: string | null
+  is_draft?: boolean
 }
 
 export interface LoyaltyCardCreate {

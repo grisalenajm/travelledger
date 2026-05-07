@@ -7,7 +7,6 @@ import { useTrip, useTripSummary } from "@/hooks/use-trips"
 import { useExpenses } from "@/hooks/use-expenses"
 import { ExpenseCard } from "@/components/expense-card"
 import { AddExpenseModal } from "@/components/add-expense-modal"
-import { UploadReceiptModal } from "@/components/upload-receipt-modal"
 import { Button } from "@/components/ui/button"
 
 function fmtDate(iso: string) {
@@ -88,7 +87,6 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
-  const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
@@ -265,7 +263,7 @@ export default function TripDetailPage() {
             </Button>
             <button
               type="button"
-              onClick={() => setUploadModalOpen(true)}
+              onClick={() => router.push(`/expenses/scan?tripId=${id}`)}
               className="flex items-center gap-2 px-5 py-2.5
                          bg-surface-container-lowest rounded-full
                          border border-outline-variant/15
@@ -273,7 +271,7 @@ export default function TripDetailPage() {
                          hover:bg-surface-container-low transition-colors"
             >
               <span className="material-symbols-outlined text-sm">document_scanner</span>
-              Escanear factura
+              Escanear ticket
             </button>
             <Button size="sm" onClick={() => setAddExpenseOpen(true)}>
               <span className="material-symbols-outlined text-sm mr-1">add</span>
@@ -338,16 +336,6 @@ export default function TripDetailPage() {
         trip={trip}
         open={addExpenseOpen}
         onClose={handleCloseExpenseModal}
-      />
-
-      <UploadReceiptModal
-        isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        tripId={id}
-        onSuccess={(expense) => {
-          setUploadModalOpen(false)
-          router.push(`/trips/${id}/expenses/${expense.id}`)
-        }}
       />
     </main>
   )

@@ -67,6 +67,8 @@ export default function SettingsPage() {
     values: user ? { name: user.name, currency_base: user.currency_base } : undefined,
   })
 
+  const hasExistingToken = settings?.paperless_token === "***"
+
   const {
     register: registerPaperless,
     handleSubmit: handlePaperlessSubmit,
@@ -77,7 +79,7 @@ export default function SettingsPage() {
     values: settings
       ? {
           paperless_url: settings.paperless_url ?? "",
-          paperless_token: settings.paperless_token ?? "",
+          paperless_token: "",  // always blank — placeholder indicates if one is configured
         }
       : undefined,
   })
@@ -100,10 +102,13 @@ export default function SettingsPage() {
         key: "paperless_url",
         value: data.paperless_url || null,
       })
-      await api.put("/api/proxy/settings", {
-        key: "paperless_token",
-        value: data.paperless_token || null,
-      })
+      // Skip token update if field is empty and a token is already configured
+      if (data.paperless_token || !hasExistingToken) {
+        await api.put("/api/proxy/settings", {
+          key: "paperless_token",
+          value: data.paperless_token || null,
+        })
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] })
@@ -241,7 +246,11 @@ export default function SettingsPage() {
                 <input
                   {...registerPaperless("paperless_token")}
                   type={showToken ? "text" : "password"}
-                  placeholder="Token de API de Paperless"
+                  placeholder={
+                    hasExistingToken
+                      ? "Token configurado — escribe para cambiar"
+                      : "Token de API de Paperless"
+                  }
                   className={`${inputClass} pr-10`}
                 />
                 <button

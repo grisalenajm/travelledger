@@ -30,8 +30,8 @@ services:
       - ./secrets/firebase-credentials.json:/app/secrets/firebase-credentials.json:ro
     networks:
       - ledger-net
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

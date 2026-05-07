@@ -13,11 +13,12 @@
 
 ---
 
-### SEC-01 · SSRF vía `paperless_url` configurable por el usuario
+### SEC-01 · SSRF vía `paperless_url` configurable por el usuario `[FIXED]`
 
 - **Severidad:** ALTA  
 - **Confianza:** 8/10  
 - **Categoría:** Server-Side Request Forgery (SSRF)  
+- **Fix aplicado:** `_validate_paperless_url()` en `backend/app/routers/settings.py` — bloquea esquemas no-http/https, hosts en `_BLOCKED_HOSTS` y rangos `127.0.0.0/8` + `169.254.0.0/16`. Validación en `PUT /api/settings` y defense-in-depth en `POST /api/settings/verify-paperless`. Tests en `backend/tests/test_settings.py`.  
 - **Archivos afectados:**  
   - `backend/app/routers/settings.py:20-47` (endpoint PUT, sin validación de URL)  
   - `backend/app/routers/settings.py:50-75` (endpoint POST `/verify-paperless`, dispara la petición)  
@@ -118,11 +119,12 @@ Aplicar también en `paperless_service.py` antes de cada llamada a `httpx`.
 
 ---
 
-### SEC-02 · Credenciales de Paperless devueltas en texto claro por `GET /api/settings`
+### SEC-02 · Credenciales de Paperless devueltas en texto claro por `GET /api/settings` `[FIXED]`
 
 - **Severidad:** MEDIA-ALTA  
 - **Confianza:** 9/10  
 - **Categoría:** Credential Exposure / Escalada de privilegios laterales  
+- **Fix aplicado:** `GET /api/settings` devuelve `"***"` si hay token, `null` si no. `PUT /api/settings` ignora el valor `"***"` (placeholder) para no sobreescribir el token real. Frontend actualizado para mostrar placeholder informativo y no enviar token vacío cuando ya hay uno configurado.  
 - **Archivos afectados:**  
   - `backend/app/routers/settings.py:30-36`
 
@@ -167,11 +169,12 @@ async def get_settings(...):
 
 ---
 
-### SEC-03 · Android — tráfico HTTP en texto claro habilitado globalmente
+### SEC-03 · Android — tráfico HTTP en texto claro habilitado globalmente `[FIXED]`
 
 - **Severidad:** MEDIA  
 - **Confianza:** 9/10  
 - **Categoría:** Transmisión insegura de credenciales (CWE-319)  
+- **Fix aplicado:** Creado `android/app/src/main/res/xml/network_security_config.xml` que restringe cleartext a `192.168.1.125` y rangos de emulador en debug-overrides. `AndroidManifest.xml` usa `android:networkSecurityConfig` en lugar de `android:usesCleartextTraffic="true"`. Build debug: `BUILD SUCCESSFUL`.  
 - **Archivos afectados:**  
   - `android/app/src/main/AndroidManifest.xml:24`  
   - `android/app/src/main/res/xml/` (ausencia de `network_security_config.xml`)
@@ -233,7 +236,7 @@ android:networkSecurityConfig="@xml/network_security_config"
 
 ---
 
-### SEC-04 · `verify_bot_request` definida pero no usada en ningún router
+### SEC-04 · `verify_bot_request` definida pero no usada en ningún router — *pendiente*
 
 - **Severidad:** BAJA  
 - **Confianza:** 8/10  
@@ -248,10 +251,11 @@ android:networkSecurityConfig="@xml/network_security_config"
 
 ---
 
-### SEC-05 · Logs incluyen URL de Paperless completa (incluyendo IP interna)
+### SEC-05 · Logs incluyen URL de Paperless completa (incluyendo IP interna) `[FIXED]`
 
 - **Severidad:** BAJA  
 - **Confianza:** 8/10  
+- **Fix aplicado:** `verify_paperless failed` en `settings.py:74` ya no incluye la URL. `paperless_service.py` download log elimina la URL completa (solo `doc_id`).  
 - **Categoría:** Información sensible en logs  
 - **Archivos afectados:**  
   - `backend/app/services/paperless_service.py:110, 232`
@@ -293,13 +297,15 @@ Los siguientes aspectos están correctamente securizados:
 
 Ordenado por prioridad descendente:
 
-| Prioridad | ID | Acción | Esfuerzo |
-|-----------|-----|--------|---------|
-| 🔴 1 | SEC-01 | Añadir validación de URL (esquema, host bloqueado, no IP loopback/link-local) en `SettingUpsert` antes del `settings_service.set()` | 1–2h |
-| 🔴 2 | SEC-02 | Enmascarar `paperless_token` en `GET /api/settings` (devolver `"***"` si configurado, `null` si no) | 30min |
-| 🟡 3 | SEC-03 | Crear `network_security_config.xml` en Android limitando cleartext a rangos RFC 1918; eliminar `usesCleartextTraffic="true"` del manifest | 1h |
-| 🟢 4 | SEC-04 | Añadir comentario/test explícito para garantizar que endpoints `/api/bot/*` siempre usen `verify_bot_request` | 30min |
-| 🟢 5 | SEC-05 | Eliminar URL de Paperless de líneas de log; loguear solo `doc_id` | 15min |
+| Prioridad | ID | Acción | Estado |
+|-----------|-----|--------|--------|
+| 🔴 1 | SEC-01 | Validación SSRF en `paperless_url` | ✅ FIXED |
+| 🔴 2 | SEC-02 | Enmascarar `paperless_token` en GET settings | ✅ FIXED |
+| 🟡 3 | SEC-03 | `network_security_config.xml` Android | ✅ FIXED |
+| 🟢 4 | SEC-04 | Garantizar `verify_bot_request` en endpoints `/api/bot/*` | ⏳ Pendiente (A8) |
+| 🟢 5 | SEC-05 | Eliminar URL de logs de Paperless | ✅ FIXED |
+| ➕ extra | — | Dockerfile non-root user (uid 1001) | ✅ FIXED |
+| ➕ extra | — | Backend `expose` en lugar de `ports` en docker-compose.yml | ✅ FIXED |
 
 ---
 

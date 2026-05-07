@@ -63,6 +63,8 @@ export const api = {
       ...init,
     }),
 
+  postForm: <T>(path: string, form: FormData) =>
+    request<T>(path, { method: "POST", body: form }),
   put: <T>(path: string, body: unknown, init?: RequestInit) =>
     request<T>(path, {
       method: "PUT",

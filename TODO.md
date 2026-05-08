@@ -75,10 +75,10 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 - [x] Actualizar tests de auth para nueva lógica
 
 ### Web — refactor /register `[Web]`
-- [ ] Eliminar campo `invite_code` del formulario `/register`
-- [ ] Añadir campo `confirm_password` — validación client-side al submit
-- [ ] Llamar `GET /api/auth/status` al cargar `/register` — si cerrado → mostrar mensaje
-- [ ] Actualizar `lib/api.ts` si necesario
+- [x] Eliminar campo `invite_code` del formulario `/register`
+- [x] Añadir campo `confirm_password` — validación client-side al submit
+- [x] Llamar `GET /api/auth/status` al cargar `/register` — si cerrado → mostrar mensaje
+- [x] Actualizar `lib/api.ts` si necesario
 
 ---
 
@@ -127,11 +127,11 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 - [ ] **Pendiente deploy**: `alembic upgrade head` en LXC cuando NAS (192.168.1.154) esté online
 
 ### Web — /settings/profile ampliado `[Web]`
-- [ ] Sección "Cuenta": nombre, email, moneda base, cambio de password
-- [ ] Sección "OCR": campo `anthropic_api_key` (tipo password), indicador "configurada ✓ / no configurada"
-- [ ] Sección "Paperless": `paperless_url`, `paperless_token` (tipo password), toggle on/off, botón "Verificar conexión"
-- [ ] Sección "Apariencia": selector idioma (ES/EN), toggle dark/light/system
-- [ ] Actualizar `hooks/use-settings.ts` — GET /api/settings con nuevos campos
+- [x] Sección "Cuenta": nombre, email, moneda base, cambio de password
+- [x] Sección "OCR": campo `anthropic_api_key` (tipo password), indicador "configurada ✓ / no configurada"
+- [x] Sección "Paperless": `paperless_url`, `paperless_token` (tipo password), toggle on/off, botón "Verificar conexión"
+- [x] Sección "Apariencia": selector idioma (ES/EN), toggle dark/light/system
+- [x] Actualizar `hooks/use-settings.ts` — GET /api/settings con nuevos campos
 
 ---
 

@@ -14,7 +14,7 @@ Siempre verificar después de cada build:
 docker compose exec backend grep -n "FUNCION_O_VARIABLE_NUEVA" /app/app/services/archivo.py
 ```
 
-Si no aparece nada → el build usó caché o el commit no llegó. Investigar antes de seguir.
+Si no aparece → el build usó caché o el commit no llegó. Investigar antes de seguir.
 
 ### Secuencia de deploy obligatoria
 ```bash
@@ -24,7 +24,7 @@ git commit -m "tipo(scope): descripción"
 git push origin main
 
 # 2. En el LXC
-ssh -i ~/.ssh/id_claude root@192.168.1.125 \
+ssh -i ~/.ssh/id_ed25519 root@192.168.1.125 \
   "cd /opt/ledger && git pull origin main && docker compose up -d --build [servicio]"
 
 # 3. Verificar que el código nuevo está dentro
@@ -34,424 +34,386 @@ docker compose exec [servicio] grep -n "ALGO_DEL_CODIGO_NUEVO" /app/ruta/archivo
 docker compose logs [servicio] --since=1m
 ```
 
-### Nunca dar la tarea por terminada sin verificar el contenedor
-Si el grep del paso 3 no devuelve resultados → el código no está desplegado → investigar.
-
 ---
 
 ## 🐍 Backend — FastAPI
 
 ### Trailing slash y 307 redirects
-**NUNCA** usar `""` en decoradores de colección. Usar siempre `redirect_slashes=False` en el router:
+**NUNCA** usar `""` en decoradores de colección. Siempre usar `"/"`:
 
 ```python
-# ✅ CORRECTO
-router = APIRouter(
-    prefix="/api/expenses",
-    tags=["expenses"],
-    redirect_slashes=False,
-)
-
-@router.get("")      # coincide con /api/expenses
-@router.post("")     # coincide con /api/expenses
-@router.get("/{id}") # coincide con /api/expenses/123
-```
-
-```python
-# ❌ INCORRECTO — genera 307 cuando el cliente llama sin slash
-router = APIRouter(prefix="/api/expenses")
-@router.get("/")   # FastAPI redirige /api/expenses → /api/expenses/
+# ✅
+@router.get("/")
+# ❌
+@router.get("")
 ```
 
 ### Lógica solo en services
-```python
-# ✅ CORRECTO — router solo orquesta
-@router.post("")
-async def create_expense(data: ExpenseCreate, db=Depends(get_db), user=Depends(get_current_user)):
-    return await expense_service.create(db, user_id=user.id, data=data)
+Los routers son thin wrappers. Nunca lógica de negocio en routers:
 
-# ❌ INCORRECTO — lógica en router
-@router.post("")
-async def create_expense(data: ExpenseCreate, db=Depends(get_db)):
-    expense = Expense(**data.model_dump())
-    db.add(expense)
+```python
+# ✅ router
+@router.post("/", response_model=TripRead)
+async def create_trip(data: TripCreate, current_user=Depends(get_current_user), db=Depends(get_db)):
+    return await trip_service.create(db, current_user.id, data)
+
+# ❌ router con lógica
+@router.post("/")
+async def create_trip(...):
+    if data.end_date < data.start_date:  # esto va en el service
+        raise HTTPException(...)
+```
+
+### FormData vs JSON
+`POST /api/expenses` usa `Form(...)` — el cliente **debe** enviar `FormData`, nunca `application/json`:
+
+```python
+# ✅ backend
+@router.post("/")
+async def create_expense(
+    trip_id: UUID = Form(...),
+    amount: Decimal = Form(...),
+    image: UploadFile | None = File(None),
+    ...
+):
+```
+
+```typescript
+// ✅ frontend — usar FormData
+const fd = new FormData()
+fd.append("trip_id", tripId)
+fd.append("amount", String(amount))
+if (image) fd.append("image", image)
+await api.postForm("/api/proxy/expenses/", fd)
+
+// ❌ frontend — NO usar JSON para este endpoint
+await api.post("/api/proxy/expenses/", { trip_id: tripId, amount })
+```
+
+### Nunca escribir a disco salvo volumen temporal
+- OCR, CSV, ZIP → usar `io.BytesIO` / `io.StringIO`
+- Imágenes de usuario sin Paperless → guardar en `/app/uploads/` (volumen Docker montado)
+- Nunca en `/tmp/`, nunca en el filesystem del contenedor fuera del volumen
+
+```python
+# ✅
+buffer = io.BytesIO()
+zipf = zipfile.ZipFile(buffer, "w")
+# ... añadir archivos ...
+zipf.close()
+buffer.seek(0)
+return StreamingResponse(buffer, media_type="application/zip")
+
+# ❌
+with open("/tmp/export.zip", "wb") as f:
+    ...
+```
+
+### Cifrado de claves sensibles en user_settings
+
+```python
+# core/crypto_utils.py
+import base64
+from cryptography.fernet import Fernet
+from app.core.config import settings
+
+def _get_fernet() -> Fernet:
+    # Derivar clave de 32 bytes de SECRET_KEY
+    key = base64.urlsafe_b64encode(settings.SECRET_KEY[:32].encode().ljust(32)[:32])
+    return Fernet(key)
+
+def encrypt(value: str) -> str:
+    return _get_fernet().encrypt(value.encode()).decode()
+
+def decrypt(value: str) -> str:
+    return _get_fernet().decrypt(value.encode()).decode()
+```
+
+```python
+# settings_service.py
+ENCRYPTED_KEYS = {"anthropic_api_key", "paperless_token"}
+
+async def set_setting(db, user_id, key: str, value: str | None):
+    if value and key in ENCRYPTED_KEYS:
+        value = encrypt(value)
+    # ... upsert en BD
+
+async def get_setting(db, user_id, key: str) -> str | None:
+    raw = # ... leer de BD
+    if raw and key in ENCRYPTED_KEYS:
+        return decrypt(raw)
+    return raw
+```
+
+**Regla:** NUNCA devolver claves reales en respuestas API. Solo `*_set: bool`:
+
+```python
+# ✅ schema response
+class SettingsRead(BaseModel):
+    paperless_url: str | None
+    paperless_enabled: bool
+    paperless_token_set: bool      # bool, nunca el token
+    anthropic_api_key_set: bool    # bool, nunca la key
+
+# ❌
+class SettingsRead(BaseModel):
+    anthropic_api_key: str | None  # NUNCA
+```
+
+### Fallback de configuración (user → entorno)
+
+```python
+# ocr_service.py
+async def get_api_key(db, user_id: UUID) -> str:
+    user_key = await settings_service.get_setting(db, user_id, "anthropic_api_key")
+    return user_key or settings.ANTHROPIC_API_KEY
+
+# paperless_service.py
+async def get_credentials(db, user_id: UUID) -> tuple[str, str]:
+    url = await settings_service.get_setting(db, user_id, "paperless_url") or settings.PAPERLESS_URL
+    token = await settings_service.get_setting(db, user_id, "paperless_token") or settings.PAPERLESS_TOKEN
+    return url, token
+```
+
+### Migración async a Paperless
+
+```python
+# settings_service.py
+async def migrate_to_paperless(db: AsyncSession, user_id: UUID):
+    """Migra imágenes del volumen local a Paperless cuando el usuario lo configura."""
+    expenses = await expense_service.get_with_local_path(db, user_id)
+    for expense in expenses:
+        try:
+            url, token = await paperless_service.get_credentials(db, user_id)
+            doc_id = await paperless_service.upload(url, token, expense.local_path)
+            await expense_service.update_paperless_doc(db, expense.id, doc_id)
+            Path(expense.local_path).unlink(missing_ok=True)
+        except Exception as e:
+            logger.error(f"migrate_to_paperless: expense {expense.id} falló: {e}")
+            continue  # nunca bloquear
+```
+
+```python
+# router settings
+@router.put("/")
+async def update_setting(data: SettingUpdate, background_tasks: BackgroundTasks, ...):
+    await settings_service.set_setting(db, current_user.id, data.key, data.value)
+    if data.key in ("paperless_url", "paperless_token"):
+        background_tasks.add_task(migrate_to_paperless, db, current_user.id)
+    return await settings_service.get_all(db, current_user.id)
+```
+
+### Registro self-hosted
+
+```python
+# auth_service.py
+async def register(db, data: UserCreate) -> User:
+    has_users = await user_exists_any(db)
+    
+    if has_users:
+        if not settings.ALLOW_REGISTRATION:
+            raise HTTPException(403, "El registro está cerrado")
+    
+    user = User(
+        ...
+        is_admin=not has_users,  # primer usuario → admin
+    )
+    db.add(user)
     await db.commit()
-```
-
-### Logging obligatorio en operaciones externas
-Siempre loggear antes de llamar a Paperless, Anthropic o servicios externos:
-```python
-logger.info("Paperless upload — title=%s correspondent_id=%s", title, correspondent_id)
-```
-
-### Multipart con httpx — campos mixtos
-Cuando hay campos de texto y fichero en el mismo POST, usar `files=` con tuplas para todo:
-```python
-# ✅ CORRECTO — todo en files con tuplas (None, valor) para texto
-multipart_fields = {
-    "title": (None, title),
-    "correspondent": (None, str(correspondent_id)),
-    "document": (filename, file_bytes, mime_type),
-}
-resp = await client.post(url, headers=auth_header, files=multipart_fields)
-
-# ❌ INCORRECTO — data= y files= juntos puede causar encoding incorrecto
-resp = await client.post(url, data={"title": title}, files={"document": ...})
-```
-
-### Haiku OCR — limpiar markdown fences antes de json.loads()
-Haiku puede devolver JSON envuelto en ` ```json ... ``` `. Limpiar siempre antes de parsear:
-```python
-cleaned = raw_text.strip()
-if cleaned.startswith("```"):
-    cleaned = cleaned.split("```")[1]
-    if cleaned.startswith("json"):
-        cleaned = cleaned[4:]
-    cleaned = cleaned.strip()
-data = json.loads(cleaned[cleaned.find("{"):cleaned.rfind("}") + 1])
-```
-
-### Pydantic v2 y date alias
-```python
-# ❌ En Python 3.12, 'date' como nombre de campo en clase SQLAlchemy hace shadowing
-from datetime import date as date_t  # usar alias
-
-class Expense(Base):
-    date: Mapped[date_t]  # ✅
+    return user
 ```
 
 ---
 
-## ⚛️ Frontend — Next.js
+## 🌐 Frontend — Next.js 14
 
-### Proxy URL — sin trailing slash
-El proxy construye la URL sin slash final. FastAPI tiene `redirect_slashes=False`:
-```typescript
-// ✅ CORRECTO
-const joinedPath = pathSegments.join("/")  // "expenses" no "expenses/"
-const url = `${API_INTERNAL_URL}/api/${joinedPath}${searchParams ? `?${searchParams}` : ""}`
-```
+### Proxy obligatorio
+Las llamadas al backend van **siempre** por `/api/proxy/*`. Nunca llamar directamente al backend desde el navegador:
 
-### Proxy multipart — preservar Content-Type con boundary
-```typescript
-// ✅ CORRECTO
-const incomingContentType = req.headers.get("content-type") || ""
-const isMultipart = incomingContentType.startsWith("multipart/form-data")
-
-const body = hasBody
-  ? isMultipart ? await req.arrayBuffer() : await req.text()
-  : undefined
-
-if (isMultipart) {
-  fetchHeaders["Content-Type"] = incomingContentType  // preservar con boundary
-} else {
-  fetchHeaders["Content-Type"] = "application/json"
-}
-```
-
-### FormData en el cliente — nunca fijar Content-Type
-```typescript
-// ✅ CORRECTO — el browser añade el boundary automáticamente
-const fd = new FormData()
-fd.append("file", file)
-await fetch("/api/proxy/expenses", { method: "POST", body: fd })
-
-// ❌ INCORRECTO — faltaría el boundary
-await fetch(url, {
-  method: "POST",
-  body: fd,
-  headers: { "Content-Type": "multipart/form-data" }  // NO hacer esto
-})
-```
-
-### Redirect en proxy
-```typescript
-// ✅ Seguir redirects por si acaso
-const response = await fetch(url, {
-  method,
-  headers: fetchHeaders,
-  body,
-  redirect: "follow",
-  // @ts-ignore
-  duplex: "half",
-})
-```
-
-### Decimales desde FastAPI
-FastAPI devuelve `Decimal` como string en JSON. Siempre envolver con `Number()`:
 ```typescript
 // ✅
-const amount = Number(expense.amount).toFixed(2)
+const data = await api.get("/api/proxy/trips/")
 
-// ❌ — falla si amount es string
-const amount = expense.amount.toFixed(2)
+// ❌
+const data = await fetch("http://backend:8000/api/trips/")
 ```
 
-### Next.js 14 — useSearchParams requiere Suspense
-Cualquier componente que use `useSearchParams()` DEBE estar envuelto en `<Suspense>`.
-El patrón correcto es extraer el contenido a un componente interno y que el `export default` solo contenga el `<Suspense>`.
-El build falla en producción (exit code 1) si no se hace. **No usar `export const dynamic = "force-dynamic"`** como sustituto — puede interactuar mal con el caché de Docker BuildKit en LXC.
+### useSearchParams — Suspense obligatorio
+
+En Next.js 14, `useSearchParams()` **fuera** de `<Suspense>` causa error de build en producción:
 
 ```tsx
-// ✅ CORRECTO
-import { Suspense } from "react"
-import { useSearchParams } from "next/navigation"
-
+// ✅ patrón correcto
 function PageContent() {
   const searchParams = useSearchParams()
-  // ... contenido
+  return <div>...</div>
 }
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-    </div>}>
+    <Suspense fallback={<div>Cargando...</div>}>
       <PageContent />
     </Suspense>
   )
 }
+```
 
-// ❌ INCORRECTO — el build falla en prod
-export default function Page() {
-  const searchParams = useSearchParams()  // sin Suspense
-  // ...
+### FormData para endpoints con imagen
+
+```typescript
+// lib/api.ts — método postForm
+async postForm(path: string, formData: FormData) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await getToken()}` },
+    body: formData,
+    // NO añadir Content-Type — el navegador lo pone con boundary automáticamente
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
 }
 ```
 
-### Endpoints FastAPI con Form(...) requieren FormData en el cliente
-Si el router FastAPI usa `Form(...)` en lugar de `Body(...)`, el cliente web DEBE enviar `FormData`, nunca `JSON.stringify`.
-Verificar antes de escribir el hook: `grep "Form(...)" backend/app/routers/expenses.py`
+### Dark mode con next-themes
 
-El endpoint `POST /api/expenses` usa `Form(...)` porque acepta imagen opcional. Usar `api.postForm()` de `lib/api.ts`:
-
-```typescript
-// ✅ CORRECTO
-mutationFn: (data: ExpenseCreate) => {
-  const form = new FormData()
-  form.append("trip_id", data.trip_id)
-  form.append("amount", String(data.amount))
-  form.append("currency", data.currency)
-  // ... resto de campos
-  return api.postForm("/api/proxy/expenses", form)
-},
-
-// ❌ INCORRECTO — 422 en todos los campos porque backend espera Form, no JSON
-mutationFn: (data: ExpenseCreate) =>
-  api.post("/api/proxy/expenses", data),
-```
-
-`api.postForm()` en `lib/api.ts`:
-```typescript
-postForm: (path: string, form: FormData) =>
-  request(path, { method: "POST", body: form }),
-```
-
-### SessionProvider — Navbar dentro de Providers
 ```tsx
-// ✅ CORRECTO — Navbar es hijo de Providers (tiene acceso a useSession)
-<Providers>
-  <Navbar />
-  {children}
-</Providers>
+// app/layout.tsx
+import { ThemeProvider } from "next-themes"
 
-// ❌ INCORRECTO — fuera del contexto
-<Navbar />
-<Providers>{children}</Providers>
-```
-
----
-
-## 🗄️ Paperless-ngx — Integración
-
-### IDs conocidos en producción
-| Entidad | Nombre | ID |
-|---------|--------|----|
-| Correspondent | Comida | 2 |
-| Correspondent | Transporte | 1 |
-| Correspondent | Alojamiento | 3 |
-| Correspondent | otros | 11 |
-| Document type | Invoice | 1 |
-| Storage path | Viajes | 1 |
-| Tag | travel | 5 |
-
-### Query por nombre — usar name__iexact
-```python
-# ✅ CORRECTO — case insensitive
-resp = await client.get(f"{base}/api/correspondents/", params={"name__iexact": name}, ...)
-
-# ❌ INCORRECTO — case sensitive, puede no encontrar
-resp = await client.get(f"{base}/api/correspondents/", params={"name": name}, ...)
-```
-
-### Mapeo categorías → correspondents
-```python
-CATEGORY_TO_CORRESPONDENT = {
-    "Dining": "Comida",
-    "Transport": "Transporte",
-    "Lodging": "Alojamiento",
-    "Culture": "Cultura",
-    "Shopping": "Compras",
-    "Health": "Salud",
-    "Other": "Otros",
+export default function RootLayout({ children }) {
+  return (
+    <html lang="es" suppressHydrationWarning>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
 }
 ```
 
-### Bug conocido — storage_path ignorado (posiblemente resuelto)
-Paperless ignoraba el campo `storage_path` en `post_document/`. Causa probable: encoding incorrecto al mezclar `data=` y `files=` en httpx. Fix aplicado en commit 311aa7d (2026-04-29) — pendiente verificación tras redeploy.
+```tsx
+// components/theme-toggle.tsx
+import { useTheme } from "next-themes"
 
-### URLs de Paperless son internas — nunca devolverlas al frontend
-Las URLs de Paperless apuntan a `192.168.1.154:8004` (NAS, red local). El browser del cliente no puede acceder a esa red.
-
-**Regla:** nunca devolver la URL de Paperless directamente al frontend. Usar siempre el endpoint proxy server-side:
-
-```python
-# ✅ CORRECTO — endpoint que hace de proxy con credenciales del usuario
-@router.get("/{expense_id}/receipt-image")
-async def get_receipt_image(...):
-    paperless_url, token = await paperless_service.get_credentials(db, user.id)
-    image_url = f"{paperless_url.rstrip('/')}/api/documents/{doc_id}/download/"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(image_url, headers={"Authorization": f"Token {token}"}, follow_redirects=True)
-    return StreamingResponse(iter([resp.content]), media_type=content_type, headers={"Cache-Control": "private, max-age=3600"})
-
-# ❌ INCORRECTO — URL interna devuelta al browser
-return {"url": "http://192.168.1.154:8004/api/documents/42/download/"}
+export function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  // "system" | "light" | "dark"
+}
 ```
 
-En el frontend, usar la URL del proxy como `src` del `<img>` directamente:
+### i18n con next-intl (sin prefijo de ruta)
+
 ```typescript
-// ✅ — src apunta al proxy del backend, nunca a Paperless
-setReceiptUrl(`/api/proxy/expenses/${expenseId}/receipt-image`)
+// i18n.ts
+import { getRequestConfig } from "next-intl/server"
+import { cookies } from "next/headers"
+
+export default getRequestConfig(async () => {
+  const locale = cookies().get("NEXT_LOCALE")?.value ?? "es"
+  return {
+    locale,
+    messages: (await import(`./messages/${locale}.json`)).default,
+  }
+})
 ```
 
----
+```tsx
+// Server Component
+import { getTranslations } from "next-intl/server"
 
-## 📱 Android — Patrones adicionales
-
-### Debounce para conversión live de moneda en QuickCapture
-```kotlin
-// ✅ CORRECTO — observar StateFlow con debounce para no llamar la API en cada tecla
-@OptIn(FlowPreview::class)
-private fun observeAmountAndCurrencyChanges() {
-    viewModelScope.launch {
-        uiState
-            .drop(1)                    // saltar el estado inicial
-            .debounce(500)              // 500ms sin cambios antes de llamar a la API
-            .distinctUntilChanged { old, new ->
-                old.amount == new.amount && old.currency == new.currency
-            }
-            .collect { state ->
-                updateConversion(state.amount, state.currency, state.date)
-            }
-    }
+export default async function TripsPage() {
+  const t = await getTranslations("trips")
+  return <h1>{t("title")}</h1>
 }
-// El Job de conversión anterior se cancela si llega nueva entrada antes de que termine
-conversionJob?.cancel()
-conversionJob = viewModelScope.launch { /* llamada a CurrencyRepository */ }
-```
 
-### HiltWorkerFactory — WorkManager con Hilt
+// Client Component
+import { useTranslations } from "next-intl"
 
-Cuando se usa `@HiltWorker` + `@AssistedInject`, hay que:
-
-1. Implementar `Configuration.Provider` en `App.kt`:
-```kotlin
-@HiltAndroidApp
-class App : Application(), Configuration.Provider {
-    @Inject lateinit var workerFactory: HiltWorkerFactory
-    override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
+export function TripCard() {
+  const t = useTranslations("trips")
+  return <span>{t("status.active")}</span>
 }
 ```
 
-2. Desactivar el inicializador por defecto en `AndroidManifest.xml`:
-```xml
-<provider
-    android:name="androidx.startup.InitializationProvider"
-    android:authorities="${applicationId}.androidx-startup"
-    android:exported="false"
-    tools:node="merge">
-    <meta-data
-        android:name="androidx.work.WorkManagerInitializer"
-        android:value="androidx.startup"
-        tools:node="remove" />
-</provider>
-```
-
-### HorizontalPager + DayChipStrip — sincronización bidireccional
-```kotlin
-// Pager → selectedDay
-LaunchedEffect(pagerState) {
-    snapshotFlow { pagerState.currentPage }.collect { page ->
-        days.getOrNull(page)?.let { viewModel.selectDay(it) }
-    }
-}
-// selectedDay → Pager (cuando el usuario toca un chip)
-LaunchedEffect(selectedDay) {
-    val idx = days.indexOf(selectedDay)
-    if (idx >= 0 && pagerState.currentPage != idx) {
-        pagerState.animateScrollToPage(idx)
-    }
+**Estructura de mensajes:**
+```json
+// messages/es.json
+{
+  "nav": { "trips": "Viajes", "settings": "Configuración" },
+  "trips": {
+    "title": "Mis viajes",
+    "status": { "active": "Activo", "closed": "Cerrado", "draft": "Borrador" }
+  },
+  "expenses": { "title": "Gastos", "billable": "Facturable" },
+  "settings": {
+    "profile": "Perfil",
+    "ocr": "OCR",
+    "paperless": "Paperless",
+    "appearance": "Apariencia"
+  },
+  "auth": {
+    "register": { "closed": "El registro está cerrado. Contacta con el administrador." }
+  }
 }
 ```
 
----
+### Descarga de archivos (CSV/ZIP)
 
-## 🔄 Proveedores Externos
+```typescript
+// hooks/use-export.ts
+export function useExportTrip(tripId: string) {
+  const downloadFile = async (url: string, filename: string) => {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    const blob = await res.blob()
+    const href = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = href
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(href)
+  }
 
-### Tipos de cambio
-- **Usar:** `open.er-api.com/v6/latest/{base}` — sin API key, plan gratuito
-- **No usar:** `exchangerate.host` — requiere API key desde 2025
-
-### OCR
-- **Usar:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) — único motor
-- **No usar:** Tesseract, PaddleOCR, modelos locales
-
----
-
-## 📱 Android — Build y Deploy (Windows)
-
-```bash
-# Compilar APK debug
-C:\gradle\gradle-8.2\bin\gradle.bat assembleDebug
-
-# Instalar en emulador (desinstalar primero si ya existe)
-& "C:\Users\grisa\AppData\Local\Android\Sdk\platform-tools\adb.exe" uninstall com.ledger.app
-& "C:\Users\grisa\AppData\Local\Android\Sdk\platform-tools\adb.exe" install app\build\outputs\apk\debug\app-debug.apk
-
-# Si gradlew.bat falla con NoClassDefFoundError:
-# Usar gradle directo: C:\gradle\gradle-8.2\bin\gradle.bat
+  return {
+    downloadCsv: (onlyBillable: boolean) =>
+      downloadFile(
+        `/api/proxy/reports/export/${tripId}?format=csv&only_billable=${onlyBillable}`,
+        `gastos_${tripId}.csv`
+      ),
+    downloadBundle: (onlyBillable: boolean) =>
+      downloadFile(
+        `/api/proxy/reports/export/${tripId}/bundle?only_billable=${onlyBillable}`,
+        `bundle_${tripId}.zip`
+      ),
+  }
+}
 ```
-
-**Emulador:** Pixel 10, API 36.1. AVD en `D:\android\avd\` (C: sin espacio suficiente).
-**HTTP en desarrollo:** `android:usesCleartextTraffic="true"` en AndroidManifest.xml — solo debug.
-**NAS caído:** después de reiniciar, esperar a que `postgres-ledger` arranque antes de `docker compose restart backend`.
-
-### Retrofit — URL dinámica
-Nunca hardcodear la URL base en el momento de crear Retrofit. Usar `DynamicUrlInterceptor`:
-- El interceptor lee `ConfigStore.getServerUrl()` en cada petición y reescribe `scheme/host/port`.
-- Retrofit usa `baseUrl("http://localhost/")` como placeholder irrelevante.
-- `ConfigViewModel` debe inyectar `@Named("raw")` OkHttpClient (sin interceptor) para que sus llamadas de validación vayan a la URL que el usuario está configurando, no a ConfigStore.
 
 ---
 
 ## 📝 Git
 
 ```bash
-# Formato obligatorio
-feat(android): descripción
+# Formato obligatorio de commits
 feat(web): descripción
 feat(api): descripción
 fix(proxy): descripción
 fix(backend): descripción
+refactor(auth): descripción
 docs: descripción
+chore(deps): descripción
 
-# Rama siempre main, nunca master
+# Rama siempre main
 git branch -M main
 ```
 
-**Nunca commitear:** `.env`, API keys, `node_modules/`, `__pycache__/`
+**Nunca commitear:** `.env`, API keys, `node_modules/`, `__pycache__/`, `*.pyc`
 
 ---
 
@@ -459,6 +421,24 @@ git branch -M main
 
 - Passwords: bcrypt siempre
 - JWT: access 30min, refresh 7d
-- CORS: orígenes explícitos, nunca `*` en prod
+- API keys en BD: Fernet cifrado, derivado de `SECRET_KEY`
+- CORS: orígenes explícitos en `ALLOWED_ORIGINS`, nunca `*` en prod
 - Uploads: validar MIME por magic bytes, no por extensión
-- `ANTHROPIC_API_KEY`: solo en backend y bot, nunca en frontend
+- `ANTHROPIC_API_KEY`: solo en backend, nunca en frontend
+- Settings API: devolver siempre `*_set: bool`, nunca la clave real
+- `pin bcrypt>=4.0,<5.0` — bcrypt 5.x rompe passlib
+
+---
+
+## 🐛 Bugs conocidos y soluciones documentadas
+
+| Bug | Solución |
+|-----|----------|
+| `passlib` incompatible con `bcrypt>=5` | Pin `bcrypt>=4.0,<5.0` en requirements.txt |
+| Next.js 14 no soporta `next.config.ts` | Usar `next.config.mjs` |
+| Next.js standalone: healthcheck falla | `ENV HOSTNAME=0.0.0.0` en Dockerfile |
+| BuildKit LXC no hereda DNS (Tailscale) | `{"dns":["8.8.8.8","1.1.1.1"]}` en `/etc/docker/daemon.json` |
+| `NEXT_PUBLIC_API_URL` embebida en build | Proxy `/api/proxy/*` con `API_INTERNAL_URL` |
+| `useSearchParams` sin Suspense → error build prod | Envolver en `<Suspense>` |
+| `POST /api/expenses` espera FormData, no JSON | Usar `api.postForm()` con FormData |
+| Backend unhealthy tras reinicio NAS | Esperar a postgres-ledger, luego `docker compose restart backend` |

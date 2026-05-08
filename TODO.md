@@ -1,9 +1,8 @@
-# TODO.md — Ledger / Travel Expenses App
+# TODO.md — Ledger
 
-> Lista maestra de tareas para agentes Claude Code.
 > **Leer `CLAUDE.md` y `MEMORY.md` antes de empezar.**
-> Al completar una tarea: marcar `[x]` aquí **y** actualizar `MEMORY.md`, `CLAUDE.md`, `BEST_PRACTICES.md`.
-> Para tareas Android: ver `ANDROID_TODO.md` para desglose detallado.
+> Al completar una tarea: marcar `[x]` aquí **y** actualizar `MEMORY.md`.
+> Bot y Android aparcados indefinidamente — no tocar.
 
 ---
 
@@ -13,16 +12,17 @@
 [ ] — pendiente
 [x] — completado
 [~] — en progreso (anotar agente y fecha)
-[!] — bloqueante: otros agentes no pueden avanzar hasta que esté hecho
-[✗] — descartado permanentemente (con razón anotada)
+[!] — bloqueante: otros no pueden avanzar hasta que esté hecho
+[✗] — descartado permanentemente
 ```
 
-**Agentes disponibles:**
-- `[Infra]` — Docker, infraestructura, CI
+**Agentes activos:**
 - `[BE]` — Backend FastAPI
 - `[Web]` — Frontend Next.js
-- `[And]` — Android Kotlin/Compose
-- `[OCR]` — Servicio OCR / integración Paperless
+- `[Docs]` — Documentación
+
+**Aparcados (no tocar):**
+- `[And]` — Android
 - `[Bot]` — Bot Telegram
 
 ---
@@ -31,257 +31,197 @@
 
 ```
 NAS UGREEN (192.168.1.154)
-├── postgres-ledger       → BD exclusiva Ledger (puerto 5433, DB "ledger")
-├── paperless-ngx         → almacén de imágenes/facturas
-└── nginx-proxy-manager   → proxy inverso TLS
+├── postgres-ledger  → puerto 5433, DB "ledger"
+├── paperless-ngx    → almacén facturas
+└── nginx-proxy-manager → TLS
 
-LXC Proxmox (192.168.1.125, 768 MB RAM, nesting)
+LXC Proxmox (192.168.1.125, 768 MB RAM)
 └── /opt/ledger/docker-compose.yml
     ├── backend   (FastAPI :8000)
     ├── frontend  (Next.js :3000)
-    └── bot       (PTB :8080 health)
+    └── bot       (skeleton, aparcado)
 ```
 
-**Servicios eliminados — no recrear:**
-- `[✗]` PostgreSQL propio en LXC → usar postgres-ledger del NAS (puerto 5433)
-- `[✗]` MinIO → imágenes van a Paperless-ngx
-- `[✗]` Paperless-ngx propio → usar el del NAS vía API REST
-- `[✗]` Ollama → usar Claude Haiku 4.5 API
-- `[✗]` Tesseract → usar Claude Haiku 4.5 Vision
-- `[✗]` Integración Uber → descartada (no hay API pública gratuita)
-
 ---
 
-## ✅ FASE 0 — Infraestructura *(COMPLETADA 2026-04-24)*
+## ✅ FASE 0 — Infraestructura *(COMPLETADA)*
 
-- [x] `docker-compose.yml` — 3 servicios: backend, frontend, bot
-- [x] `docker-compose.dev.yml` — hot-reload para los 3
-- [x] `.env.example` — variables con `DATABASE_URL` apuntando a NAS:5433
-- [x] `nas-postgres-ledger.yml` — fragmento para el NAS
-- [x] Healthcheck en cada servicio del LXC
-- [x] Deploy verificado — 3 servicios healthy en 192.168.1.125
+- [x] docker-compose.yml, docker-compose.dev.yml, .env.example
+- [x] Healthchecks en los 3 servicios
 - [x] Backend skeleton — FastAPI, CORS, routers, /health, Alembic
-- [x] Frontend skeleton — Next.js 14, shadcn tokens, Manrope/Public Sans
-- [x] Bot skeleton — PTB, handlers stub, llm_service stub, trip_resolver
-- [ ] README: instrucciones para levantar postgres-ledger en el NAS
-- [ ] Android skeleton — proyecto /android/, Hilt, Compose BOM, Navigation
-- [ ] Seed SQL — categorías: Dining, Lodging, Transport, Culture, Shopping, Health, Other
+- [x] Frontend skeleton — Next.js 14, shadcn tokens
+- [x] Bot skeleton — aparcado
+- [ ] README: instrucciones para levantar postgres-ledger en NAS
+- [ ] Seed SQL — categorías iniciales
 
 ---
 
-## ✅ FASE 1 — Autenticación *(Backend + Web COMPLETADOS 2026-04-24)*
+## ✅ FASE 1 — Autenticación *(Backend + Web COMPLETADOS)*
 
 ### Backend ✅
 - [x] Modelo `User` + migration `0001_create_users`
-- [x] Schemas: UserCreate, UserLogin, UserRead, UserUpdate, Token, TokenRefresh
 - [x] `core/security.py` — bcrypt, JWT access 30min / refresh 7d
-- [x] `core/limiter.py` — SlowAPI con no-op para tests
-- [x] `core/dependencies.py` — get_current_user, verify_bot_request (HMAC-SHA256)
-- [x] Router `/api/auth` — register, login, refresh, logout, device
+- [x] Router `/api/auth` — register, login, refresh, logout
 - [x] Router `/api/users` — GET/PUT /me
-- [x] Hardening: rate limits, security headers, CORS explícito, openapi_url=None en prod
 - [x] Tests: test_auth_*, test_jwt_*
 
-### Backend — cambios requeridos por Android `[BE]`
-- [x] [!] Añadir `REGISTRATION_INVITE_CODE` a `.env.example` y `config.py` *(2026-05-04)*
-- [x] [!] Crear endpoint `POST /api/auth/validate-invite` — valida code antes del formulario de registro *(2026-05-04)*
-- [x] [!] Modificar `UserCreate` schema: añadir `invite_code: str` obligatorio *(2026-05-04)*
-- [x] [!] Modificar `POST /api/auth/register`: validar `invite_code` en el body *(2026-05-04)*
-- [x] [!] Modificar `TripCreate` schema: añadir `id: UUID | None = None` *(2026-05-04)*
-- [x] [!] Modificar `trip_service.create()`: respetar `id` del cliente si viene, generar si no *(2026-05-04)*
-- [x] [!] Modificar `ExpenseCreate` schema: añadir `id: UUID | None = None` *(2026-05-04)*
-- [x] [!] Modificar `expense_service.create()`: respetar `id` del cliente si viene, generar si no *(2026-05-04)*
-- [x] [!] Idempotencia: POST con UUID ya existente del mismo usuario → 200/201 con recurso existente (no 409) *(2026-05-04)*
-- [ ] Pendiente infra: rate limit en nginx-proxy-manager `/api/auth/register` → 3 req/hora por IP
-- [ ] Implementar `GET /api/sync/pull?since={timestamp}` — ver FASE 5
-- [ ] Implementar `POST /api/sync/push` idempotente — ver FASE 5
+### Backend — refactor self-hosted `[BE]` `[!]`
+- [ ] [!] Eliminar toda lógica de `invite_code` de auth_service, schemas, router
+- [ ] [!] Añadir `is_admin: bool = False` a modelo `User`
+- [ ] [!] Migration `0005_add_is_admin`
+- [ ] [!] Añadir `ALLOW_REGISTRATION: bool = False` a `config.py` y `.env.example`
+- [ ] [!] Lógica registro: tabla vacía → libre + is_admin=True; no vacía → chequear `ALLOW_REGISTRATION`
+- [ ] [!] Nuevo endpoint `GET /api/auth/status` → `{registration_open: bool, has_users: bool}`
+- [ ] Actualizar tests de auth para nueva lógica
 
-### Web ✅
-- [x] NextAuth.js con provider credentials + refreshAccessToken automático
-- [x] Páginas /login y /register con design system
-- [x] Zustand useAuthStore
-- [x] Middleware — redirige a /login si no hay sesión
-- [x] Proxy /api/proxy/* con req.text() (evita detached ArrayBuffer)
-- [x] lib/api.ts — auto-JWT + 401→signOut
-
-### Web — cambios requeridos por Android `[Web]`
-- [ ] Añadir campo `invite_code` al formulario `/register`
-- [ ] Pasar `invite_code` en body de `POST /api/auth/register`
-- [ ] Fix `confirm_password` en `/register` — validar que coinciden antes de enviar
-
-### Android `[And]`
-> Ver `ANDROID_TODO.md` Phase A1 y A2 para desglose completo.
-- [ ] Phase A1 — Foundation (Gradle, Hilt, Room, Retrofit, Theme, Nav, Splash, Config)
-- [ ] Phase A2 — Auth Flow (Login, Register, TokenStore, auto-login, logout)
+### Web — refactor /register `[Web]`
+- [ ] Eliminar campo `invite_code` del formulario `/register`
+- [ ] Añadir campo `confirm_password` — validación client-side al submit
+- [ ] Llamar `GET /api/auth/status` al cargar `/register` — si cerrado → mostrar mensaje
+- [ ] Actualizar `lib/api.ts` si necesario
 
 ---
 
-## ✅ FASE 2 — CRUD Trips, Legs, Expenses & Loyalty Cards
+## ✅ FASE 2 — CRUD Core *(COMPLETADA)*
 
-### Backend ✅ *(2026-04-25 — 27/27 tests)*
-- [x] Modelos: LoyaltyCard, Trip, TripLeg, Expense, ExchangeRate
-- [x] Migration 0002_create_core_models aplicada
-- [x] Schemas: loyalty_card, trip (TripSummary incluido), trip_leg, expense, currency
-- [x] currency_service.py — open.er-api.com, cache en ExchangeRate
-- [x] loyalty_card_service.py, trip_service.py, leg_service.py, expense_service.py
-- [x] Routers: /api/loyalty-cards, /api/trips, /api/trips/{id}/legs, /api/expenses, /api/currencies
-- [x] Tests: test_trips, test_expenses, test_currency, test_loyalty_cards
-
-### Web ✅ *(2026-04-26)*
-- [x] types/ledger.ts — tipos completos del dominio
-- [x] Hooks React Query: useTrips, useExpenses, useLoyaltyCards
-- [x] Componentes UI propios (sin Radix): badge, progress, button, dialog, switch, label
-- [x] trip-card.tsx, expense-card.tsx, add-expense-modal.tsx
-- [x] /trips — lista con filtros de status
-- [x] /trips/new — formulario con primary_currency obligatorio
-- [x] /trips/[id] — detalle con summary, tabs gastos/tramos
-- [x] / (dashboard) — viaje activo + últimos gastos
-- [x] /settings/cards — loyalty cards CRUD
-- [x] Navbar global, breadcrumb, /settings/profile, edición de gasto
-- [x] Barra de totales por moneda en trip detail
-- [x] Edición de viaje — /trips/[id]/edit con cover image
-- [x] Imagen de portada de viaje — POST /api/trips/{id}/cover
-- [x] Adjuntar imagen a gasto (Flujo A) → Paperless → paperless_doc_id
-- [x] Ver comprobante desde detalle de gasto
-- [x] Export CSV del viaje — GET /api/reports/export/{id}?format=csv
-- [x] Selector de días deslizante en trip detail
-
-### Android `[And]`
-> Ver `ANDROID_TODO.md` Phase A3 y A4 para desglose completo.
-- [x] Phase A3 — Trip Management (TripsScreen, CreateTrip, TripRepository offline-first) *(2026-05-05)*
-- [x] Phase A4 — Quick Capture (QuickCaptureScreen, ExpenseRepository, SyncWorker) *(2026-05-05)*
+- [x] Backend: Trips, TripLegs, Expenses, LoyaltyCards, Currency (27/27 tests)
+- [x] Web: todas las pantallas CRUD
 
 ---
 
-## 🟢 FASE 3 — OCR & Scanner `[OCR]` `[Web]` `[And]`
+## ✅ FASE 3 — OCR & Scanner *(COMPLETADA)*
 
-### Pre-requisitos (completados)
-- [x] Modelo `Setting` + migration `0004_create_settings`
-- [x] `settings_service.py` — get_all, get, set (upsert PostgreSQL)
-- [x] Router `/api/settings` — GET, PUT, POST /verify-paperless
-- [x] `paperless_service.py` — credenciales per-user desde BD
-
-### Backend ✅
-- [x] Sin modelo Receipt — OCR escribe directamente en Expense (is_draft=True) per CLAUDE.md
-- [x] services/ocr_service.py — Haiku 4.5 Vision + prompt caching + Paperless upload
-- [x] Router POST /api/receipts/upload — Flujo B (devuelve ExpenseRead)
-- [x] Router POST /api/expenses con imagen — Flujo A (sin OCR, solo Paperless)
-- [ ] Tests con fixtures (mockear Anthropic API y Paperless)
-
-### Web
-- [x] /settings — página unificada: Perfil + Integraciones → Paperless
-- [x] hooks/use-settings.ts
-- [x] /expenses/scan — drag&drop + file + cámara *(2026-05-07)*
-- [x] /expenses/scan/confirm — layout 5/7, pre-rellenado OCR *(2026-05-07)*
-
-### Android `[And]`
-> Ver `ANDROID_TODO.md` Phase A5 para desglose completo.
-- [x] Phase A5 — Camera + OCR (CameraScreen, CameraX, OcrProcessingScreen) *(2026-05-06)*
+- [x] Backend: ocr_service.py, receipts router, Flujo B
+- [x] Web: /expenses/scan, /expenses/scan/confirm
 
 ---
 
-## 🔵 FASE 4 — Paperless-ngx integración `[OCR]` `[Web]` `[And]`
+## ✅ FASE 4 — Paperless integración *(COMPLETADA)*
 
-- [x] [!] expense_service.delete() — cascade borrado en Paperless *(2026-05-06)*
-- [x] Web: botón "Ver factura" en expense detail page
-- [ ] Android: botón "Ver factura" con Intent.ACTION_VIEW
-
----
-
-## 🟣 FASE 5 — Offline Sync Android `[BE]` `[And]`
-
-- [ ] [!] Modelo PendingOperation + migration (backend)
-- [ ] [!] POST /api/sync/push — idempotente por operation_id
-- [ ] [!] GET /api/sync/pull?since= — trips, legs, expenses, deleted_ids
-- [ ] SyncWorker.kt — WorkManager NetworkType.CONNECTED, procesado por dependencias
-- [ ] Write-through en todos los repositorios Android
-- [ ] Backoff exponencial: 1min → 5min → 15min → 1h → 6h (max 5 intentos)
-- [ ] Limpieza de ops `done` con más de 7 días
+- [x] Backend: cascade delete Paperless en expense_service.delete()
+- [x] Web: "Ver factura" en expense detail
 
 ---
 
-## 🟤 FASE 6 — Reports & Export Bundle `[BE]` `[Web]` `[And]`
+## 🔴 FASE X — Preparación self-hosted `[BE]` `[Web]` ← ATACAR PRIMERO
 
-- [x] export_service.py — CSV (BOM UTF-8) + ZIP con imágenes de Paperless *(2026-05-06)*
-- [x] Naming ZIP: {category}_{date}_{merchant-slug}.{ext} (plano, sin subcarpetas) *(2026-05-06)*
-- [x] Router: GET /api/reports/trip/{id}, /export/{id}?format=csv, /export/{id}/bundle *(2026-05-06)*
-- [ ] Web: modal export con toggle billable + date range + botones CSV y ZIP
-- [x] Android: Phase A7 — SummaryScreen + export vía backend + FileProvider share sheet *(2026-05-07)*
-  - [ ] Android A7 ZIP — activar botón: cambiar `enabled=false` → `enabled=isOnline` + conectar `ExportZipUseCase`
+> Prerequisito para todas las demás fases web. Hacer antes de cualquier otra cosa.
+
+### Backend `[BE]`
+- [ ] [!] Refactor auth — ver FASE 1 Backend arriba
+- [ ] [!] `core/crypto_utils.py` — `encrypt(value: str) -> str` / `decrypt(value: str) -> str` con Fernet
+  - Derivar clave Fernet de `SECRET_KEY` del .env (usar `base64.urlsafe_b64encode(SECRET_KEY[:32].encode())`)
+- [ ] [!] Añadir `cryptography>=42.0` a `requirements.txt`
+- [ ] [!] Actualizar `settings_service.py`:
+  - `ENCRYPTED_KEYS = {"anthropic_api_key", "paperless_token"}`
+  - `set()` cifra si la clave está en `ENCRYPTED_KEYS`
+  - `get()` descifra si la clave está en `ENCRYPTED_KEYS`
+- [ ] [!] Actualizar schemas Settings:
+  - GET response: `anthropic_api_key_set: bool`, `paperless_token_set: bool` — nunca la clave real
+  - PUT request: acepta `{"key": "anthropic_api_key", "value": "sk-ant-..."}` → cifra y guarda
+- [ ] Actualizar `ocr_service.py`:
+  - `get_api_key(user_id)` → busca en `user_settings` → fallback a `settings.ANTHROPIC_API_KEY`
+- [ ] Actualizar `paperless_service.py`:
+  - `get_credentials(user_id)` → busca en `user_settings` → fallback a `settings.PAPERLESS_*`
+
+### Backend — volumen temporal `[BE]`
+- [ ] Añadir `local_path: str | None` a modelo `Expense` + migration `0006_add_local_path`
+- [ ] Añadir `aiofiles>=23.0` a `requirements.txt`
+- [ ] Actualizar `docker-compose.yml` — volumen `ledger_uploads:/app/uploads`
+- [ ] Actualizar `expense_service.create()`:
+  - Si `paperless_enabled=false` o sin Paperless → guardar imagen en `/app/uploads/{user_id}/{expense_id}.{ext}`
+  - Rellenar `Expense.local_path`
+- [ ] Actualizar `expense_service.delete()` — borrar `local_path` si existe
+- [ ] Implementar `settings_service.migrate_to_paperless(user_id: UUID)`:
+  - Obtener todos los `Expense` del usuario con `local_path != None`
+  - Para cada uno: subir a Paperless, actualizar `paperless_doc_id`, limpiar `local_path`, borrar archivo
+  - Si falla: loguear, continuar con el siguiente
+- [ ] Actualizar router `PUT /api/settings`:
+  - Si se guarda `paperless_url` o `paperless_token` → `background_tasks.add_task(migrate_to_paperless, user_id)`
+
+### Web — /settings/profile ampliado `[Web]`
+- [ ] Sección "Cuenta": nombre, email, moneda base, cambio de password
+- [ ] Sección "OCR": campo `anthropic_api_key` (tipo password), indicador "configurada ✓ / no configurada"
+- [ ] Sección "Paperless": `paperless_url`, `paperless_token` (tipo password), toggle on/off, botón "Verificar conexión"
+- [ ] Sección "Apariencia": selector idioma (ES/EN), toggle dark/light/system
+- [ ] Actualizar `hooks/use-settings.ts` — GET /api/settings con nuevos campos
 
 ---
 
-## ⚫ FASE 7 — Push Notifications & Polish `[BE]` `[Web]` `[And]`
+## 🟡 FASE 6 — Export Bundle Web `[Web]`
 
-- [ ] Modelo PushDevice + migration
-- [ ] push_service.py — alertas 80% y 100% presupuesto
-- [ ] Android Phase A8: FCM + dark mode + animaciones + Glance Widget
-- [ ] Web: dark mode + i18n ES/EN + E2E Playwright
+> Backend ya completado. Solo falta el modal en el frontend.
+
+- [ ] `components/export-modal.tsx`:
+  - Toggle "Solo facturables" — **estado inicial ON**
+  - `DatePickerWithRange` — **opcional** (sin selección = viaje completo)
+  - Botón "Descargar CSV" → `GET /api/reports/export/{id}?format=csv&only_billable={bool}`
+  - Botón "Descargar ZIP" → `GET /api/reports/export/{id}/bundle?only_billable={bool}`
+  - Manejo de descarga con `blob()` + `URL.createObjectURL()`
+- [ ] Conectar botón "Exportar" en `/trips/[id]/page.tsx` → abrir modal
 
 ---
 
-## 🤖 FASE 8 — Bot Telegram `[Bot]` `[BE]`
+## 🟠 FASE 7 — Polish Web `[Web]`
 
-- [ ] [!] POST /api/bot/link + GET /api/bot/context/{chat_id}
-- [ ] bot/llm_service.py — Haiku 4.5 con prompt caching
-- [ ] Handlers completos: commands, message, photo, callback
-- [ ] Export CSV y bundle ZIP desde lenguaje natural
-- [ ] Tests: llm_service, handlers, trip_resolver
+### Dark mode
+- [ ] Instalar `next-themes`
+- [ ] `ThemeProvider` en `app/layout.tsx`
+- [ ] Configurar Tailwind `darkMode: 'class'` (ya debería estar)
+- [ ] Variables CSS para colores dark en `globals.css`
+- [ ] Aplicar `dark:` clases en todos los componentes (navbar, cards, modales, forms, sidebar)
+- [ ] Respetar `prefers-color-scheme` por defecto
+
+### i18n con next-intl
+- [ ] Instalar `next-intl`
+- [ ] Crear `/messages/es.json` — todas las cadenas en español
+- [ ] Crear `/messages/en.json` — todas las cadenas en inglés
+- [ ] `i18n.ts` — configuración request sin prefijo de ruta
+- [ ] Actualizar `next.config.mjs` con plugin `createNextIntlPlugin`
+- [ ] `NextIntlClientProvider` en `app/layout.tsx`
+- [ ] Traducir por orden: navbar → auth (login, register) → trips → expenses → settings
+- [ ] Locale en cookie `NEXT_LOCALE` — gestionado por next-intl
+
+---
+
+## 📝 FASE Docs — README comunidad `[Docs]`
+
+- [ ] Audit de historial git: `git log --all` + `git grep "192.168.1"` — limpiar antes de publicar
+- [ ] `README.md` orientado a comunidad self-hosted:
+  - Descripción del proyecto y capturas
+  - Requisitos: Docker, Docker Compose, PostgreSQL 16, Paperless-ngx (opcional)
+  - Instrucciones de despliegue paso a paso
+  - Variables de entorno explicadas (tabla)
+  - Primer login: primer usuario = admin automáticamente
+  - Configuración OCR (Anthropic API key en perfil)
+  - Configuración Paperless en perfil de usuario
+  - `ALLOW_REGISTRATION` para añadir más usuarios
+  - FAQ: ¿puedo usar sin Paperless? ¿sin Anthropic key propia?
+
+---
+
+## 🟣 FASE 5 — Sync Android `[And]` ← APARCADA
+
+> No implementar. Sin cliente Android activo no hay forma de validar.
+
+---
+
+## ⚫ FASE 7b — Push Notifications `[BE]` ← APARCADA
+
+> FCM requiere Android. Aparcado.
+
+---
+
+## 🤖 FASE 8 — Bot Telegram `[Bot]` ← APARCADO
+
+> Aparcado indefinidamente.
 
 ---
 
 ## 🗂️ FASE 9 — Backlog
 
+- [ ] TripLegs CRUD en web (pantalla de tramos)
+- [ ] Estadísticas agregadas entre viajes (dashboard global)
 - [ ] OCR de confirmaciones de vuelo → crear TripLeg automático
-- [ ] Android Phase A8: TripLegs, BYOK OCR, biometría
-- [ ] Android A8 — `LoyaltyCardsScreen` en `SettingsScreen` (CRUD, no en Trips/Expenses)
-- [ ] Android A8 — selector loyalty card en `QuickCaptureScreen` y `ExpenseDetailScreen`
-- `[✗]` Integración Uber — descartada
-
----
-
-## 📱 FASES ANDROID — Resumen
-
-> Ver `ANDROID_TODO.md` para desglose completo de cada phase.
-
-| Phase | Nombre | Estado |
-|---|---|---|
-| A1 | Foundation | [x] Completado 2026-05-05 |
-| A2 | Auth Flow | [x] Completado 2026-05-05 |
-| A3 | Trip Management | [x] Completado 2026-05-05 |
-| A4 | Quick Capture | [x] Completado 2026-05-05 |
-| A5 | Camera + OCR | [x] Completado 2026-05-06 |
-| A6 | Vista por Días + Detalle | [x] Completado 2026-05-07 |
-| A7 | Summary + Export | [x] Completado 2026-05-07 |
-| A8 | Polish + Future Evolution | [ ] Pendiente |
-
----
-
-## 🐛 Bugs conocidos
-
-- `/register` (web) no solicita confirmación de contraseña — campo `confirm_password` ausente `[Web]`
-- `/register` (web) no envía `invite_code` — pendiente hasta implementar invite code en backend `[Web]` `[BE]`
-- ~~Android: Retrofit singleton inicializado con localhost antes de leer ConfigStore~~ **RESUELTO (2026-05-06)** — `DynamicUrlInterceptor` + `@Named("raw")` OkHttpClient `[And]`
-- ~~Android: expenses OCR quedan huérfanos~~ **RESUELTO (2026-05-07)** — `OcrProcessingViewModel` navega a `ExpenseDetailScreen` en lugar de `QuickCapture`; `UpdateExpenseUseCase` limpia `isDraft` al confirmar `[And]`
-
----
-
-## 📌 Notas para agentes
-
-1. Orden de lectura: `CLAUDE.md` → `MEMORY.md` → `BEST_PRACTICES.md` → este archivo.
-2. Para Android: leer además `ANDROID_ARCHITECTURE.md` → `ANDROID_BEST_PRACTICES.md` → `ANDROID_TODO.md`.
-3. Al completar: marcar `[x]`, actualizar `MEMORY.md`, `CLAUDE.md`, `BEST_PRACTICES.md`.
-4. Al encontrar bug: añadir a "Bugs conocidos".
-5. Al terminar: commit + push a GitHub → LXC: git pull + docker compose up --build.
-6. Nunca avanzar una fase sin que sus bloqueantes `[!]` estén completos.
-7. OCR: siempre Haiku 4.5. Flujo A nunca dispara OCR.
-8. Storage: siempre Paperless-ngx del NAS.
-9. BD: siempre postgres-ledger del NAS (192.168.1.154:5433).
-10. `billable` DEFAULT True. `primary_currency` obligatorio al crear viaje.
-11. Frontend web: llamadas al backend siempre por /api/proxy/*, nunca directamente desde el navegador.
-12. Currency service: usar open.er-api.com (gratuito, sin key). No usar exchangerate.host.
-13. Rama git: siempre main. Nunca master.
-14. Android: el cliente **siempre genera UUIDs** antes de persistir en Room.
-15. Android: export CSV/ZIP solo online — no generar en cliente Android.
-16. Android: OCR solo vía backend — no BYOK en MVP.
-17. Android: distribución via APK firmado (no Google Play en MVP). Acceso protegido por invite_code.
+- [ ] Presupuesto por viaje — pantalla de configuración
+- [ ] `[✗]` Integración Uber — descartada

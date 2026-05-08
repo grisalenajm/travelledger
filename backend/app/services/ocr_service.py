@@ -4,8 +4,10 @@ import logging
 from dataclasses import dataclass
 from datetime import date as date_t
 from decimal import Decimal, InvalidOperation
+from uuid import UUID
 
 import anthropic
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 
@@ -52,13 +54,21 @@ def _empty(raw_text: str | None = None) -> OcrExtracted:
     )
 
 
-async def extract(image_bytes: bytes, mime_type: str) -> OcrExtracted:
+async def get_api_key(db: AsyncSession, user_id: UUID) -> str | None:
+    """Return the Anthropic API key for a user: user setting → env fallback."""
+    from app.services import settings_service  # local import to avoid potential cycle
+    user_key = await settings_service.get(db, user_id, "anthropic_api_key")
+    return user_key or settings.ANTHROPIC_API_KEY
+
+
+async def extract(image_bytes: bytes, mime_type: str, api_key: str | None = None) -> OcrExtracted:
     """Extract structured receipt data via Haiku 4.5 Vision.
 
     Never raises on read/parse failure — only on network/API errors.
     """
     try:
-        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        resolved_key = api_key or settings.ANTHROPIC_API_KEY
+        client = anthropic.AsyncAnthropic(api_key=resolved_key)
         encoded = base64.standard_b64encode(image_bytes).decode("utf-8")
 
         if mime_type == "application/pdf":

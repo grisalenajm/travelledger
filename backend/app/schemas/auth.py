@@ -27,7 +27,6 @@ class UserCreate(BaseModel):
     name: str
     password: str
     currency_base: str = "EUR"
-    invite_code: str
 
     @field_validator("password")
     @classmethod
@@ -55,7 +54,8 @@ class UserRead(BaseModel):
     email: str
     name: str
     currency_base: str
-    telegram_chat_id: str | None
+    is_admin: bool = False
+    telegram_chat_id: str | None = None
 
     model_config = {"from_attributes": True}
 

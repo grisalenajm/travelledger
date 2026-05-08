@@ -8,6 +8,7 @@ import httpx
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.services import settings_service
 
 logger = logging.getLogger(__name__)
@@ -41,9 +42,9 @@ def slugify(text: str) -> str:
 
 
 async def get_credentials(db: AsyncSession, user_id: UUID) -> tuple[str | None, str | None]:
-    """Returns (paperless_url, paperless_token) from user settings."""
-    url = await settings_service.get(db, user_id, _URL_KEY)
-    token = await settings_service.get(db, user_id, _TOKEN_KEY)
+    """Returns (paperless_url, paperless_token): user setting → env fallback."""
+    url = await settings_service.get(db, user_id, _URL_KEY) or settings.PAPERLESS_URL
+    token = await settings_service.get(db, user_id, _TOKEN_KEY) or settings.PAPERLESS_TOKEN
     return url, token
 
 

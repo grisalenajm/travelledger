@@ -7,7 +7,7 @@ from app.config import settings
 REGISTER_URL = "/api/auth/register"
 LOGIN_URL = "/api/auth/login"
 REFRESH_URL = "/api/auth/refresh"
-VALIDATE_INVITE_URL = "/api/auth/validate-invite"
+STATUS_URL = "/api/auth/status"
 ME_URL = "/api/users/me"
 
 USER_PAYLOAD = {
@@ -15,18 +15,60 @@ USER_PAYLOAD = {
     "name": "Test User",
     "password": "TestPass1!secret",
     "currency_base": "EUR",
-    "invite_code": settings.REGISTRATION_INVITE_CODE,
 }
 
 
 @pytest.mark.asyncio
-async def test_register(client: AsyncClient):
+async def test_auth_status_empty_db(client: AsyncClient):
+    r = await client.get(STATUS_URL)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["has_users"] is False
+    assert data["registration_open"] is True
+
+
+@pytest.mark.asyncio
+async def test_auth_status_with_user(client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "ALLOW_REGISTRATION", False)
+    await client.post(REGISTER_URL, json=USER_PAYLOAD)
+    r = await client.get(STATUS_URL)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["has_users"] is True
+    assert data["registration_open"] is False
+
+
+@pytest.mark.asyncio
+async def test_register_first_user(client: AsyncClient):
     r = await client.post(REGISTER_URL, json=USER_PAYLOAD)
     assert r.status_code == 201
     data = r.json()
     assert data["email"] == USER_PAYLOAD["email"]
     assert data["name"] == USER_PAYLOAD["name"]
+    assert data["is_admin"] is True
     assert "password_hash" not in data
+
+
+@pytest.mark.asyncio
+async def test_register_second_user_is_not_admin(client: AsyncClient):
+    await client.post(REGISTER_URL, json=USER_PAYLOAD)
+    payload2 = {**USER_PAYLOAD, "email": "second@example.com"}
+    r = await client.post(REGISTER_URL, json=payload2)
+    assert r.status_code == 201
+    assert r.json()["is_admin"] is False
+
+
+@pytest.mark.asyncio
+async def test_register_closed_when_allow_registration_false(client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "ALLOW_REGISTRATION", False)
+    # First user: allowed (empty DB)
+    r = await client.post(REGISTER_URL, json=USER_PAYLOAD)
+    assert r.status_code == 201
+    # Second user: blocked
+    payload2 = {**USER_PAYLOAD, "email": "second@example.com"}
+    r = await client.post(REGISTER_URL, json=payload2)
+    assert r.status_code == 403
+    assert "cerrado" in r.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
@@ -90,39 +132,3 @@ async def test_refresh_with_access_token_fails(client: AsyncClient):
 
     r = await client.post(REFRESH_URL, json={"refresh_token": access_token})
     assert r.status_code == 401
-
-
-@pytest.mark.asyncio
-async def test_validate_invite_valid(client: AsyncClient):
-    r = await client.post(VALIDATE_INVITE_URL, json={"code": settings.REGISTRATION_INVITE_CODE})
-    assert r.status_code == 200
-    assert r.json() == {"valid": True}
-
-
-@pytest.mark.asyncio
-async def test_validate_invite_invalid(client: AsyncClient):
-    r = await client.post(VALIDATE_INVITE_URL, json={"code": "wrong-code"})
-    assert r.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_register_without_invite_code(client: AsyncClient):
-    payload = {k: v for k, v in USER_PAYLOAD.items() if k != "invite_code"}
-    payload["email"] = "noinvite@example.com"
-    r = await client.post(REGISTER_URL, json=payload)
-    assert r.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_register_with_wrong_invite_code(client: AsyncClient):
-    payload = {**USER_PAYLOAD, "email": "wronginvite@example.com", "invite_code": "wrong-code"}
-    r = await client.post(REGISTER_URL, json=payload)
-    assert r.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_register_with_correct_invite_code(client: AsyncClient):
-    payload = {**USER_PAYLOAD, "email": "correctinvite@example.com"}
-    r = await client.post(REGISTER_URL, json=payload)
-    assert r.status_code == 201
-    assert r.json()["email"] == "correctinvite@example.com"

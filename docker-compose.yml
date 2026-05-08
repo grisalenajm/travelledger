@@ -23,11 +23,12 @@ services:
       PAPERLESS_TOKEN: ${PAPERLESS_TOKEN}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       BOT_API_KEY: ${BOT_API_KEY}
-      REGISTRATION_INVITE_CODE: ${REGISTRATION_INVITE_CODE}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
       FIREBASE_CREDENTIALS_PATH: /app/secrets/firebase-credentials.json
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     volumes:
       - ./secrets/firebase-credentials.json:/app/secrets/firebase-credentials.json:ro
+      - ledger_uploads:/app/uploads
     networks:
       - ledger-net
     expose:
@@ -126,6 +127,9 @@ networks:
   ledger-net:
     driver: bridge
     name: ledger-net
+
+volumes:
+  ledger_uploads:
 
 # ─────────────────────────────────────────
 # NOTA: servicios externos en el NAS

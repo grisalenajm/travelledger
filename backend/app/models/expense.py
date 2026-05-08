@@ -34,6 +34,7 @@ class Expense(Base):
         ForeignKey("loyalty_cards.id", ondelete="SET NULL"), nullable=True
     )
     paperless_doc_id: Mapped[int | None] = mapped_column(nullable=True)
+    local_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_draft: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     ocr_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
     ocr_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)

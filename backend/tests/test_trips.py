@@ -2,8 +2,6 @@ import uuid
 
 import pytest
 
-from app.config import settings
-
 TRIP_PAYLOAD = {
     "name": "Test Paris",
     "destination": "Paris",
@@ -45,7 +43,6 @@ async def test_get_trips_returns_only_own(client, auth_headers):
             "name": "User B",
             "password": "TestPass1!secret",
             "currency_base": "EUR",
-            "invite_code": settings.REGISTRATION_INVITE_CODE,
         },
     )
     res_b = await client.post(

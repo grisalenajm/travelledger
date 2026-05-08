@@ -17,14 +17,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    PAPERLESS_URL: str
-    PAPERLESS_TOKEN: str
+    PAPERLESS_URL: str | None = None
+    PAPERLESS_TOKEN: str | None = None
 
-    ANTHROPIC_API_KEY: str
+    ANTHROPIC_API_KEY: str | None = None
 
-    BOT_API_KEY: str
+    BOT_API_KEY: str | None = None
 
-    REGISTRATION_INVITE_CODE: str = "change-me-in-production"
+    ALLOW_REGISTRATION: bool = False
 
     FIREBASE_CREDENTIALS_PATH: str = "/app/secrets/firebase-credentials.json"
 

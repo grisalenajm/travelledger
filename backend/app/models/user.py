@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -15,6 +15,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     currency_base: Mapped[str] = mapped_column(String(3), nullable=False, default="EUR")
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     fcm_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

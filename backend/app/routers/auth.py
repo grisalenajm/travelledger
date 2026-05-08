@@ -3,8 +3,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
-from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -27,37 +26,37 @@ security_logger = logging.getLogger("security")
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-class InviteValidate(BaseModel):
-    code: str
-
-
-@router.post("/validate-invite")
-async def validate_invite(data: InviteValidate):
-    """Valida el invite code sin crear usuario. Usado por la app Android en ConfigScreen."""
-    if data.code != settings.REGISTRATION_INVITE_CODE:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid invite code",
-        )
-    return {"valid": True}
+@router.get("/status")
+async def auth_status(db: AsyncSession = Depends(get_db)):
+    """Public endpoint — no auth required. Returns registration state."""
+    count = (await db.execute(select(func.count(User.id)))).scalar_one()
+    has_users = count > 0
+    registration_open = not has_users or settings.ALLOW_REGISTRATION
+    return {"registration_open": registration_open, "has_users": has_users}
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def register(request: Request, payload: UserCreate, db: AsyncSession = Depends(get_db)):
-    if payload.invite_code != settings.REGISTRATION_INVITE_CODE:
+    count = (await db.execute(select(func.count(User.id)))).scalar_one()
+    has_users = count > 0
+
+    if has_users and not settings.ALLOW_REGISTRATION:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid invite code",
+            detail="El registro está cerrado. Contacta con el administrador.",
         )
+
     existing = await db.execute(select(User).where(User.email == payload.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
     user = User(
         email=payload.email,
         name=payload.name,
         password_hash=hash_password(payload.password),
         currency_base=payload.currency_base,
+        is_admin=not has_users,  # first registered user becomes admin
     )
     db.add(user)
     await db.flush()

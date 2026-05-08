@@ -1,6 +1,6 @@
 from decimal import Decimal
 from io import BytesIO
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -51,11 +51,12 @@ def _make_ocr_empty() -> OcrExtracted:
 
 @pytest.mark.asyncio
 async def test_upload_receipt_success(client, auth_headers):
+    """Default path: Paperless not enabled → expense created with is_draft=True, local storage."""
     trip_id = await _create_trip(client, auth_headers)
 
     with (
         patch("app.routers.receipts.ocr_service.extract", new_callable=AsyncMock, return_value=_make_ocr_success()),
-        patch("app.routers.receipts.paperless_service.upload_document", new_callable=AsyncMock, return_value=42),
+        patch("app.routers.receipts._save_local", new_callable=AsyncMock, return_value="/app/uploads/test/expense.jpg"),
         patch("app.services.currency_service._fetch_rate", new_callable=AsyncMock, return_value=Decimal("1.0")),
     ):
         res = await client.post(
@@ -70,8 +71,37 @@ async def test_upload_receipt_success(client, auth_headers):
     assert data["is_draft"] is True
     assert data["category"] == "Dining"
     assert data["description"] == "Le Bistrot Paris"
-    assert data["paperless_doc_id"] == 42
     assert float(data["ocr_confidence"]) == pytest.approx(0.92)
+    # Paperless is not configured (no paperless_enabled setting) → paperless_doc_id is None
+    assert data["paperless_doc_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_upload_receipt_with_paperless(client, auth_headers):
+    """When Paperless is enabled and upload succeeds, paperless_doc_id is set."""
+    trip_id = await _create_trip(client, auth_headers)
+
+    async def mock_settings_get(_db, _user_id, key):
+        return "true" if key == "paperless_enabled" else None
+
+    with (
+        patch("app.routers.receipts.settings_service.get", side_effect=mock_settings_get),
+        patch("app.routers.receipts.paperless_service.get_credentials", new_callable=AsyncMock, return_value=("http://paperless:8010", "token123")),
+        patch("app.routers.receipts.ocr_service.extract", new_callable=AsyncMock, return_value=_make_ocr_success()),
+        patch("app.routers.receipts.paperless_service.upload_document", new_callable=AsyncMock, return_value=42),
+        patch("app.services.currency_service._fetch_rate", new_callable=AsyncMock, return_value=Decimal("1.0")),
+    ):
+        res = await client.post(
+            "/api/receipts/upload",
+            files={"file": ("receipt.jpg", BytesIO(_JPEG_BYTES), "image/jpeg")},
+            data={"trip_id": trip_id},
+            headers=auth_headers,
+        )
+
+    assert res.status_code == 201
+    data = res.json()
+    assert data["is_draft"] is True
+    assert data["paperless_doc_id"] == 42
 
 
 @pytest.mark.asyncio
@@ -81,7 +111,7 @@ async def test_upload_receipt_haiku_fails(client, auth_headers):
 
     with (
         patch("app.routers.receipts.ocr_service.extract", new_callable=AsyncMock, return_value=_make_ocr_empty()),
-        patch("app.routers.receipts.paperless_service.upload_document", new_callable=AsyncMock, return_value=99),
+        patch("app.routers.receipts._save_local", new_callable=AsyncMock, return_value="/app/uploads/test/expense.png"),
     ):
         res = await client.post(
             "/api/receipts/upload",
@@ -100,17 +130,19 @@ async def test_upload_receipt_haiku_fails(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_upload_receipt_paperless_fails(client, auth_headers):
-    """When Paperless upload raises, expense is still created with paperless_doc_id=None."""
+async def test_upload_receipt_paperless_fails_saves_locally(client, auth_headers):
+    """When Paperless upload raises, expense is created with local_path (paperless_doc_id=None)."""
     trip_id = await _create_trip(client, auth_headers)
 
+    async def mock_settings_get(_db, _user_id, key):
+        return "true" if key == "paperless_enabled" else None
+
     with (
+        patch("app.routers.receipts.settings_service.get", side_effect=mock_settings_get),
+        patch("app.routers.receipts.paperless_service.get_credentials", new_callable=AsyncMock, return_value=("http://paperless:8010", "token")),
         patch("app.routers.receipts.ocr_service.extract", new_callable=AsyncMock, return_value=_make_ocr_success()),
-        patch(
-            "app.routers.receipts.paperless_service.upload_document",
-            new_callable=AsyncMock,
-            side_effect=Exception("Paperless unreachable"),
-        ),
+        patch("app.routers.receipts.paperless_service.upload_document", new_callable=AsyncMock, side_effect=Exception("Paperless unreachable")),
+        patch("app.routers.receipts._save_local", new_callable=AsyncMock, return_value="/app/uploads/test/expense.jpg"),
         patch("app.services.currency_service._fetch_rate", new_callable=AsyncMock, return_value=Decimal("1.0")),
     ):
         res = await client.post(

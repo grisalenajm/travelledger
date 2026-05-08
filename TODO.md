@@ -66,13 +66,13 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 - [x] Tests: test_auth_*, test_jwt_*
 
 ### Backend — refactor self-hosted `[BE]` `[!]`
-- [ ] [!] Eliminar toda lógica de `invite_code` de auth_service, schemas, router
-- [ ] [!] Añadir `is_admin: bool = False` a modelo `User`
-- [ ] [!] Migration `0005_add_is_admin`
-- [ ] [!] Añadir `ALLOW_REGISTRATION: bool = False` a `config.py` y `.env.example`
-- [ ] [!] Lógica registro: tabla vacía → libre + is_admin=True; no vacía → chequear `ALLOW_REGISTRATION`
-- [ ] [!] Nuevo endpoint `GET /api/auth/status` → `{registration_open: bool, has_users: bool}`
-- [ ] Actualizar tests de auth para nueva lógica
+- [x] [!] Eliminar toda lógica de `invite_code` de auth_service, schemas, router
+- [x] [!] Añadir `is_admin: bool = False` a modelo `User`
+- [x] [!] Migration `0006_add_is_admin`
+- [x] [!] Añadir `ALLOW_REGISTRATION: bool = False` a `config.py` y `.env.example`
+- [x] [!] Lógica registro: tabla vacía → libre + is_admin=True; no vacía → chequear `ALLOW_REGISTRATION`
+- [x] [!] Nuevo endpoint `GET /api/auth/status` → `{registration_open: bool, has_users: bool}`
+- [x] Actualizar tests de auth para nueva lógica
 
 ### Web — refactor /register `[Web]`
 - [ ] Eliminar campo `invite_code` del formulario `/register`
@@ -107,37 +107,24 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 
 > Prerequisito para todas las demás fases web. Hacer antes de cualquier otra cosa.
 
-### Backend `[BE]`
-- [ ] [!] Refactor auth — ver FASE 1 Backend arriba
-- [ ] [!] `core/crypto_utils.py` — `encrypt(value: str) -> str` / `decrypt(value: str) -> str` con Fernet
-  - Derivar clave Fernet de `SECRET_KEY` del .env (usar `base64.urlsafe_b64encode(SECRET_KEY[:32].encode())`)
-- [ ] [!] Añadir `cryptography>=42.0` a `requirements.txt`
-- [ ] [!] Actualizar `settings_service.py`:
-  - `ENCRYPTED_KEYS = {"anthropic_api_key", "paperless_token"}`
-  - `set()` cifra si la clave está en `ENCRYPTED_KEYS`
-  - `get()` descifra si la clave está en `ENCRYPTED_KEYS`
-- [ ] [!] Actualizar schemas Settings:
-  - GET response: `anthropic_api_key_set: bool`, `paperless_token_set: bool` — nunca la clave real
-  - PUT request: acepta `{"key": "anthropic_api_key", "value": "sk-ant-..."}` → cifra y guarda
-- [ ] Actualizar `ocr_service.py`:
-  - `get_api_key(user_id)` → busca en `user_settings` → fallback a `settings.ANTHROPIC_API_KEY`
-- [ ] Actualizar `paperless_service.py`:
-  - `get_credentials(user_id)` → busca en `user_settings` → fallback a `settings.PAPERLESS_*`
+### Backend `[BE]` ✅
+- [x] [!] Refactor auth — ver FASE 1 Backend arriba
+- [x] [!] `core/crypto_utils.py` — `encrypt(value: str) -> str` / `decrypt(value: str) -> str` con Fernet
+- [x] [!] Añadir `cryptography>=42.0` a `requirements.txt`
+- [x] [!] Actualizar `settings_service.py` — ENCRYPTED_KEYS, set/get cifra/descifra
+- [x] [!] Actualizar schemas Settings — `*_set: bool`, nunca clave real
+- [x] Actualizar `ocr_service.py` — `get_api_key(user_id)` con fallback a env
+- [x] Actualizar `paperless_service.py` — `get_credentials(user_id)` con fallback a env
 
-### Backend — volumen temporal `[BE]`
-- [ ] Añadir `local_path: str | None` a modelo `Expense` + migration `0006_add_local_path`
-- [ ] Añadir `aiofiles>=23.0` a `requirements.txt`
-- [ ] Actualizar `docker-compose.yml` — volumen `ledger_uploads:/app/uploads`
-- [ ] Actualizar `expense_service.create()`:
-  - Si `paperless_enabled=false` o sin Paperless → guardar imagen en `/app/uploads/{user_id}/{expense_id}.{ext}`
-  - Rellenar `Expense.local_path`
-- [ ] Actualizar `expense_service.delete()` — borrar `local_path` si existe
-- [ ] Implementar `settings_service.migrate_to_paperless(user_id: UUID)`:
-  - Obtener todos los `Expense` del usuario con `local_path != None`
-  - Para cada uno: subir a Paperless, actualizar `paperless_doc_id`, limpiar `local_path`, borrar archivo
-  - Si falla: loguear, continuar con el siguiente
-- [ ] Actualizar router `PUT /api/settings`:
-  - Si se guarda `paperless_url` o `paperless_token` → `background_tasks.add_task(migrate_to_paperless, user_id)`
+### Backend — volumen temporal `[BE]` ✅
+- [x] Añadir `local_path: str | None` a modelo `Expense` + migration `0007_add_local_path`
+- [x] Añadir `aiofiles>=23.0` a `requirements.txt`
+- [x] Actualizar `docker-compose.yml` — volumen `ledger_uploads:/app/uploads`
+- [x] Actualizar `receipts.py` — si paperless_enabled=false → guardar en `/app/uploads/`
+- [x] Actualizar `expense_service.delete()` — borrar `local_path` si existe
+- [x] Implementar `settings_service.migrate_to_paperless(user_id: UUID)`
+- [x] Actualizar router `PUT /api/settings` — trigger migrate_to_paperless en background
+- [ ] **Pendiente deploy**: `alembic upgrade head` en LXC cuando NAS (192.168.1.154) esté online
 
 ### Web — /settings/profile ampliado `[Web]`
 - [ ] Sección "Cuenta": nombre, email, moneda base, cambio de password

@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useAuthStatus } from "@/hooks/use-auth-status"
 
 const schema = z
   .object({
@@ -24,6 +25,7 @@ type RegisterForm = z.infer<typeof schema>
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { registration_open, isLoading: statusLoading } = useAuthStatus()
   const {
     register,
     handleSubmit,
@@ -39,11 +41,18 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, invite_code: process.env.NEXT_PUBLIC_INVITE_CODE ?? "" }),
+        body: JSON.stringify(data),
       })
 
       if (res.status === 409) {
         setError("email", { message: "Este email ya está registrado" })
+        return
+      }
+
+      if (res.status === 403) {
+        setError("root", {
+          message: "El registro está cerrado. Contacta con el administrador de tu instancia.",
+        })
         return
       }
 
@@ -84,154 +93,167 @@ export default function RegisterPage() {
             Ledger
           </h1>
           <p className="mt-4 font-body text-primary-fixed/70 text-lg leading-relaxed">
-            Start tracking your travel expenses with precision and style.
+            Gestiona tus gastos de viaje con precisión.
           </p>
           <p className="mt-12 font-label text-[10px] font-bold uppercase tracking-widest text-primary-fixed/50">
-            Your base currency can be changed later in settings
+            La moneda base se puede cambiar más adelante en ajustes
           </p>
         </div>
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-primary-container opacity-40" />
         <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full bg-primary-container opacity-20" />
       </div>
 
-      {/* Right panel — form */}
+      {/* Right panel */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
           <div className="lg:hidden mb-10 text-center">
             <h1 className="font-headline text-4xl font-extrabold text-primary">Ledger</h1>
           </div>
 
-          <h2 className="font-headline text-2xl font-bold text-on-surface">
-            Create your account
-          </h2>
+          <h2 className="font-headline text-2xl font-bold text-on-surface">Crear cuenta</h2>
           <p className="mt-1 font-body text-sm text-on-surface-variant">
-            Start tracking expenses in minutes
+            Empieza a gestionar tus gastos de viaje
           </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-10 space-y-7">
-            {/* Name */}
-            <div className="space-y-1.5">
-              <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-                Full name
-              </label>
-              <input
-                {...register("name")}
-                type="text"
-                autoComplete="name"
-                placeholder="Your name"
-                className="w-full bg-transparent border-b border-outline py-3 text-on-surface
-                           placeholder:text-on-surface-variant/40 focus:border-primary
-                           focus:outline-none transition-colors font-body text-sm"
-              />
-              {errors.name && (
-                <p className="text-error text-xs font-body">{errors.name.message}</p>
-              )}
+          {statusLoading ? (
+            <div className="mt-10 animate-pulse space-y-4">
+              <div className="h-10 bg-surface-container-high rounded" />
+              <div className="h-10 bg-surface-container-high rounded" />
+              <div className="h-10 bg-surface-container-high rounded" />
             </div>
-
-            {/* Email */}
-            <div className="space-y-1.5">
-              <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-                Email
-              </label>
-              <input
-                {...register("email")}
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                className="w-full bg-transparent border-b border-outline py-3 text-on-surface
-                           placeholder:text-on-surface-variant/40 focus:border-primary
-                           focus:outline-none transition-colors font-body text-sm"
-              />
-              {errors.email && (
-                <p className="text-error text-xs font-body">{errors.email.message}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-                Password
-              </label>
-              <input
-                {...register("password")}
-                type="password"
-                autoComplete="new-password"
-                placeholder="Min. 8 characters"
-                className="w-full bg-transparent border-b border-outline py-3 text-on-surface
-                           placeholder:text-on-surface-variant/40 focus:border-primary
-                           focus:outline-none transition-colors font-body text-sm"
-              />
-              {errors.password && (
-                <p className="text-error text-xs font-body">{errors.password.message}</p>
-              )}
-            </div>
-
-            {/* Confirm password */}
-            <div className="space-y-1.5">
-              <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-                Confirm password
-              </label>
-              <input
-                {...register("confirm_password")}
-                type="password"
-                autoComplete="new-password"
-                placeholder="Repeat your password"
-                className="w-full bg-transparent border-b border-outline py-3 text-on-surface
-                           placeholder:text-on-surface-variant/40 focus:border-primary
-                           focus:outline-none transition-colors font-body text-sm"
-              />
-              {errors.confirm_password && (
-                <p className="text-error text-xs font-body">{errors.confirm_password.message}</p>
-              )}
-            </div>
-
-            {/* Currency base */}
-            <div className="space-y-1.5">
-              <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-                Base currency
-              </label>
-              <input
-                {...register("currency_base")}
-                type="text"
-                maxLength={3}
-                placeholder="EUR"
-                className="w-full bg-transparent border-b border-outline py-3 text-on-surface
-                           placeholder:text-on-surface-variant/40 focus:border-primary
-                           focus:outline-none transition-colors font-body text-sm uppercase"
-              />
-              <p className="text-on-surface-variant/60 text-[11px] font-body">
-                ISO 4217 code — your reporting currency (e.g. EUR, CHF, USD)
+          ) : !registration_open ? (
+            <div className="mt-10 bg-surface-container rounded-xl px-6 py-8 text-center">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-4 block">
+                lock
+              </span>
+              <p className="text-on-surface font-body">
+                El registro está cerrado. Contacta con el administrador de tu instancia.
               </p>
-              {errors.currency_base && (
-                <p className="text-error text-xs font-body">{errors.currency_base.message}</p>
-              )}
             </div>
-
-            {/* Root error */}
-            {errors.root && (
-              <div className="bg-error-container rounded-xl px-4 py-3">
-                <p className="text-error text-sm font-body">{errors.root.message}</p>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="mt-10 space-y-7">
+              {/* Name */}
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                  Nombre completo
+                </label>
+                <input
+                  {...register("name")}
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Tu nombre"
+                  className="w-full bg-transparent border-b border-outline py-3 text-on-surface
+                             placeholder:text-on-surface-variant/40 focus:border-primary
+                             focus:outline-none transition-colors font-body text-sm"
+                />
+                {errors.name && (
+                  <p className="text-error text-xs font-body">{errors.name.message}</p>
+                )}
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="mt-2 w-full bg-primary text-on-primary py-4 rounded-full
-                         font-label font-bold text-sm uppercase tracking-wider
-                         hover:bg-primary-container transition-colors
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         shadow-[0_8px_32px_rgba(0,77,100,0.25)]"
-            >
-              {isSubmitting ? "Creating account…" : "Create account"}
-            </button>
-          </form>
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                  Email
+                </label>
+                <input
+                  {...register("email")}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="tu@ejemplo.com"
+                  className="w-full bg-transparent border-b border-outline py-3 text-on-surface
+                             placeholder:text-on-surface-variant/40 focus:border-primary
+                             focus:outline-none transition-colors font-body text-sm"
+                />
+                {errors.email && (
+                  <p className="text-error text-xs font-body">{errors.email.message}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                  Contraseña
+                </label>
+                <input
+                  {...register("password")}
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Mín. 8 caracteres"
+                  className="w-full bg-transparent border-b border-outline py-3 text-on-surface
+                             placeholder:text-on-surface-variant/40 focus:border-primary
+                             focus:outline-none transition-colors font-body text-sm"
+                />
+                {errors.password && (
+                  <p className="text-error text-xs font-body">{errors.password.message}</p>
+                )}
+              </div>
+
+              {/* Confirm password */}
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                  Confirmar contraseña
+                </label>
+                <input
+                  {...register("confirm_password")}
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Repite tu contraseña"
+                  className="w-full bg-transparent border-b border-outline py-3 text-on-surface
+                             placeholder:text-on-surface-variant/40 focus:border-primary
+                             focus:outline-none transition-colors font-body text-sm"
+                />
+                {errors.confirm_password && (
+                  <p className="text-error text-xs font-body">{errors.confirm_password.message}</p>
+                )}
+              </div>
+
+              {/* Currency base */}
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                  Moneda base
+                </label>
+                <input
+                  {...register("currency_base")}
+                  type="text"
+                  maxLength={3}
+                  placeholder="EUR"
+                  className="w-full bg-transparent border-b border-outline py-3 text-on-surface
+                             placeholder:text-on-surface-variant/40 focus:border-primary
+                             focus:outline-none transition-colors font-body text-sm uppercase"
+                />
+                <p className="text-on-surface-variant/60 text-[11px] font-body">
+                  Código ISO 4217 — moneda de reporting (ej. EUR, CHF, USD)
+                </p>
+                {errors.currency_base && (
+                  <p className="text-error text-xs font-body">{errors.currency_base.message}</p>
+                )}
+              </div>
+
+              {errors.root && (
+                <div className="bg-error-container rounded-xl px-4 py-3">
+                  <p className="text-error text-sm font-body">{errors.root.message}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-2 w-full bg-primary text-on-primary py-4 rounded-full
+                           font-label font-bold text-sm uppercase tracking-wider
+                           hover:bg-primary-container transition-colors
+                           disabled:opacity-50 disabled:cursor-not-allowed
+                           shadow-[0_8px_32px_rgba(0,77,100,0.25)]"
+              >
+                {isSubmitting ? "Creando cuenta…" : "Crear cuenta"}
+              </button>
+            </form>
+          )}
 
           <p className="mt-8 text-center font-body text-sm text-on-surface-variant">
-            Already have an account?{" "}
+            ¿Ya tienes cuenta?{" "}
             <Link href="/login" className="text-primary font-medium hover:underline">
-              Sign in
+              Iniciar sesión
             </Link>
           </p>
         </div>

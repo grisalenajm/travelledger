@@ -1,9 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 
 export interface Settings {
   paperless_url: string | null
-  paperless_token: string | null
+  paperless_enabled: boolean
+  paperless_token_set: boolean
+  anthropic_api_key_set: boolean
+  language: string | null
+  theme: string | null
 }
 
 export interface SettingUpdate {
@@ -27,5 +31,12 @@ export function useUpdateSetting() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["settings"] })
     },
+  })
+}
+
+export function useVerifyPaperless() {
+  return useMutation({
+    mutationFn: () =>
+      api.post<{ ok: boolean; error: string | null }>("/api/proxy/settings/verify-paperless", {}),
   })
 }

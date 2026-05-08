@@ -27,10 +27,13 @@ git push origin main
 ssh -i ~/.ssh/id_ed25519 root@192.168.1.125 \
   "cd /opt/ledger && git pull origin main && docker compose up -d --build [servicio]"
 
-# 3. Verificar que el código nuevo está dentro
+# 3. Si el deploy incluye nuevas migrations → aplicarlas SIEMPRE
+docker compose exec backend alembic upgrade head
+
+# 4. Verificar que el código nuevo está dentro
 docker compose exec [servicio] grep -n "ALGO_DEL_CODIGO_NUEVO" /app/ruta/archivo.py
 
-# 4. Verificar logs
+# 5. Verificar logs
 docker compose logs [servicio] --since=1m
 ```
 
@@ -442,3 +445,4 @@ git branch -M main
 | `useSearchParams` sin Suspense → error build prod | Envolver en `<Suspense>` |
 | `POST /api/expenses` espera FormData, no JSON | Usar `api.postForm()` con FormData |
 | Backend unhealthy tras reinicio NAS | Esperar a postgres-ledger, luego `docker compose restart backend` |
+| `UndefinedColumnError` en runtime tras deploy con migrations | `docker compose exec backend alembic upgrade head` — el build no aplica migrations automáticamente |

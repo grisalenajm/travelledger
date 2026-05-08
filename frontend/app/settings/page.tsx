@@ -67,7 +67,7 @@ export default function SettingsPage() {
     values: user ? { name: user.name, currency_base: user.currency_base } : undefined,
   })
 
-  const hasExistingToken = settings?.paperless_token === "***"
+  const hasExistingToken = settings?.paperless_token_set ?? false
 
   const {
     register: registerPaperless,

@@ -201,7 +201,7 @@ export default function TripDetailPage() {
               className="flex-shrink-0 px-5 py-3 rounded-full text-base font-semibold text-white whitespace-nowrap"
               style={{ backgroundColor: "#004d5d" }}
             >
-              {fmtAmount(baseTotal, trip.budget_currency)}
+              {fmtAmount(baseTotal, currencyBase)}
             </div>
             {!showOnlyBase && currencyEntries.map(([currency, total]) => (
               <div

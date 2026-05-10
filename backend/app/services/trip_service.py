@@ -58,6 +58,7 @@ async def create(db: AsyncSession, user_id: UUID, data: TripCreate) -> Trip:
             trip.cover_image_path = f"covers/{trip.id}.jpg"
             await db.flush()
             await db.commit()
+            await db.refresh(trip)
     except Exception as exc:
         logger.warning("trip_service.create: portada automática falló para %s: %s", trip.id, exc)
 

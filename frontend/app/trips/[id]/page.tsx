@@ -175,6 +175,16 @@ export default function TripDetailPage() {
             <span className="material-symbols-outlined text-base leading-none">arrow_back</span>
             Viajes
           </Link>
+
+          {trip.cover_image_path && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/api/proxy/trips/${id}/cover`}
+              alt={trip.name}
+              className="w-full h-44 object-cover rounded-2xl mb-4"
+            />
+          )}
+
           <div className="flex items-center gap-2">
             <h1 className="font-headline text-2xl font-bold text-on-surface flex-1">{trip.name}</h1>
             <button

@@ -68,6 +68,7 @@ class TripRead(TripCreate):
     id: UUID
     user_id: UUID
     cover_doc_id: int | None = None
+    cover_image_path: str | None = None
     created_at: datetime
     updated_at: datetime
 

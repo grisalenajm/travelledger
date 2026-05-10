@@ -29,6 +29,7 @@ export interface Trip {
   budget_currency: string
   status: TripStatus
   cover_doc_id: number | null
+  cover_image_path: string | null
   created_at: string
 }
 

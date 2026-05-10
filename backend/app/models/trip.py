@@ -27,6 +27,7 @@ class Trip(Base):
     status: Mapped[str] = mapped_column(String(10), default="active")
     # valores: active | closed | draft
     cover_doc_id: Mapped[int | None] = mapped_column(nullable=True)
+    cover_image_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

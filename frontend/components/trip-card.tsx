@@ -32,40 +32,51 @@ export function TripCard({ trip, summary }: TripCardProps) {
   return (
     <Link
       href={`/trips/${trip.id}`}
-      className="group block rounded-xl bg-surface-container-lowest p-5 shadow-editorial transition-shadow hover:shadow-fab focus:outline-none focus:ring-2 focus:ring-primary/40"
+      className="group block rounded-xl bg-surface-container-lowest shadow-editorial transition-shadow hover:shadow-fab focus:outline-none focus:ring-2 focus:ring-primary/40 overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-headline text-base font-semibold text-on-surface truncate">
-            {trip.name}
-          </p>
-          <p className="mt-0.5 text-sm text-on-surface-variant">{trip.destination}</p>
+      {trip.cover_image_path && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/proxy/trips/${trip.id}/cover`}
+          alt={trip.name}
+          className="w-full h-32 object-cover"
+        />
+      )}
+
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-headline text-base font-semibold text-on-surface truncate">
+              {trip.name}
+            </p>
+            <p className="mt-0.5 text-sm text-on-surface-variant">{trip.destination}</p>
+          </div>
+          <Badge variant={variant}>{label}</Badge>
         </div>
-        <Badge variant={variant}>{label}</Badge>
-      </div>
 
-      <p className="mt-2 text-xs text-on-surface-variant">
-        {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}
-      </p>
+        <p className="mt-2 text-xs text-on-surface-variant">
+          {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}
+        </p>
 
-      {summary !== undefined && (
-        <div className="mt-4 space-y-2">
-          <Progress
-            value={Number(summary.percentage)}
-            indicatorClassName={overBudget ? "bg-error" : undefined}
-          />
-          <div className="flex items-center justify-between text-xs text-on-surface-variant">
-            <span>
-              {Number(summary.spent_base).toFixed(2)} / {Number(summary.budget_base).toFixed(2)}{" "}
-              {summary.currency_base}
-            </span>
-            <div className="flex gap-3">
-              <span>{summary.expense_count} gastos</span>
-              <span>{summary.legs_count} tramos</span>
+        {summary !== undefined && (
+          <div className="mt-4 space-y-2">
+            <Progress
+              value={Number(summary.percentage)}
+              indicatorClassName={overBudget ? "bg-error" : undefined}
+            />
+            <div className="flex items-center justify-between text-xs text-on-surface-variant">
+              <span>
+                {Number(summary.spent_base).toFixed(2)} / {Number(summary.budget_base).toFixed(2)}{" "}
+                {summary.currency_base}
+              </span>
+              <div className="flex gap-3">
+                <span>{summary.expense_count} gastos</span>
+                <span>{summary.legs_count} tramos</span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </Link>
   )
 }

@@ -97,16 +97,21 @@ export default function TripEditPage() {
     }
   }, [trip, reset])
 
-  // Load existing cover preview
+  // Load existing cover preview — prefer local path, fall back to Paperless URL
   useEffect(() => {
-    if (!trip?.cover_doc_id) return
+    if (!trip) return
+    if (trip.cover_image_path) {
+      setCoverPreview(`/api/proxy/trips/${id}/cover`)
+      return
+    }
+    if (!trip.cover_doc_id) return
     fetch(`/api/proxy/trips/${id}/cover-url`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { url: string } | null) => {
         if (data?.url) setCoverPreview(data.url)
       })
       .catch(() => null)
-  }, [trip?.cover_doc_id, id])
+  }, [trip?.cover_image_path, trip?.cover_doc_id, id])
 
   async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

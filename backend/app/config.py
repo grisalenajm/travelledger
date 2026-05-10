@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     ANTHROPIC_API_KEY: str | None = None
 
+    UNSPLASH_ACCESS_KEY: str | None = None
+
     BOT_API_KEY: str | None = None
 
     ALLOW_REGISTRATION: bool = False

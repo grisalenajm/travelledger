@@ -1,7 +1,12 @@
+import logging
 from datetime import date as date_type
+from pathlib import Path
 from uuid import UUID
 
+import aiofiles
+import aiofiles.os
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
@@ -9,6 +14,9 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.trip import TripCreate, TripRead, TripSummary, TripUpdate
 from app.services import paperless_service, trip_service
+
+logger = logging.getLogger(__name__)
+_COVERS_DIR = Path("/app/uploads/covers")
 
 router = APIRouter(prefix="/api/trips", tags=["trips"], redirect_slashes=False)
 
@@ -97,15 +105,41 @@ async def upload_cover(
     trip = await trip_service.get_or_404(db, trip_id, user.id)
     content = await file.read()
     mime = _detect_mime(content)
-    filename = file.filename or f"cover_{trip_id}.jpg"
-    doc_id = await paperless_service.upload_document(
-        content, filename, mime, db, user.id,
-        title_parts={"category": "cover", "date": str(date_type.today()), "trip_name": trip.name},
-    )
-    trip.cover_doc_id = doc_id
+
+    await aiofiles.os.makedirs(_COVERS_DIR, exist_ok=True)
+    cover_path = _COVERS_DIR / f"{trip_id}.jpg"
+    async with aiofiles.open(cover_path, "wb") as f:
+        await f.write(content)
+
+    trip.cover_image_path = f"covers/{trip_id}.jpg"
+    try:
+        filename = file.filename or f"cover_{trip_id}.jpg"
+        doc_id = await paperless_service.upload_document(
+            content, filename, mime, db, user.id,
+            title_parts={"category": "cover", "date": str(date_type.today()), "trip_name": trip.name},
+        )
+        trip.cover_doc_id = doc_id
+    except Exception as exc:
+        logger.warning("upload_cover: Paperless upload failed for %s: %s", trip_id, exc)
+
     await db.flush()
     await db.refresh(trip)
     return trip
+
+
+@router.get("/{trip_id}/cover")
+async def get_cover(
+    trip_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    trip = await trip_service.get_or_404(db, trip_id, user.id)
+    if not trip.cover_image_path:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No cover image")
+    cover_path = Path("/app/uploads") / trip.cover_image_path
+    if not await aiofiles.os.path.exists(cover_path):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cover image not found")
+    return FileResponse(cover_path, media_type="image/jpeg")
 
 
 @router.get("/{trip_id}/cover-url")

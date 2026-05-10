@@ -56,7 +56,15 @@ export function Navbar() {
             {initial}
           </Link>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => {
+              // Clear the backend HttpOnly refresh_token cookie before clearing NextAuth session
+              try {
+                await fetch("/api/proxy/auth/logout", { method: "POST" })
+              } catch {
+                // ignore — proceed with signOut regardless
+              }
+              signOut({ callbackUrl: "/login" })
+            }}
             className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
             title="Cerrar sesión"
           >

@@ -61,7 +61,17 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   })
 
   if (response.status === 204) {
-    return new NextResponse(null, { status: 204 })
+    // Propagate Set-Cookie even on 204 (e.g. logout clears the refresh_token cookie)
+    const emptyCookies: string[] =
+      typeof response.headers.getSetCookie === "function"
+        ? response.headers.getSetCookie()
+        : response.headers.get("set-cookie")
+          ? [response.headers.get("set-cookie")!]
+          : []
+    if (emptyCookies.length === 0) return new NextResponse(null, { status: 204 })
+    const h204 = new Headers()
+    emptyCookies.forEach((c) => h204.append("set-cookie", c))
+    return new NextResponse(null, { status: 204, headers: h204 })
   }
 
   const responseBody = await response.arrayBuffer()
@@ -72,8 +82,9 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   if (contentDisposition) {
     responseHeaders.set("Content-Disposition", contentDisposition)
   }
-  // Forward Set-Cookie from backend to browser, rewriting backend path to proxy path
-  // so the browser sends the cookie when calling /api/proxy/auth/refresh
+  // Forward Set-Cookie from backend to browser.
+  // The backend sets refresh_token with Path=/api so the browser sends it with every
+  // /api/* request, enabling the NextAuth jwt callback to read it via cookies().
   const setCookieValues: string[] =
     typeof response.headers.getSetCookie === "function"
       ? response.headers.getSetCookie()

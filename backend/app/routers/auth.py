@@ -76,7 +76,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         secure=True,
         samesite="lax",
         max_age=_REFRESH_MAX_AGE,
-        path="/api/auth/refresh",
+        path="/api",
     )
 
 
@@ -142,7 +142,7 @@ async def refresh(request: Request, response: Response, db: AsyncSession = Depen
 async def logout(response: Response, current_user: User = Depends(get_current_user)):
     response.delete_cookie(
         key=_REFRESH_COOKIE,
-        path="/api/auth/refresh",
+        path="/api",
         secure=True,
         httponly=True,
         samesite="lax",

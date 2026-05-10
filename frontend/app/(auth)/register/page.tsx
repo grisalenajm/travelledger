@@ -61,10 +61,24 @@ export default function RegisterPage() {
         return
       }
 
+      // Get tokens via proxy so the browser receives the HttpOnly refresh_token cookie
+      const loginRes = await fetch("/api/proxy/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      })
+      if (!loginRes.ok) {
+        router.push("/login")
+        return
+      }
+      const tokens = (await loginRes.json()) as { access_token: string; refresh_token: string }
+
       const result = await signIn("credentials", {
         redirect: false,
         email: data.email,
         password: data.password,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
       })
 
       if (result?.error) {

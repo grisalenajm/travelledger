@@ -24,10 +24,35 @@ export default function LoginPage() {
   } = useForm<LoginForm>({ resolver: zodResolver(schema) })
 
   const onSubmit = async (data: LoginForm) => {
+    // 1. Call the backend through the proxy so the browser receives the HttpOnly
+    //    refresh_token cookie (persistent, 7-day). If we went directly through
+    //    NextAuth signIn(), the Set-Cookie would be lost in the server-to-server call.
+    let tokens: { access_token: string; refresh_token: string }
+    try {
+      const proxyRes = await fetch("/api/proxy/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      })
+      if (!proxyRes.ok) {
+        setError("root", { message: "Email o contraseña incorrectos" })
+        return
+      }
+      tokens = await proxyRes.json()
+    } catch {
+      setError("root", { message: "Error de conexión. Inténtalo de nuevo." })
+      return
+    }
+
+    // 2. Create the NextAuth session using the pre-fetched tokens.
+    //    authorize() in lib/auth.ts detects accessToken+refreshToken and skips
+    //    a second backend call — it only verifies the token with /api/users/me.
     const result = await signIn("credentials", {
       redirect: false,
       email: data.email,
       password: data.password,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
     })
 
     if (result?.error) {

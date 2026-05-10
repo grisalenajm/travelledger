@@ -1,10 +1,21 @@
 import { withAuth } from "next-auth/middleware"
+import { NextResponse } from "next/server"
 
-export default withAuth({
-  pages: {
-    signIn: "/login",
+export default withAuth(
+  function middleware(req) {
+    if (req.nextauth.token?.error === "RefreshAccessTokenError") {
+      const url = new URL("/login", req.url)
+      url.searchParams.set("error", "SessionExpired")
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
   },
-})
+  {
+    pages: {
+      signIn: "/login",
+    },
+  }
+)
 
 export const config = {
   matcher: [

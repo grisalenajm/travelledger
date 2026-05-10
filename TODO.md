@@ -124,7 +124,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 - [x] Actualizar `expense_service.delete()` — borrar `local_path` si existe
 - [x] Implementar `settings_service.migrate_to_paperless(user_id: UUID)`
 - [x] Actualizar router `PUT /api/settings` — trigger migrate_to_paperless en background
-- [ ] **Pendiente deploy**: `alembic upgrade head` en LXC cuando NAS (192.168.1.154) esté online
+- [x] **Pendiente deploy**: `alembic upgrade head` en LXC — migration `0005_add_is_admin` aplicada en producción
 
 ### Web — /settings/profile ampliado `[Web]`
 - [x] Sección "Cuenta": nombre, email, moneda base, cambio de password
@@ -207,6 +207,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 
 ## 🗂️ FASE 9 — Backlog
 
+- [x] Foto automática de portada de viaje (Unsplash) — `cover_image_path` en Trip + GET /trips/{id}/cover + TripCard/detail muestran imagen
 - [ ] TripLegs CRUD en web (pantalla de tramos)
 - [ ] Estadísticas agregadas entre viajes (dashboard global)
 - [ ] OCR de confirmaciones de vuelo → crear TripLeg automático

@@ -446,3 +446,6 @@ git branch -M main
 | `POST /api/expenses` espera FormData, no JSON | Usar `api.postForm()` con FormData |
 | Backend unhealthy tras reinicio NAS | Esperar a postgres-ledger, luego `docker compose restart backend` |
 | `UndefinedColumnError` en runtime tras deploy con migrations | `docker compose exec backend alembic upgrade head` — el build no aplica migrations automáticamente |
+| `MissingGreenletError` al serializar respuesta tras commit | Tras cada `await db.commit()` que añade campos nuevos, hacer `await db.refresh(objeto)` antes de retornar — sin refresh el ORM deja el objeto en estado detached |
+| Variable de entorno nueva no llega al contenedor | Añadirla explícitamente a la sección `environment:` del servicio en `docker-compose.yml` — las variables del `.env` del host no se pasan automáticamente |
+| Volumen Docker nombrado: contenedor no puede escribir archivos | Usar bind mount `./dir:/app/dir` con el directorio creado por el usuario (no root) — un volumen nombrado creado como root impide escritura desde el proceso de la app |

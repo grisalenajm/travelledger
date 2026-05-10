@@ -39,6 +39,11 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   } else {
     fetchHeaders["Content-Type"] = "application/json"
   }
+  // Forward browser cookies so the backend can read the HttpOnly refresh_token cookie
+  const cookieHeader = req.headers.get("cookie")
+  if (cookieHeader) {
+    fetchHeaders["Cookie"] = cookieHeader
+  }
 
   const hasBody = ["POST", "PUT", "PATCH"].includes(method)
   let body: BodyInit | undefined
@@ -62,9 +67,19 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   const responseBody = await response.arrayBuffer()
   const contentType = response.headers.get("content-type") ?? "application/json"
   const contentDisposition = response.headers.get("content-disposition")
-  const responseHeaders: Record<string, string> = { "Content-Type": contentType }
+  const responseHeaders: Record<string, string | string[]> = { "Content-Type": contentType }
   if (contentDisposition) {
     responseHeaders["Content-Disposition"] = contentDisposition
+  }
+  // Forward Set-Cookie from backend to browser, rewriting backend path to proxy path
+  // so the browser sends the cookie when calling /api/proxy/auth/refresh
+  const setCookieValues: string[] = typeof response.headers.getSetCookie === "function"
+    ? response.headers.getSetCookie()
+    : (response.headers.get("set-cookie") ? [response.headers.get("set-cookie")!] : [])
+  if (setCookieValues.length > 0) {
+    responseHeaders["set-cookie"] = setCookieValues.map((h) =>
+      h.replace(/Path=\/api\/auth/gi, "Path=/api/proxy/auth")
+    )
   }
   return new NextResponse(responseBody, {
     status: response.status,

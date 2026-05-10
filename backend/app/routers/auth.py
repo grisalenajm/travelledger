@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from jose import JWTError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +18,7 @@ from app.core.security import (
 )
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import DeviceRegister, Token, TokenRefresh, UserCreate, UserLogin, UserRead
+from app.schemas.auth import DeviceRegister, Token, UserCreate, UserLogin, UserRead
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security")
@@ -64,9 +64,25 @@ async def register(request: Request, payload: UserCreate, db: AsyncSession = Dep
     return user
 
 
+_REFRESH_COOKIE = "refresh_token"
+_REFRESH_MAX_AGE = 7 * 24 * 60 * 60  # 7 days
+
+
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=_REFRESH_COOKIE,
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=_REFRESH_MAX_AGE,
+        path="/api/auth/refresh",
+    )
+
+
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")
-async def login(request: Request, payload: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, response: Response, payload: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(payload.password, user.password_hash):
@@ -79,18 +95,30 @@ async def login(request: Request, payload: UserLogin, db: AsyncSession = Depends
         "login_success",
         extra={"user_id": str(user.id), "ip": request.client.host},
     )
-    return Token(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
-    )
+    access_token = create_access_token(str(user.id))
+    refresh_token = create_refresh_token(str(user.id))
+    _set_refresh_cookie(response, refresh_token)
+    return Token(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/refresh", response_model=Token)
 @limiter.limit("20/minute")
-async def refresh(request: Request, payload: TokenRefresh, db: AsyncSession = Depends(get_db)):
+async def refresh(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     exc = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    # Cookie-first, body-fallback
+    token_value = request.cookies.get(_REFRESH_COOKIE)
+    if not token_value:
+        try:
+            body = await request.json()
+            token_value = body.get("refresh_token")
+        except Exception:
+            token_value = None
+    if not token_value:
+        raise exc
+
     try:
-        data = decode_token(payload.refresh_token)
+        data = decode_token(token_value)
         if data.get("type") != "refresh":
             raise exc
         user_id = data.get("sub")
@@ -103,16 +131,22 @@ async def refresh(request: Request, payload: TokenRefresh, db: AsyncSession = De
     user = result.scalar_one_or_none()
     if not user:
         raise exc
-    return Token(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
-    )
+
+    new_access = create_access_token(str(user.id))
+    new_refresh = create_refresh_token(str(user.id))
+    _set_refresh_cookie(response, new_refresh)
+    return Token(access_token=new_access, refresh_token=new_refresh)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(current_user: User = Depends(get_current_user)):
-    # JWT es stateless — el cliente descarta el token
-    pass
+async def logout(response: Response, current_user: User = Depends(get_current_user)):
+    response.delete_cookie(
+        key=_REFRESH_COOKIE,
+        path="/api/auth/refresh",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
 
 
 @router.post("/device", status_code=status.HTTP_204_NO_CONTENT)

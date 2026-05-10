@@ -17,10 +17,11 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       body: JSON.stringify({ refresh_token: token.refreshToken }),
     })
     if (!res.ok) throw new Error(`Refresh failed: ${res.status}`)
-    const data = (await res.json()) as { access_token: string }
+    const data = (await res.json()) as { access_token: string; refresh_token: string }
     return {
       ...token,
       accessToken: data.access_token,
+      refreshToken: data.refresh_token,
       accessTokenExpires: Date.now() + ACCESS_TOKEN_TTL_MS,
       error: undefined,
     }

@@ -67,20 +67,22 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   const responseBody = await response.arrayBuffer()
   const contentType = response.headers.get("content-type") ?? "application/json"
   const contentDisposition = response.headers.get("content-disposition")
-  const responseHeaders: Record<string, string | string[]> = { "Content-Type": contentType }
+  const responseHeaders = new Headers()
+  responseHeaders.set("Content-Type", contentType)
   if (contentDisposition) {
-    responseHeaders["Content-Disposition"] = contentDisposition
+    responseHeaders.set("Content-Disposition", contentDisposition)
   }
   // Forward Set-Cookie from backend to browser, rewriting backend path to proxy path
   // so the browser sends the cookie when calling /api/proxy/auth/refresh
-  const setCookieValues: string[] = typeof response.headers.getSetCookie === "function"
-    ? response.headers.getSetCookie()
-    : (response.headers.get("set-cookie") ? [response.headers.get("set-cookie")!] : [])
-  if (setCookieValues.length > 0) {
-    responseHeaders["set-cookie"] = setCookieValues.map((h) =>
-      h.replace(/Path=\/api\/auth/gi, "Path=/api/proxy/auth")
-    )
-  }
+  const setCookieValues: string[] =
+    typeof response.headers.getSetCookie === "function"
+      ? response.headers.getSetCookie()
+      : response.headers.get("set-cookie")
+        ? [response.headers.get("set-cookie")!]
+        : []
+  setCookieValues.forEach((h) => {
+    responseHeaders.append("set-cookie", h.replace(/Path=\/api\/auth/gi, "Path=/api/proxy/auth"))
+  })
   return new NextResponse(responseBody, {
     status: response.status,
     headers: responseHeaders,

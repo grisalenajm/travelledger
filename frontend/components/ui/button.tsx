@@ -10,7 +10,7 @@ export function Button({ className, variant = "primary", size = "md", ...props }
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded font-label font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center rounded font-label font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:pointer-events-none disabled:opacity-50 active:scale-95 active:opacity-80 select-none",
         variant === "primary" && "bg-primary text-white hover:bg-primary-container",
         variant === "secondary" && "bg-secondary-container text-on-secondary-container hover:bg-secondary-container/80",
         variant === "ghost" && "hover:bg-surface-container",

@@ -32,7 +32,7 @@ export function TripCard({ trip, summary }: TripCardProps) {
   return (
     <Link
       href={`/trips/${trip.id}`}
-      className="group block rounded-xl bg-surface-container-lowest shadow-editorial transition-shadow hover:shadow-fab focus:outline-none focus:ring-2 focus:ring-primary/40 overflow-hidden"
+      className="group block rounded-xl bg-surface-container-lowest shadow-editorial transition-all duration-150 hover:shadow-fab active:scale-95 active:opacity-80 focus:outline-none focus:ring-2 focus:ring-primary/40 overflow-hidden select-none"
     >
       {trip.cover_image_path && (
         // eslint-disable-next-line @next/next/no-img-element

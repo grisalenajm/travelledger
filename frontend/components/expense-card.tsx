@@ -29,7 +29,7 @@ export function ExpenseCard({ expense, currencyBase, onDoubleClick }: ExpenseCar
 
   return (
     <div
-      className="flex items-center gap-3 rounded-xl bg-surface-container-lowest px-4 py-3 shadow-editorial cursor-pointer select-none"
+      className="flex items-center gap-3 rounded-xl bg-surface-container-lowest px-4 py-3 shadow-editorial cursor-pointer select-none active:scale-95 active:opacity-80 transition-all duration-150"
       onDoubleClick={onDoubleClick}
       title="Doble clic para editar"
     >

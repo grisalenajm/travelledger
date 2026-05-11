@@ -278,7 +278,8 @@ export default function TripDetailPage() {
                          bg-surface-container-lowest rounded-full
                          border border-outline-variant/15
                          text-on-surface-variant font-label text-sm
-                         hover:bg-surface-container-low transition-colors"
+                         hover:bg-surface-container-low transition-all duration-150
+                         active:scale-95 active:opacity-80 select-none"
             >
               <span className="material-symbols-outlined text-sm">document_scanner</span>
               Escanear ticket

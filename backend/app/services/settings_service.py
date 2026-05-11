@@ -58,18 +58,22 @@ async def set(db: AsyncSession, user_id: UUID, key: str, value: str | None) -> N
     await db.execute(stmt)
 
 
-async def migrate_to_paperless(db: AsyncSession, user_id: UUID) -> None:
+async def migrate_to_paperless(db: AsyncSession, user_id: UUID) -> dict:
     """Migrate locally-stored images to Paperless-ngx when the user configures it."""
     from app.services import expense_service, paperless_service  # local import to avoid cycle
 
+    migrated = 0
+    failed = 0
+    errors: list[str] = []
+
     expenses = await expense_service.get_with_local_path(db, user_id)
     if not expenses:
-        return
+        return {"migrated": 0, "failed": 0, "errors": []}
 
     url, token = await paperless_service.get_credentials(db, user_id)
     if not url or not token:
         logger.warning("migrate_to_paperless: no Paperless credentials for user %s", user_id)
-        return
+        return {"migrated": 0, "failed": 0, "errors": ["No Paperless credentials configured"]}
 
     for expense in expenses:
         try:
@@ -89,6 +93,11 @@ async def migrate_to_paperless(db: AsyncSession, user_id: UUID) -> None:
             await db.flush()
             Path(local).unlink(missing_ok=True)
             logger.info("migrate_to_paperless: migrated expense %s → doc_id=%s", expense.id, doc_id)
+            migrated += 1
         except Exception as exc:
             logger.error("migrate_to_paperless: expense %s failed: %s", expense.id, exc)
+            failed += 1
+            errors.append(f"expense {expense.id}: {exc}")
             continue
+
+    return {"migrated": migrated, "failed": failed, "errors": errors}

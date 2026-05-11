@@ -6,7 +6,6 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/use-expenses"
-import { useLoyaltyCards } from "@/hooks/use-loyalty-cards"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 
@@ -42,7 +41,6 @@ const schema = z.object({
   description: z.string().optional(),
   payment_method: z.enum(["card", "cash", "transfer", "other"]).optional(),
   billable: z.boolean(),
-  loyalty_card_id: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -74,7 +72,6 @@ export default function ExpenseDetailPage() {
   const { id: tripId, expenseId } = useParams<{ id: string; expenseId: string }>()
   const router = useRouter()
   const { data: expense, isLoading, isError } = useExpense(expenseId)
-  const { data: loyaltyCards } = useLoyaltyCards()
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -128,7 +125,6 @@ export default function ExpenseDetailPage() {
       description: "",
       payment_method: undefined,
       billable: true,
-      loyalty_card_id: undefined,
     },
   })
 
@@ -142,7 +138,6 @@ export default function ExpenseDetailPage() {
         description: expense.description ?? "",
         payment_method: expense.payment_method ?? undefined,
         billable: expense.billable,
-        loyalty_card_id: expense.loyalty_card_id ?? undefined,
       })
     }
   }, [expense, reset])
@@ -159,7 +154,6 @@ export default function ExpenseDetailPage() {
         description: values.description || null,
         payment_method: values.payment_method || null,
         billable: values.billable,
-        loyalty_card_id: values.loyalty_card_id || null,
       },
     })
     router.push(`/trips/${tripId}`)
@@ -327,30 +321,16 @@ export default function ExpenseDetailPage() {
           />
         </div>
 
-        {/* Row 4 — Método de pago + Tarjeta de viajero */}
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="payment_method" className={FIELD_LABEL}>Método de pago</label>
-            <select id="payment_method" className={FIELD_INPUT} {...register("payment_method")}>
-              <option value="">Sin especificar</option>
-              <option value="card">Tarjeta</option>
-              <option value="cash">Efectivo</option>
-              <option value="transfer">Transferencia</option>
-              <option value="other">Otro</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="loyalty_card_id" className={FIELD_LABEL}>Tarjeta viajero</label>
-            <select id="loyalty_card_id" className={FIELD_INPUT} {...register("loyalty_card_id")}>
-              <option value="">Sin tarjeta</option>
-              {loyaltyCards?.map((card) => (
-                <option key={card.id} value={card.id}>
-                  {card.alias ?? card.program_name}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Row 4 — Método de pago */}
+        <div>
+          <label htmlFor="payment_method" className={FIELD_LABEL}>Método de pago</label>
+          <select id="payment_method" className={FIELD_INPUT} {...register("payment_method")}>
+            <option value="">Sin especificar</option>
+            <option value="card">Tarjeta</option>
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="other">Otro</option>
+          </select>
         </div>
 
         {/* Row 5 — Toggle facturable */}

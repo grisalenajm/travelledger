@@ -71,6 +71,12 @@ class PaperlessVerifyResult(BaseModel):
     error: str | None = None
 
 
+class MigrateNowResult(BaseModel):
+    migrated: int
+    failed: int
+    errors: list[str]
+
+
 @router.get("", response_model=SettingsRead)
 async def get_settings(
     current_user: User = Depends(get_current_user),
@@ -112,6 +118,15 @@ async def upsert_setting(
 
     if payload.key in ("paperless_url", "paperless_token"):
         background_tasks.add_task(migrate_to_paperless, db, current_user.id)
+
+
+@router.post("/migrate-now", response_model=MigrateNowResult)
+async def migrate_now(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await migrate_to_paperless(db, current_user.id)
+    return MigrateNowResult(**result)
 
 
 @router.post("/verify-paperless", response_model=PaperlessVerifyResult)

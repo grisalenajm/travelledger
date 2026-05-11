@@ -7,7 +7,6 @@ import { z } from "zod"
 import { useQueryClient } from "@tanstack/react-query"
 import type { Trip, Expense } from "@/types/index"
 import { useCreateExpense, useUpdateExpense } from "@/hooks/use-expenses"
-import { useLoyaltyCards } from "@/hooks/use-loyalty-cards"
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
@@ -42,7 +41,6 @@ const schema = z.object({
   description: z.string().optional(),
   payment_method: z.enum(["card", "cash", "transfer", "other"]).optional(),
   billable: z.boolean(),
-  loyalty_card_id: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -58,8 +56,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
   const isEdit = !!expense
   const createExpense = useCreateExpense()
   const updateExpense = useUpdateExpense()
-  const { data: loyaltyCards } = useLoyaltyCards()
-  const hasCards = loyaltyCards !== undefined && loyaltyCards.length > 0
   const queryClient = useQueryClient()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -84,7 +80,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
       description: "",
       payment_method: undefined,
       billable: true,
-      loyalty_card_id: undefined,
     },
   })
 
@@ -98,7 +93,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
         description: "",
         payment_method: undefined,
         billable: true,
-        loyalty_card_id: undefined,
       })
       setImageFile(null)
       setImagePreview(null)
@@ -111,7 +105,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
         description: expense.description ?? "",
         payment_method: expense.payment_method ?? undefined,
         billable: expense.billable,
-        loyalty_card_id: expense.loyalty_card_id ?? undefined,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +124,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
             description: values.description || null,
             payment_method: values.payment_method || null,
             billable: values.billable,
-            loyalty_card_id: values.loyalty_card_id || null,
           },
         })
       } else if (imageFile) {
@@ -147,7 +139,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
         Object.entries(fields).forEach(([k, v]) => formData.append(k, v))
         if (values.description) formData.append("description", values.description)
         if (values.payment_method) formData.append("payment_method", values.payment_method)
-        if (values.loyalty_card_id) formData.append("loyalty_card_id", values.loyalty_card_id)
         formData.append("image", imageFile)
         await api.post<Expense>("/api/proxy/expenses/", formData)
         queryClient.invalidateQueries({ queryKey: ["expenses", trip.id] })
@@ -162,7 +153,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
           description: values.description || null,
           payment_method: values.payment_method || null,
           billable: values.billable,
-          loyalty_card_id: values.loyalty_card_id || null,
         })
       }
       reset()
@@ -277,21 +267,6 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
             )}
           />
         </div>
-
-        {/* Tarjeta de viajero */}
-        {hasCards && (
-          <div>
-            <Label htmlFor="loyalty_card_id">Tarjeta de viajero</Label>
-            <select id="loyalty_card_id" className={INPUT_CLASS} {...register("loyalty_card_id")}>
-              <option value="">— Sin tarjeta —</option>
-              {loyaltyCards!.map((card) => (
-                <option key={card.id} value={card.id}>
-                  {card.alias ?? card.program_name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {/* Comprobante */}
         {!isEdit && (

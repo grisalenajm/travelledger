@@ -449,3 +449,6 @@ git branch -M main
 | `MissingGreenletError` al serializar respuesta tras commit | Tras cada `await db.commit()` que añade campos nuevos, hacer `await db.refresh(objeto)` antes de retornar — sin refresh el ORM deja el objeto en estado detached |
 | Variable de entorno nueva no llega al contenedor | Añadirla explícitamente a la sección `environment:` del servicio en `docker-compose.yml` — las variables del `.env` del host no se pasan automáticamente |
 | Volumen Docker nombrado: contenedor no puede escribir archivos | Usar bind mount `./dir:/app/dir` con el directorio creado por el usuario (no root) — un volumen nombrado creado como root impide escritura desde el proceso de la app |
+| Toggle de settings no persiste al recargar | Llamar a la API en el `onClick` del toggle inmediatamente — no esperar al submit general del formulario |
+| Paperless devuelve error aunque la URL sea correcta | Verificar con `curl -L` — Paperless puede devolver redirect 301/302; el cliente HTTP necesita `follow_redirects=True` o la URL definitiva sin trailing slash |
+| `paperless_enabled` llega como `false` aunque el toggle esté ON | Guardar `paperless_enabled` explícitamente en BD con `set_setting()` — el backend debe leerlo de `user_settings`, no asumir ningún default en memoria |

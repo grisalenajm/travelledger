@@ -301,6 +301,7 @@ PUT    /api/users/me         → {name?, email?, currency_base?, password_curren
 GET    /api/settings                    → {paperless_url, paperless_enabled, anthropic_api_key_set, language, theme}
 PUT    /api/settings                    → {key, value} — upsert
 POST   /api/settings/verify-paperless  → {ok: bool, error: str|null}
+POST   /api/settings/migrate-now       → {migrated: int, failed: int, errors: list[str]}
 ```
 
 > `anthropic_api_key_set` es bool — nunca devolver la key en texto plano al frontend.
@@ -433,6 +434,17 @@ pytest-asyncio>=0.23
 "next-intl": "^3.x",
 "next-themes": "^0.x"
 ```
+
+---
+
+## 🔧 Variables de Entorno Nuevas
+
+Toda variable nueva en `.env.example` **debe añadirse también a**:
+1. `docker-compose.yml` → sección `environment:` del servicio correspondiente
+2. `backend/app/core/config.py` → clase `Settings`
+3. `.env` del LXC en producción (manualmente vía SSH)
+
+Si se olvida cualquiera de estos tres pasos, la variable llegará vacía al contenedor aunque esté en el `.env` del host.
 
 ---
 

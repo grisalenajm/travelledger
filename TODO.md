@@ -119,7 +119,7 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 ### Backend — volumen temporal `[BE]` ✅
 - [x] Añadir `local_path: str | None` a modelo `Expense` + migration `0007_add_local_path`
 - [x] Añadir `aiofiles>=23.0` a `requirements.txt`
-- [x] Actualizar `docker-compose.yml` — volumen `ledger_uploads:/app/uploads`
+- [x] Actualizar `docker-compose.yml` — bind mount `./uploads:/app/uploads` (chown 1001:1001 en host, no volumen nombrado)
 - [x] Actualizar `receipts.py` — si paperless_enabled=false → guardar en `/app/uploads/`
 - [x] Actualizar `expense_service.delete()` — borrar `local_path` si existe
 - [x] Implementar `settings_service.migrate_to_paperless(user_id: UUID)`
@@ -132,6 +132,19 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 - [x] Sección "Paperless": `paperless_url`, `paperless_token` (tipo password), toggle on/off, botón "Verificar conexión"
 - [x] Sección "Apariencia": selector idioma (ES/EN), toggle dark/light/system
 - [x] Actualizar `hooks/use-settings.ts` — GET /api/settings con nuevos campos
+- [x] Fix toggle `paperless_enabled` — llama a la API en onClick inmediatamente (no en submit)
+- [x] `paperless_enabled` guardado explícitamente en BD con `set_setting()`
+
+### Backend — fixes post-deploy mayo 2026 `[BE]`
+- [x] Endpoint `POST /api/settings/migrate-now` — migración síncrona Paperless con stats `{migrated, failed, errors}`
+- [x] Fix `await db.refresh(trip)` tras commit en `trip_service.create()` — evita MissingGreenlet
+- [x] Refresh token persistente en cookie HttpOnly 7 días
+- [x] `uploads/` añadido a `.gitignore`
+- [x] `UNSPLASH_ACCESS_KEY` añadida a `environment:` en `docker-compose.yml`
+
+### Web — fixes post-deploy mayo 2026 `[Web]`
+- [x] Eliminado campo `loyalty_card_id` (frequent flyer) de formularios de gastos web
+- [x] Fix badge total viaje — usa `currency_base` del usuario en lugar de `budget_currency`
 
 ---
 

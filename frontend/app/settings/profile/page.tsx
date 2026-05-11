@@ -347,7 +347,11 @@ function PaperlessSection({ paperlessUrl, paperlessEnabled, tokenSet }: Paperles
             type="button"
             role="switch"
             aria-checked={enabled}
-            onClick={() => setEnabled(!enabled)}
+            onClick={() => {
+              const newValue = !enabled
+              setEnabled(newValue)
+              updateSetting.mutate({ key: "paperless_enabled", value: newValue ? "true" : "false" })
+            }}
             className={`w-12 h-6 rounded-full transition-colors ${
               enabled ? "bg-primary" : "bg-outline"
             } relative flex-shrink-0`}

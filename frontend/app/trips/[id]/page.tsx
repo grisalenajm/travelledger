@@ -7,6 +7,7 @@ import { useTrip, useTripSummary } from "@/hooks/use-trips"
 import { useExpenses } from "@/hooks/use-expenses"
 import { ExpenseCard } from "@/components/expense-card"
 import { AddExpenseModal } from "@/components/add-expense-modal"
+import { ExportModal } from "@/components/export-modal"
 import { Button } from "@/components/ui/button"
 
 function fmtDate(iso: string) {
@@ -87,32 +88,10 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
-  const [exporting, setExporting] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const handleCloseExpenseModal = useCallback(() => setAddExpenseOpen(false), [])
-
-  async function handleExportCsv() {
-    if (!trip) return
-    setExporting(true)
-    try {
-      const res = await fetch(`/api/proxy/reports/export/${id}?format=csv`)
-      if (!res.ok) throw new Error("Export failed")
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `gastos_${trip.name}_${new Date().toISOString().split("T")[0]}.csv`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      console.error("CSV export failed", e)
-    } finally {
-      setExporting(false)
-    }
-  }
 
   const { data: trip, isLoading: tripLoading, isError } = useTrip(id)
   const { data: summary } = useTripSummary(id)
@@ -265,11 +244,11 @@ export default function TripDetailPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={handleExportCsv}
-              disabled={exporting || !expenses || expenses.length === 0}
+              onClick={() => setExportOpen(true)}
+              disabled={!expenses || expenses.length === 0}
             >
               <span className="material-symbols-outlined text-sm mr-1">download</span>
-              {exporting ? "Exportando…" : "Exportar CSV"}
+              Exportar
             </Button>
             <button
               type="button"
@@ -347,6 +326,13 @@ export default function TripDetailPage() {
         trip={trip}
         open={addExpenseOpen}
         onClose={handleCloseExpenseModal}
+      />
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        tripId={id}
+        tripName={trip.name}
       />
     </main>
   )

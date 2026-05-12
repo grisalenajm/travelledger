@@ -1,7 +1,9 @@
 from datetime import date as date_t
 from decimal import Decimal
+from pathlib import Path
 from uuid import UUID
 
+import aiofiles
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -104,26 +106,42 @@ async def get_receipt_image(
     user: User = Depends(get_current_user),
 ):
     expense = await expense_service.get_or_404(db, expense_id, user.id)
-    if not expense.paperless_doc_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No receipt attached")
 
-    paperless_url, token = await paperless_service.get_credentials(db, user.id)
-    if not paperless_url or not token:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Paperless not configured")
+    # Try Paperless first
+    if expense.paperless_doc_id:
+        paperless_url, token = await paperless_service.get_credentials(db, user.id)
+        if paperless_url and token:
+            image_url = f"{paperless_url.rstrip('/')}/api/documents/{expense.paperless_doc_id}/download/"
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(
+                    image_url,
+                    headers={"Authorization": f"Token {token}"},
+                    follow_redirects=True,
+                )
+            if resp.status_code == 200:
+                content_type = resp.headers.get("content-type", "application/octet-stream")
+                return StreamingResponse(
+                    iter([resp.content]),
+                    media_type=content_type,
+                    headers={"Cache-Control": "private, max-age=3600"},
+                )
 
-    image_url = f"{paperless_url.rstrip('/')}/api/documents/{expense.paperless_doc_id}/download/"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(
-            image_url,
-            headers={"Authorization": f"Token {token}"},
-            follow_redirects=True,
-        )
-    if resp.status_code != 200:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Receipt not found in Paperless")
+    # Fall back to local file
+    if expense.local_path:
+        local = Path(expense.local_path)
+        if local.exists():
+            mime_map = {
+                ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".png": "image/png", ".webp": "image/webp",
+                ".pdf": "application/pdf",
+            }
+            content_type = mime_map.get(local.suffix.lower(), "application/octet-stream")
+            async with aiofiles.open(local, "rb") as f:
+                data = await f.read()
+            return StreamingResponse(
+                iter([data]),
+                media_type=content_type,
+                headers={"Cache-Control": "private, max-age=3600"},
+            )
 
-    content_type = resp.headers.get("content-type", "application/octet-stream")
-    return StreamingResponse(
-        iter([resp.content]),
-        media_type=content_type,
-        headers={"Cache-Control": "private, max-age=3600"},
-    )
+    raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No receipt attached")

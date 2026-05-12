@@ -88,9 +88,11 @@ export interface Expense {
   billable: boolean
   loyalty_card_id: string | null
   paperless_doc_id: number | null
+  has_receipt: boolean
   is_draft: boolean
   ocr_confidence: number | null
   created_at: string
+  warning?: string
 }
 
 // ─── Loyalty Cards ───────────────────────────────────────

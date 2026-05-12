@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 ExpenseCategory = Literal[
     "Dining", "Lodging", "Transport", "Culture", "Shopping", "Health", "Other"
@@ -81,5 +81,11 @@ class ExpenseRead(BaseModel):
     ocr_confidence: float | None
     created_at: datetime
     updated_at: datetime
+    local_path: str | None = Field(default=None, exclude=True)
+
+    @computed_field
+    @property
+    def has_receipt(self) -> bool:
+        return self.paperless_doc_id is not None or self.local_path is not None
 
     model_config = {"from_attributes": True}

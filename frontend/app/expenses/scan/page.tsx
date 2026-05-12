@@ -60,6 +60,9 @@ function ScanPageContent() {
 
     uploadReceipt({ file, tripId: currentTripId })
       .then((expense) => {
+        if (expense.warning) {
+          toast.warning(expense.warning)
+        }
         router.push(`/expenses/scan/confirm?expenseId=${expense.id}&tripId=${currentTripId}`)
       })
       .catch((e: unknown) => {

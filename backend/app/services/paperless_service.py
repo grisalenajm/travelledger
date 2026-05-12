@@ -119,22 +119,18 @@ async def get_url(doc_id: int, db: AsyncSession, user_id: UUID) -> str:
     return f"{url.rstrip('/')}/api/documents/{doc_id}/download/"
 
 
-async def upload_document(
+async def _build_multipart_and_post(
+    base_url: str,
+    token: str,
     file_bytes: bytes,
     filename: str,
     mime_type: str,
-    db: AsyncSession,
-    user_id: UUID,
     title_parts: dict | None = None,
-) -> int:
-    """Upload document to Paperless-ngx. Returns document_id after async processing."""
-    base_url, token = await get_credentials(db, user_id)
-    if not base_url or not token:
-        raise HTTPException(
-            status.HTTP_424_FAILED_DEPENDENCY,
-            "paperless_url or paperless_token not configured",
-        )
-
+) -> str:
+    """
+    Prepare metadata, build multipart payload, POST to Paperless.
+    Returns task_id string. Raises HTTPException on HTTP failure.
+    """
     base = base_url.rstrip("/")
     auth_header = {"Authorization": f"Token {token}"}
 
@@ -193,9 +189,32 @@ async def upload_document(
                 status.HTTP_502_BAD_GATEWAY,
                 f"Paperless upload failed: {resp.status_code}",
             )
-        task_id = resp.json()
+        return str(resp.json())
 
-        # Poll until Paperless finishes processing the document
+
+async def upload_document(
+    file_bytes: bytes,
+    filename: str,
+    mime_type: str,
+    db: AsyncSession,
+    user_id: UUID,
+    title_parts: dict | None = None,
+) -> int:
+    """Upload document to Paperless-ngx. Returns document_id after async processing."""
+    base_url, token = await get_credentials(db, user_id)
+    if not base_url or not token:
+        raise HTTPException(
+            status.HTTP_424_FAILED_DEPENDENCY,
+            "paperless_url or paperless_token not configured",
+        )
+
+    base = base_url.rstrip("/")
+    auth_header = {"Authorization": f"Token {token}"}
+
+    task_id = await _build_multipart_and_post(base_url, token, file_bytes, filename, mime_type, title_parts)
+
+    # Poll until Paperless finishes processing the document
+    async with httpx.AsyncClient(timeout=60) as client:
         for _ in range(30):
             await asyncio.sleep(1)
             task_resp = await client.get(
@@ -222,6 +241,31 @@ async def upload_document(
         status.HTTP_504_GATEWAY_TIMEOUT,
         "Paperless document processing timed out",
     )
+
+
+async def upload_document_queued(
+    file_bytes: bytes,
+    filename: str,
+    mime_type: str,
+    db: AsyncSession,
+    user_id: UUID,
+    title_parts: dict | None = None,
+) -> bool:
+    """
+    Submit document to Paperless-ngx without waiting for processing.
+    Returns True if successfully queued, False otherwise.
+    Never raises — logs failures instead.
+    """
+    try:
+        base_url, token = await get_credentials(db, user_id)
+        if not base_url or not token:
+            return False
+        task_id = await _build_multipart_and_post(base_url, token, file_bytes, filename, mime_type, title_parts)
+        logger.info("Paperless document queued fire-and-forget — task_id=%s", task_id)
+        return True
+    except Exception as exc:
+        logger.warning("Paperless queue error: %s", exc)
+        return False
 
 
 async def download_document(

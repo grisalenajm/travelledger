@@ -16,7 +16,6 @@ from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.expense import ExpenseRead
 from app.services import currency_service, ocr_service, paperless_service, settings_service
-from app.services.paperless_service import PaperlessDuplicateError
 from app.services.trip_service import get_or_404 as get_trip_or_404
 
 logger = logging.getLogger(__name__)
@@ -76,40 +75,31 @@ async def upload_receipt(
     expense_id = uuid4()
 
     paperless_doc_id: int | None = None
-    local_path: str | None = None
-    duplicate_warning = False
+    paperless_warning: str | None = None
 
     ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "application/pdf": ".pdf"}.get(mime_type, ".jpg")
     unique_filename = f"{expense_id}{ext}"
 
+    # Always save locally as backup first
+    local_path = await _save_local(content, user.id, expense_id, mime_type)
+
+    # Fire-and-forget to Paperless — no polling, return immediately
     paperless_enabled = await settings_service.get(db, user.id, "paperless_enabled")
     if paperless_enabled == "true":
-        paperless_url, paperless_token = await paperless_service.get_credentials(db, user.id)
-        if paperless_url and paperless_token:
-            try:
-                paperless_doc_id = await paperless_service.upload_document(
-                    content,
-                    unique_filename,
-                    mime_type,
-                    db,
-                    user.id,
-                    title_parts={
-                        "category": ocr.category or "Other",
-                        "date": str(ocr.date or date_t.today()),
-                        "trip_name": trip.name,
-                    },
-                )
-            except PaperlessDuplicateError as exc:
-                logger.warning("Paperless duplicate detected, saving locally: %s", exc)
-                duplicate_warning = True
-                local_path = await _save_local(content, user.id, expense_id, mime_type)
-            except Exception as exc:
-                logger.warning("Paperless upload failed, saving locally: %s", exc)
-                local_path = await _save_local(content, user.id, expense_id, mime_type)
-        else:
-            local_path = await _save_local(content, user.id, expense_id, mime_type)
-    else:
-        local_path = await _save_local(content, user.id, expense_id, mime_type)
+        queued = await paperless_service.upload_document_queued(
+            content,
+            unique_filename,
+            mime_type,
+            db,
+            user.id,
+            title_parts={
+                "category": ocr.category or "Other",
+                "date": str(ocr.date or date_t.today()),
+                "trip_name": trip.name,
+            },
+        )
+        if not queued:
+            paperless_warning = "No se pudo enviar a Paperless. El documento se ha guardado localmente."
 
     expense_date = ocr.date or date_t.today()
     expense_currency = ocr.currency or trip.primary_currency
@@ -147,7 +137,6 @@ async def upload_receipt(
     await db.refresh(expense)
 
     expense_data = jsonable_encoder(ExpenseRead.model_validate(expense))
-    response = JSONResponse(content=expense_data, status_code=status.HTTP_201_CREATED)
-    if duplicate_warning:
-        response.headers["X-Paperless-Warning"] = "duplicate"
-    return response
+    if paperless_warning:
+        expense_data["warning"] = paperless_warning
+    return JSONResponse(content=expense_data, status_code=status.HTTP_201_CREATED)

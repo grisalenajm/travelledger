@@ -48,7 +48,7 @@ function ConfirmPageContent() {
   const [receiptObjectUrl, setReceiptObjectUrl] = useState<string | null>(null)
   const [receiptContentType, setReceiptContentType] = useState<string | null>(null)
 
-  const receiptProxyUrl = expense?.paperless_doc_id
+  const receiptProxyUrl = expense?.has_receipt
     ? `/api/proxy/expenses/${expenseId}/receipt-image`
     : null
 

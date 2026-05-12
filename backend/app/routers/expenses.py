@@ -107,7 +107,25 @@ async def get_receipt_image(
 ):
     expense = await expense_service.get_or_404(db, expense_id, user.id)
 
-    # Try Paperless first
+    # Local file is always available immediately (fire-and-forget means paperless_doc_id may not be set yet)
+    if expense.local_path:
+        local = Path(expense.local_path)
+        if local.exists():
+            mime_map = {
+                ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".png": "image/png", ".webp": "image/webp",
+                ".pdf": "application/pdf",
+            }
+            content_type = mime_map.get(local.suffix.lower(), "application/octet-stream")
+            async with aiofiles.open(local, "rb") as f:
+                data = await f.read()
+            return StreamingResponse(
+                iter([data]),
+                media_type=content_type,
+                headers={"Cache-Control": "private, max-age=3600"},
+            )
+
+    # Fallback: try Paperless if local file is missing
     if expense.paperless_doc_id:
         paperless_url, token = await paperless_service.get_credentials(db, user.id)
         if paperless_url and token:
@@ -125,23 +143,5 @@ async def get_receipt_image(
                     media_type=content_type,
                     headers={"Cache-Control": "private, max-age=3600"},
                 )
-
-    # Fall back to local file
-    if expense.local_path:
-        local = Path(expense.local_path)
-        if local.exists():
-            mime_map = {
-                ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                ".png": "image/png", ".webp": "image/webp",
-                ".pdf": "application/pdf",
-            }
-            content_type = mime_map.get(local.suffix.lower(), "application/octet-stream")
-            async with aiofiles.open(local, "rb") as f:
-                data = await f.read()
-            return StreamingResponse(
-                iter([data]),
-                media_type=content_type,
-                headers={"Cache-Control": "private, max-age=3600"},
-            )
 
     raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No receipt attached")

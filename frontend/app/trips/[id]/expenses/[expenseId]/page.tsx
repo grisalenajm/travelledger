@@ -79,7 +79,7 @@ export default function ExpenseDetailPage() {
   const [receiptObjectUrl, setReceiptObjectUrl] = useState<string | null>(null)
   const [receiptContentType, setReceiptContentType] = useState<string | null>(null)
 
-  const receiptUrl = expense?.paperless_doc_id
+  const receiptUrl = expense?.has_receipt
     ? `/api/proxy/expenses/${expenseId}/receipt-image`
     : null
 

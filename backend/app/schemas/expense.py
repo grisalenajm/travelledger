@@ -49,6 +49,7 @@ class ExpenseUpdate(BaseModel):
     payment_method: PaymentMethod | None = None
     billable: bool | None = None
     loyalty_card_id: UUID | None = None
+    is_draft: bool | None = None
 
     @field_validator("currency", mode="before")
     @classmethod

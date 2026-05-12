@@ -79,6 +79,9 @@ async def upload_receipt(
     local_path: str | None = None
     duplicate_warning = False
 
+    ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "application/pdf": ".pdf"}.get(mime_type, ".jpg")
+    unique_filename = f"{expense_id}{ext}"
+
     paperless_enabled = await settings_service.get(db, user.id, "paperless_enabled")
     if paperless_enabled == "true":
         paperless_url, paperless_token = await paperless_service.get_credentials(db, user.id)
@@ -86,7 +89,7 @@ async def upload_receipt(
             try:
                 paperless_doc_id = await paperless_service.upload_document(
                     content,
-                    file.filename or "receipt",
+                    unique_filename,
                     mime_type,
                     db,
                     user.id,
@@ -97,8 +100,9 @@ async def upload_receipt(
                     },
                 )
             except PaperlessDuplicateError as exc:
-                logger.warning("Paperless duplicate detected, continuing without doc_id: %s", exc)
+                logger.warning("Paperless duplicate detected, saving locally: %s", exc)
                 duplicate_warning = True
+                local_path = await _save_local(content, user.id, expense_id, mime_type)
             except Exception as exc:
                 logger.warning("Paperless upload failed, saving locally: %s", exc)
                 local_path = await _save_local(content, user.id, expense_id, mime_type)

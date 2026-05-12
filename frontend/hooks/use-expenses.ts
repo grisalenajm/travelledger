@@ -53,7 +53,8 @@ export function useUpdateExpense() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: ExpenseUpdate; tripId: string }) =>
       api.put<Expense>(`/api/proxy/expenses/${id}`, data),
-    onSuccess: (expense) => {
+    onSuccess: (expense, { id }) => {
+      qc.setQueryData(["expense", id], expense)
       qc.invalidateQueries({ queryKey: ["expenses", expense.trip_id] })
       qc.invalidateQueries({ queryKey: ["trips", expense.trip_id, "summary"] })
     },

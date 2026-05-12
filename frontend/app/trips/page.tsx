@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useTrips } from "@/hooks/use-trips"
 import { TripCard } from "@/components/trip-card"
 import { Button } from "@/components/ui/button"
-import type { TripStatus } from "@/types/ledger"
+import type { Trip, TripStatus } from "@/types/ledger"
 
 type FilterOption = { label: string; value: TripStatus | undefined }
 
@@ -15,6 +15,29 @@ const FILTERS: FilterOption[] = [
   { label: "Cerrados", value: "closed" },
   { label: "Borradores", value: "draft" },
 ]
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function getTodayString(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+function findHeroTrip(trips: Trip[]): Trip | null {
+  const today = getTodayString()
+  const candidates = trips.filter(t => t.start_date <= today && today <= t.end_date)
+  if (!candidates.length) return null
+  return candidates.sort((a, b) => b.start_date.localeCompare(a.start_date))[0]
+}
 
 function TripCardSkeleton() {
   return (
@@ -34,6 +57,8 @@ function TripCardSkeleton() {
 export default function TripsPage() {
   const [status, setStatus] = useState<TripStatus | undefined>(undefined)
   const { data: trips, isLoading } = useTrips(status)
+  const { data: allTrips } = useTrips(undefined)
+  const heroTrip = allTrips ? findHeroTrip(allTrips) : null
 
   return (
     <main className="min-h-screen bg-background">
@@ -47,6 +72,44 @@ export default function TripsPage() {
             </Button>
           </Link>
         </div>
+
+        {heroTrip && (
+          <div className="mb-8">
+            <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-3">
+              Viaje en curso
+            </p>
+            <Link
+              href={`/trips/${heroTrip.id}`}
+              className="block rounded-2xl overflow-hidden bg-surface-container-lowest shadow-fab active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/40 select-none"
+            >
+              {heroTrip.cover_image_path && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`/api/proxy/trips/${heroTrip.id}/cover`}
+                  alt={heroTrip.name}
+                  className="w-full h-44 object-cover"
+                />
+              )}
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-headline text-xl font-bold text-on-surface truncate">
+                      {heroTrip.name}
+                    </p>
+                    <p className="mt-0.5 text-sm text-on-surface-variant">{heroTrip.destination}</p>
+                  </div>
+                  <span className="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary text-on-primary text-xs font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-on-primary animate-pulse" />
+                    En curso
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-on-surface-variant">
+                  {fmtDate(heroTrip.start_date)} – {fmtDate(heroTrip.end_date)}
+                </p>
+              </div>
+            </Link>
+          </div>
+        )}
 
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
           {FILTERS.map((f) => (

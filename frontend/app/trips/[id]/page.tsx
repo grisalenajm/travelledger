@@ -323,7 +323,7 @@ export default function TripDetailPage() {
                   key={expense.id}
                   expense={expense}
                   currencyBase={currencyBase}
-                  onDoubleClick={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
+                  onNavigate={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
                 />
               ))}
             </div>

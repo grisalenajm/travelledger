@@ -266,8 +266,7 @@ export default function TripDetailPage() {
                          bg-surface-container-lowest rounded-full
                          border border-outline-variant/15
                          text-on-surface-variant font-label text-sm
-                         hover:bg-surface-container-low transition-all duration-150
-                         active:scale-95 active:opacity-80 select-none"
+                         hover:bg-surface-container-low transition-colors"
             >
               <span className="material-symbols-outlined text-sm">document_scanner</span>
               Escanear ticket
@@ -323,7 +322,7 @@ export default function TripDetailPage() {
                   key={expense.id}
                   expense={expense}
                   currencyBase={currencyBase}
-                  onNavigate={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
+                  onDoubleClick={() => router.push(`/trips/${id}/expenses/${expense.id}`)}
                 />
               ))}
             </div>

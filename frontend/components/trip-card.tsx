@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import type { Trip, TripSummary, TripStatus } from "@/types/index"
 import { Progress } from "@/components/ui/progress"
 
@@ -101,73 +101,69 @@ interface TripCardProps {
 }
 
 export function TripCard({ trip, summary, onStatusChange }: TripCardProps) {
-  const router = useRouter()
   const { label, chipClass } = STATUS_CONFIG[trip.status]
   const overBudget = summary !== undefined && Number(summary.percentage) > 100
 
-  function handlePointerDown(e: React.PointerEvent) {
-    // Don't navigate when tapping the status chip or its dropdown
-    if ((e.target as HTMLElement).closest("[data-no-nav]")) return
-    router.push(`/trips/${trip.id}`)
-  }
-
   return (
-    <article
-      className="rounded-xl bg-surface-container-lowest shadow-editorial overflow-hidden select-none transition-all duration-150 hover:shadow-fab active:scale-95 active:opacity-80 cursor-pointer"
-      onPointerDown={handlePointerDown}
-    >
-      {trip.cover_image_path && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/proxy/trips/${trip.id}/cover`}
-          alt={trip.name}
-          className="w-full h-32 object-cover"
-        />
-      )}
+    <article className="relative rounded-xl bg-surface-container-lowest shadow-editorial overflow-hidden select-none transition-all duration-150 hover:shadow-fab">
+      <Link
+        href={`/trips/${trip.id}`}
+        className="absolute inset-0 z-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 active:bg-black/5"
+        aria-label={`Ver viaje ${trip.name}`}
+      />
 
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-headline text-base font-semibold text-on-surface truncate">
-              {trip.name}
-            </p>
-            <p className="mt-0.5 text-sm text-on-surface-variant">{trip.destination}</p>
-          </div>
-          {onStatusChange ? (
-            <div data-no-nav>
-              <StatusChip current={trip.status} onChange={onStatusChange} />
+      <div className="relative z-10">
+        {trip.cover_image_path && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`/api/proxy/trips/${trip.id}/cover`}
+            alt={trip.name}
+            className="w-full h-32 object-cover pointer-events-none"
+          />
+        )}
+
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 pointer-events-none">
+              <p className="font-headline text-base font-semibold text-on-surface truncate">
+                {trip.name}
+              </p>
+              <p className="mt-0.5 text-sm text-on-surface-variant">{trip.destination}</p>
             </div>
-          ) : (
-            <span
-              className={`inline-flex items-center flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${chipClass}`}
-            >
-              {label}
-            </span>
-          )}
-        </div>
-
-        <p className="mt-2 text-xs text-on-surface-variant">
-          {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}
-        </p>
-
-        {summary !== undefined && (
-          <div className="mt-4 space-y-2">
-            <Progress
-              value={Number(summary.percentage)}
-              indicatorClassName={overBudget ? "bg-error" : undefined}
-            />
-            <div className="flex items-center justify-between text-xs text-on-surface-variant">
-              <span>
-                {Number(summary.spent_base).toFixed(2)} / {Number(summary.budget_base).toFixed(2)}{" "}
-                {summary.currency_base}
+            {onStatusChange ? (
+              <StatusChip current={trip.status} onChange={onStatusChange} />
+            ) : (
+              <span
+                className={`inline-flex items-center flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium pointer-events-none ${chipClass}`}
+              >
+                {label}
               </span>
-              <div className="flex gap-3">
-                <span>{summary.expense_count} gastos</span>
-                <span>{summary.legs_count} tramos</span>
+            )}
+          </div>
+
+          <p className="mt-2 text-xs text-on-surface-variant pointer-events-none">
+            {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}
+          </p>
+
+          {summary !== undefined && (
+            <div className="mt-4 space-y-2 pointer-events-none">
+              <Progress
+                value={Number(summary.percentage)}
+                indicatorClassName={overBudget ? "bg-error" : undefined}
+              />
+              <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                <span>
+                  {Number(summary.spent_base).toFixed(2)} / {Number(summary.budget_base).toFixed(2)}{" "}
+                  {summary.currency_base}
+                </span>
+                <div className="flex gap-3">
+                  <span>{summary.expense_count} gastos</span>
+                  <span>{summary.legs_count} tramos</span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </article>
   )

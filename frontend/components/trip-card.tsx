@@ -105,48 +105,51 @@ export function TripCard({ trip, summary, onStatusChange }: TripCardProps) {
   const overBudget = summary !== undefined && Number(summary.percentage) > 100
 
   return (
-    <article className="relative rounded-xl bg-surface-container-lowest shadow-editorial overflow-hidden select-none transition-all duration-150 hover:shadow-fab">
-      <Link
-        href={`/trips/${trip.id}`}
-        className="absolute inset-0 z-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 active:bg-black/5"
-        aria-label={`Ver viaje ${trip.name}`}
-      />
-
-      <div className="relative z-10">
+    <Link
+      href={`/trips/${trip.id}`}
+      className="block rounded-xl bg-surface-container-lowest shadow-editorial overflow-hidden select-none transition-all duration-150 hover:shadow-fab focus:outline-none focus:ring-2 focus:ring-primary/40"
+      aria-label={`Ver viaje ${trip.name}`}
+    >
+      <article>
         {trip.cover_image_path && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={`/api/proxy/trips/${trip.id}/cover`}
             alt={trip.name}
-            className="w-full h-32 object-cover pointer-events-none"
+            className="w-full h-32 object-cover"
           />
         )}
 
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 pointer-events-none">
+            <div className="min-w-0">
               <p className="font-headline text-base font-semibold text-on-surface truncate">
                 {trip.name}
               </p>
               <p className="mt-0.5 text-sm text-on-surface-variant">{trip.destination}</p>
             </div>
             {onStatusChange ? (
-              <StatusChip current={trip.status} onChange={onStatusChange} />
+              <div
+                onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <StatusChip current={trip.status} onChange={onStatusChange} />
+              </div>
             ) : (
               <span
-                className={`inline-flex items-center flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium pointer-events-none ${chipClass}`}
+                className={`inline-flex items-center flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${chipClass}`}
               >
                 {label}
               </span>
             )}
           </div>
 
-          <p className="mt-2 text-xs text-on-surface-variant pointer-events-none">
+          <p className="mt-2 text-xs text-on-surface-variant">
             {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}
           </p>
 
           {summary !== undefined && (
-            <div className="mt-4 space-y-2 pointer-events-none">
+            <div className="mt-4 space-y-2">
               <Progress
                 value={Number(summary.percentage)}
                 indicatorClassName={overBudget ? "bg-error" : undefined}
@@ -164,7 +167,7 @@ export function TripCard({ trip, summary, onStatusChange }: TripCardProps) {
             </div>
           )}
         </div>
-      </div>
-    </article>
+      </article>
+    </Link>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useTrips } from "@/hooks/use-trips"
+import { useTrips, useUpdateTrip } from "@/hooks/use-trips"
 import { TripCard } from "@/components/trip-card"
 import { Button } from "@/components/ui/button"
 import type { Trip, TripStatus } from "@/types/ledger"
@@ -59,6 +59,7 @@ export default function TripsPage() {
   const { data: trips, isLoading } = useTrips(status)
   const { data: allTrips } = useTrips(undefined)
   const heroTrip = allTrips ? findHeroTrip(allTrips) : null
+  const updateTrip = useUpdateTrip()
 
   return (
     <main className="min-h-screen bg-background">
@@ -156,7 +157,13 @@ export default function TripsPage() {
         ) : (
           <div className="space-y-3">
             {trips.map((trip) => (
-              <TripCard key={trip.id} trip={trip} />
+              <TripCard
+                key={trip.id}
+                trip={trip}
+                onStatusChange={(newStatus) =>
+                  updateTrip.mutate({ id: trip.id, data: { status: newStatus } })
+                }
+              />
             ))}
           </div>
         )}

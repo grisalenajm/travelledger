@@ -148,17 +148,11 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 
 ---
 
-## 🟡 FASE 6 — Export Bundle Web `[Web]`
+## ✅ FASE 6 — Export Bundle Web `[Web]` *(COMPLETADA)*
 
-> Backend ya completado. Solo falta el modal en el frontend.
-
-- [ ] `components/export-modal.tsx`:
-  - Toggle "Solo facturables" — **estado inicial ON**
-  - `DatePickerWithRange` — **opcional** (sin selección = viaje completo)
-  - Botón "Descargar CSV" → `GET /api/reports/export/{id}?format=csv&only_billable={bool}`
-  - Botón "Descargar ZIP" → `GET /api/reports/export/{id}/bundle?only_billable={bool}`
-  - Manejo de descarga con `blob()` + `URL.createObjectURL()`
-- [ ] Conectar botón "Exportar" en `/trips/[id]/page.tsx` → abrir modal
+- [x] `components/export-modal.tsx`: toggle solo facturables, rango fechas, botón CSV (outline) + botón ZIP (primary), blob download
+- [x] Conectar botón "Exportar" en `/trips/[id]/page.tsx` → abre modal
+- [x] Título Paperless = `{slug_viaje}_{category}_{date}` vía `title_parts` en receipts.py
 
 ---
 
@@ -221,6 +215,8 @@ LXC Proxmox (192.168.1.125, 768 MB RAM)
 ## 🗂️ FASE 9 — Backlog
 
 - [x] Foto automática de portada de viaje (Unsplash) — `cover_image_path` en Trip + GET /trips/{id}/cover + TripCard/detail muestran imagen
+- [x] Hero card en /trips: viaje cuyas fechas incluyen hoy ("En curso"), sin importar status field; si múltiples → el de start_date más reciente; si ninguno → no se muestra
+- [x] Cambiar estado de viaje desde lista (chip dropdown en TripCard) y desde detalle (StatusChip junto a botón editar)
 - [ ] TripLegs CRUD en web (pantalla de tramos)
 - [ ] Estadísticas agregadas entre viajes (dashboard global)
 - [ ] OCR de confirmaciones de vuelo → crear TripLeg automático

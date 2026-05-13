@@ -3,7 +3,8 @@
 import { useState, useCallback } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useTrip, useTripSummary } from "@/hooks/use-trips"
+import { useTrip, useTripSummary, useUpdateTrip } from "@/hooks/use-trips"
+import { StatusChip } from "@/components/trip-card"
 import { useExpenses } from "@/hooks/use-expenses"
 import { ExpenseCard } from "@/components/expense-card"
 import { AddExpenseModal } from "@/components/add-expense-modal"
@@ -96,6 +97,7 @@ export default function TripDetailPage() {
   const { data: trip, isLoading: tripLoading, isError } = useTrip(id)
   const { data: summary } = useTripSummary(id)
   const { data: expenses, isLoading: expensesLoading } = useExpenses(id)
+  const updateTrip = useUpdateTrip()
 
   if (tripLoading) {
     return (
@@ -166,6 +168,13 @@ export default function TripDetailPage() {
 
           <div className="flex items-center gap-2">
             <h1 className="font-headline text-2xl font-bold text-on-surface flex-1">{trip.name}</h1>
+            <StatusChip
+              current={trip.status}
+              onChange={(newStatus) =>
+                updateTrip.mutate({ id, data: { status: newStatus } })
+              }
+              disabled={updateTrip.isPending}
+            />
             <button
               type="button"
               onClick={() => router.push(`/trips/${id}/edit`)}

@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "20mb",
+    },
+    responseLimit: false,
+  },
+}
+
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://backend:8000"
 
 export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {

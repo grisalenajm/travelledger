@@ -3,6 +3,11 @@ const config = {
   output: "standalone",
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
+  },
   // Scan pages use force-dynamic — no prerender needed
   webpack(webpackConfig) {
     // Allow importing PNGs from leaflet's node_modules (marker icons)

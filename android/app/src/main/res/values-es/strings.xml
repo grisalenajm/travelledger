@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">Ledger</string>
+
+    <!-- Screen titles -->
+    <string name="title_login">Iniciar Sesión</string>
+    <string name="title_register">Registro</string>
+    <string name="title_config">Configuración del Servidor</string>
+    <string name="title_trips">Mis Viajes</string>
+    <string name="title_settings">Ajustes</string>
+
+    <!-- Field labels -->
+    <string name="label_email">Correo electrónico</string>
+    <string name="label_password">Contraseña</string>
+    <string name="label_confirm_password">Confirmar contraseña</string>
+    <string name="label_name">Nombre completo</string>
+    <string name="label_currency">Moneda base</string>
+    <string name="label_server_url">URL del servidor</string>
+    <string name="label_invite_code">Código de invitación</string>
+
+    <!-- Button labels -->
+    <string name="btn_login">Iniciar sesión</string>
+    <string name="btn_register">Registrarse</string>
+    <string name="btn_save">Guardar</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_logout">Cerrar sesión</string>
+    <string name="btn_continue">Continuar</string>
+
+    <!-- Error messages -->
+    <string name="error_invalid_credentials">Correo o contraseña incorrectos</string>
+    <string name="error_passwords_dont_match">Las contraseñas no coinciden</string>
+    <string name="error_email_already_registered">El correo ya está registrado</string>
+    <string name="error_invalid_invite_code">Código de invitación inválido</string>
+    <string name="error_connection_failed">Error de conexión. Verifica la URL del servidor.</string>
+    <string name="session_expired">Tu sesión ha expirado. Por favor, inicia sesión de nuevo.</string>
+    <string name="error_fields_required">Por favor completa todos los campos requeridos.</string>
+    <string name="error_invalid_url">URL inválida. Debe empezar con http:// o https://</string>
+
+    <!-- Info/Success messages -->
+    <string name="msg_login_success">¡Bienvenido de nuevo!</string>
+    <string name="msg_register_success">Cuenta creada. Por favor inicia sesión.</string>
+    <string name="msg_config_saved">Configuración guardada.</string>
+    <string name="msg_no_account">¿No tienes cuenta? Regístrate</string>
+    <string name="msg_have_account">¿Ya tienes cuenta? Inicia sesión</string>
+    <string name="hint_password_requirements">Mínimo 12 caracteres, con mayúscula, número y carácter especial</string>
+    <string name="hint_server_url">ej. https://ledger.ejemplo.com</string>
+</resources>

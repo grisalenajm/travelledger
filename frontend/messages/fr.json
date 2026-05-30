@@ -1,0 +1,114 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "trips": "Voyages",
+    "stats": "Statistiques",
+    "pending": "En attente",
+    "settings": "Paramètres",
+    "notifications": "Notifications",
+    "logout": "Déconnexion",
+    "profile": "Profil",
+    "trip": "Voyage",
+    "new_trip": "Nouveau voyage",
+    "edit_trip": "Modifier le voyage",
+    "itinerary": "Itinéraire",
+    "map": "Carte",
+    "expense": "Dépense",
+    "scan": "Scanner",
+    "payment_methods": "Moyens de paiement",
+    "cards": "Cartes fidélité",
+    "users": "Utilisateurs"
+  },
+  "trips": {
+    "title": "Voyages",
+    "new": "Nouveau voyage",
+    "active": "Voyage actif",
+    "active_trip": "Voyage en cours",
+    "draft": "Brouillon",
+    "closed": "Clôturé",
+    "empty": "Aucun voyage",
+    "empty_sub": "Créez votre premier voyage pour commencer.",
+    "empty_filtered": "Aucun voyage avec ce statut.",
+    "create_first": "Créer un voyage",
+    "filters": {
+      "all": "Tous",
+      "active": "Actifs",
+      "closed": "Clôturés",
+      "draft": "Brouillons"
+    }
+  },
+  "expenses": {
+    "title": "Dépenses",
+    "new": "Nouvelle dépense",
+    "billable": "Facturable",
+    "categories": {
+      "Dining": "Restauration",
+      "Lodging": "Hébergement",
+      "Transport": "Transport",
+      "Culture": "Culture",
+      "Shopping": "Shopping",
+      "Health": "Santé",
+      "Other": "Autre"
+    }
+  },
+  "legs": {
+    "title": "Itinéraire",
+    "new": "Ajouter un segment",
+    "modes": {
+      "flight": "Vol",
+      "train": "Train",
+      "bus": "Bus",
+      "ferry": "Ferry",
+      "accommodation": "Hébergement",
+      "car_rental": "Location de voiture",
+      "other": "Autre"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "profile": "Profil",
+    "language": "Langue",
+    "theme": "Thème",
+    "users": "Utilisateurs",
+    "cards": "Cartes fidélité",
+    "email": "E-mail",
+    "paperless": "Paperless",
+    "save": "Enregistrer",
+    "saved": "Enregistré",
+    "appearance": "Apparence",
+    "appearance_sub": "Langue et thème visuel",
+    "lang_reload": "Le changement de langue s'applique instantanément."
+  },
+  "auth": {
+    "login": "Se connecter",
+    "logout": "Déconnexion",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "welcome": "Bienvenue",
+    "sign_in_subtitle": "Connectez-vous pour continuer"
+  },
+  "scan": {
+    "title": "Ajouter une dépense",
+    "receipt": "Scanner un reçu",
+    "receipt_sub": "OCR automatique par IA",
+    "manual": "Saisie manuelle",
+    "manual_sub": "Sélectionnez un voyage pour ajouter"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Terminé",
+    "confirm": "Confirmer",
+    "search": "Rechercher",
+    "no_results": "Aucun résultat",
+    "optional": "facultatif"
+  },
+  "guest": {
+    "banner": "Mode lecture · Lecture seule"
+  }
+}

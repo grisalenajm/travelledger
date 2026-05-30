@@ -1,0 +1,114 @@
+{
+  "nav": {
+    "home": "Home",
+    "trips": "Trips",
+    "stats": "Stats",
+    "pending": "Pending",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "logout": "Sign out",
+    "profile": "Profile",
+    "trip": "Trip",
+    "new_trip": "New trip",
+    "edit_trip": "Edit trip",
+    "itinerary": "Itinerary",
+    "map": "Map",
+    "expense": "Expense",
+    "scan": "Scan",
+    "payment_methods": "Payment methods",
+    "cards": "Loyalty cards",
+    "users": "Users"
+  },
+  "trips": {
+    "title": "Trips",
+    "new": "New trip",
+    "active": "Active trip",
+    "active_trip": "Active trip",
+    "draft": "Draft",
+    "closed": "Closed",
+    "empty": "No trips",
+    "empty_sub": "Create your first trip to get started.",
+    "empty_filtered": "No trips with that status.",
+    "create_first": "Create trip",
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "closed": "Closed",
+      "draft": "Drafts"
+    }
+  },
+  "expenses": {
+    "title": "Expenses",
+    "new": "New expense",
+    "billable": "Billable",
+    "categories": {
+      "Dining": "Dining",
+      "Lodging": "Lodging",
+      "Transport": "Transport",
+      "Culture": "Culture",
+      "Shopping": "Shopping",
+      "Health": "Health",
+      "Other": "Other"
+    }
+  },
+  "legs": {
+    "title": "Itinerary",
+    "new": "Add leg",
+    "modes": {
+      "flight": "Flight",
+      "train": "Train",
+      "bus": "Bus",
+      "ferry": "Ferry",
+      "accommodation": "Accommodation",
+      "car_rental": "Car rental",
+      "other": "Other"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "language": "Language",
+    "theme": "Theme",
+    "users": "Users",
+    "cards": "Loyalty cards",
+    "email": "Email",
+    "paperless": "Paperless",
+    "save": "Save",
+    "saved": "Saved",
+    "appearance": "Appearance",
+    "appearance_sub": "Language and visual theme",
+    "lang_reload": "Language change applies instantly."
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "welcome": "Welcome back",
+    "sign_in_subtitle": "Sign in to continue your journey"
+  },
+  "scan": {
+    "title": "Add expense",
+    "receipt": "Scan receipt",
+    "receipt_sub": "AI-powered automatic OCR",
+    "manual": "Manual entry",
+    "manual_sub": "Select a trip to add an expense"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Done",
+    "confirm": "Confirm",
+    "search": "Search",
+    "no_results": "No results",
+    "optional": "optional"
+  },
+  "guest": {
+    "banner": "View mode · Read only"
+  }
+}

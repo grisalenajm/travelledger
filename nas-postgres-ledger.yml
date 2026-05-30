@@ -1,0 +1,45 @@
+# nas-postgres-ledger.yml
+# Añadir al docker-compose del NAS UGREEN junto a paperless-ngx y nginx-proxy-manager.
+#
+# Contenedor PostgreSQL 16 EXCLUSIVO para Ledger.
+# Puerto 5433 — no colisiona con el 5432 de postgres-vectorchord u otros servicios.
+#
+# Antes de arrancar crear el usuario y la BD:
+#   docker exec postgres-ledger psql -U postgres \
+#     -c "CREATE USER ledger_user WITH PASSWORD '${LEDGER_DB_PASSWORD}';"
+#   docker exec postgres-ledger psql -U postgres \
+#     -c "CREATE DATABASE ledger OWNER ledger_user;"
+
+services:
+  postgres-ledger:
+    image: postgres:16-alpine
+    container_name: postgres-ledger
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LEDGER_DB_ROOT_PASSWORD}
+    volumes:
+      - postgres-ledger-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres-ledger-data:
+    driver: local
+
+# Variables de entorno a añadir al .env del NAS:
+#   LEDGER_DB_ROOT_PASSWORD=cambia-esto-root
+#
+# La variable LEDGER_DB_PASSWORD (para ledger_user) solo se usa
+# durante la creación manual del usuario — no se pasa al contenedor.

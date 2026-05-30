@@ -1,0 +1,114 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "trips": "Viajes",
+    "stats": "Estadísticas",
+    "pending": "Pendientes",
+    "settings": "Ajustes",
+    "notifications": "Notificaciones",
+    "logout": "Cerrar sesión",
+    "profile": "Perfil",
+    "trip": "Viaje",
+    "new_trip": "Nuevo viaje",
+    "edit_trip": "Editar viaje",
+    "itinerary": "Itinerario",
+    "map": "Mapa",
+    "expense": "Gasto",
+    "scan": "Escanear",
+    "payment_methods": "Métodos de pago",
+    "cards": "Tarjetas fidelidad",
+    "users": "Usuarios"
+  },
+  "trips": {
+    "title": "Viajes",
+    "new": "Nuevo viaje",
+    "active": "Viaje activo",
+    "active_trip": "Viaje en curso",
+    "draft": "Borrador",
+    "closed": "Cerrado",
+    "empty": "Sin viajes",
+    "empty_sub": "Crea tu primer viaje para empezar.",
+    "empty_filtered": "No hay viajes con ese estado.",
+    "create_first": "Crear viaje",
+    "filters": {
+      "all": "Todos",
+      "active": "Activos",
+      "closed": "Cerrados",
+      "draft": "Borradores"
+    }
+  },
+  "expenses": {
+    "title": "Gastos",
+    "new": "Nuevo gasto",
+    "billable": "Facturable",
+    "categories": {
+      "Dining": "Restauración",
+      "Lodging": "Alojamiento",
+      "Transport": "Transporte",
+      "Culture": "Cultura",
+      "Shopping": "Compras",
+      "Health": "Salud",
+      "Other": "Otros"
+    }
+  },
+  "legs": {
+    "title": "Itinerario",
+    "new": "Añadir tramo",
+    "modes": {
+      "flight": "Vuelo",
+      "train": "Tren",
+      "bus": "Autobús",
+      "ferry": "Ferry",
+      "accommodation": "Alojamiento",
+      "car_rental": "Alquiler de coche",
+      "other": "Otro"
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "profile": "Perfil",
+    "language": "Idioma",
+    "theme": "Tema",
+    "users": "Usuarios",
+    "cards": "Tarjetas de viajero",
+    "email": "Correo",
+    "paperless": "Paperless",
+    "save": "Guardar",
+    "saved": "Guardado",
+    "appearance": "Apariencia",
+    "appearance_sub": "Idioma y tema visual",
+    "lang_reload": "El cambio de idioma se aplica al instante."
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "email": "Email",
+    "password": "Contraseña",
+    "welcome": "Bienvenido",
+    "sign_in_subtitle": "Inicia sesión para continuar"
+  },
+  "scan": {
+    "title": "Añadir gasto",
+    "receipt": "Escanear recibo",
+    "receipt_sub": "OCR automático con IA",
+    "manual": "Entrada manual",
+    "manual_sub": "Selecciona un viaje para añadir"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Volver",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Hecho",
+    "confirm": "Confirmar",
+    "search": "Buscar",
+    "no_results": "Sin resultados",
+    "optional": "opcional"
+  },
+  "guest": {
+    "banner": "Modo vista · Solo lectura"
+  }
+}

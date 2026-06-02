@@ -120,9 +120,11 @@ async def list_expenses(
     if category:
         q = q.where(Expense.category == category)
     if date_from:
-        q = q.where(Expense.date >= date_from)
+        from datetime import date as _d
+        q = q.where(Expense.date >= (_d.fromisoformat(date_from) if isinstance(date_from, str) else date_from))
     if date_to:
-        q = q.where(Expense.date <= date_to)
+        from datetime import date as _d
+        q = q.where(Expense.date <= (_d.fromisoformat(date_to) if isinstance(date_to, str) else date_to))
     result = await db.execute(q.order_by(Expense.date.desc()))
     return list(result.scalars().all())
 

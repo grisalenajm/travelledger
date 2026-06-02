@@ -60,7 +60,7 @@ async def get_trip_stats(db: AsyncSession, trip_id: UUID, user: User, *, effecti
 
     pay_acc: dict[str, dict] = defaultdict(lambda: {"total": 0.0, "count": 0})
     for e in expenses:
-        method = e.payment_method or "other"
+        method = str(e.payment_method_id) if e.payment_method_id else "other"
         pay_acc[method]["total"] += float(e.amount_base)
         pay_acc[method]["count"] += 1
     by_payment = sorted(
@@ -137,7 +137,7 @@ async def get_global_stats(db: AsyncSession, user: User, period: str, year: int,
 
     pay_acc: dict[str, dict] = defaultdict(lambda: {"total": 0.0, "count": 0})
     for e in expenses:
-        method = e.payment_method or "other"
+        method = str(e.payment_method_id) if e.payment_method_id else "other"
         pay_acc[method]["total"] += float(e.amount_base)
         pay_acc[method]["count"] += 1
     by_payment = sorted(

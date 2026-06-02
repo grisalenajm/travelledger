@@ -7,7 +7,8 @@ import { z } from "zod"
 import { useQueryClient } from "@tanstack/react-query"
 import type { Trip, Expense } from "@/types/index"
 import { useCreateExpense, useUpdateExpense } from "@/hooks/use-expenses"
-import { usePaymentMethods } from "@/hooks/use-payment-methods"
+import { usePaymentMethods, useCreatePaymentMethod } from "@/hooks/use-payment-methods"
+import { PaymentMethodCombobox } from "@/components/payment-method-combobox"
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
@@ -58,6 +59,7 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
   const isEdit = !!expense
   const createExpense = useCreateExpense()
   const updateExpense = useUpdateExpense()
+  const createPaymentMethod = useCreatePaymentMethod()
   const queryClient = useQueryClient()
   const { data: paymentMethods } = usePaymentMethods()
 
@@ -258,13 +260,20 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
 
         {/* Método de pago */}
         <div>
-          <Label htmlFor="payment_method_id">Método de pago</Label>
-          <select id="payment_method_id" className={INPUT_CLASS} {...register("payment_method_id")}>
-            <option value="">— Sin método de pago —</option>
-            {paymentMethods?.map((pm) => (
-              <option key={pm.id} value={pm.id}>{pm.name}</option>
-            ))}
-          </select>
+          <Label>Método de pago</Label>
+          <Controller
+            name="payment_method_id"
+            control={control}
+            render={({ field }) => (
+              <PaymentMethodCombobox
+                value={field.value ?? null}
+                onChange={field.onChange}
+                methods={paymentMethods ?? []}
+                onCreateNew={(name) => createPaymentMethod.mutateAsync(name)}
+                className={INPUT_CLASS}
+              />
+            )}
+          />
         </div>
 
         {/* Facturable */}

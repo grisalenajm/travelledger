@@ -5,6 +5,8 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useExpense, useUpdateExpense } from "@/hooks/use-expenses"
 import { useTrips } from "@/hooks/use-trips"
+import { usePaymentMethods, useCreatePaymentMethod } from "@/hooks/use-payment-methods"
+import { PaymentMethodCombobox } from "@/components/payment-method-combobox"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/hooks/use-toast"
 import type { ExpenseCategory } from "@/types/index"
@@ -40,6 +42,8 @@ function ConfirmPageContent() {
   const { data: expense, isLoading, isError } = useExpense(expenseId)
   const { data: trips, isLoading: tripsLoading } = useTrips()
   const updateExpense = useUpdateExpense()
+  const { data: paymentMethods } = usePaymentMethods()
+  const createPaymentMethod = useCreatePaymentMethod()
 
   const [selectedTripId, setSelectedTripId] = useState<string>(tripIdParam)
 
@@ -52,6 +56,7 @@ function ConfirmPageContent() {
   const [locationName, setLocationName] = useState("")
   const [locationLat, setLocationLat] = useState<number | null>(null)
   const [locationLng, setLocationLng] = useState<number | null>(null)
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null)
   const [receiptObjectUrl, setReceiptObjectUrl] = useState<string | null>(null)
   const [receiptContentType, setReceiptContentType] = useState<string | null>(null)
 
@@ -74,6 +79,7 @@ function ConfirmPageContent() {
     setDate(expense.date)
     setDescription(expense.description ?? "")
     setBillable(expense.billable)
+    if (expense.payment_method_id) setPaymentMethodId(expense.payment_method_id)
     // Localización detectada por OCR/EXIF
     if (expense.location_name) setLocationName(expense.location_name)
     if (expense.location_lat != null) setLocationLat(Number(expense.location_lat))
@@ -112,6 +118,7 @@ function ConfirmPageContent() {
           category,
           date,
           description: description || null,
+          payment_method_id: paymentMethodId || null,
           billable,
           is_draft: false,
           location_name: locationName || null,
@@ -310,6 +317,15 @@ function ConfirmPageContent() {
                 <span className="opacity-60">— {locationLat?.toFixed(4)}, {locationLng?.toFixed(4)}</span>
               </p>
             )}
+
+            <p className={FIELD_LABEL}>Método de pago <span className="normal-case font-normal tracking-normal">(opcional)</span></p>
+            <PaymentMethodCombobox
+              value={paymentMethodId}
+              onChange={setPaymentMethodId}
+              methods={paymentMethods ?? []}
+              onCreateNew={(name) => createPaymentMethod.mutateAsync(name)}
+              className={`${FIELD_INPUT} text-left`}
+            />
 
             <div className="mt-6 pt-4 flex items-center justify-between border-t border-outline-variant/20">
               <div>

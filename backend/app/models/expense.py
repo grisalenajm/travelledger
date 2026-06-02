@@ -2,7 +2,7 @@ from datetime import date as date_t, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Numeric, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -26,8 +26,6 @@ class Expense(Base):
     # valores: Dining | Lodging | Transport | Culture | Shopping | Health | Other
     description: Mapped[str | None] = mapped_column(Text)
     date: Mapped[date_t] = mapped_column(nullable=False)
-    payment_method: Mapped[str | None] = mapped_column(String(20))
-    # valores: card | cash | transfer | other
     billable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     # CRÍTICO: default True — todo gasto es facturable por defecto
     loyalty_card_id: Mapped[UUID | None] = mapped_column(

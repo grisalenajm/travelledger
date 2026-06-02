@@ -75,7 +75,7 @@ async def build_csv(
             expense.description or "",
             expense.category,
             str(expense.billable).lower(),
-            expense.payment_method or "",
+            "",
             loyalty,
             str(expense.amount),
             expense.currency,

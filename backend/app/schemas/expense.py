@@ -8,9 +8,6 @@ from pydantic import BaseModel, Field, computed_field, field_validator
 ExpenseCategory = Literal[
     "Dining", "Lodging", "Transport", "Culture", "Shopping", "Health", "Other"
 ]
-# payment_method is an open string — can be a legacy value (card/cash/transfer/other)
-# or a custom payment method name defined by the user
-PaymentMethod = str
 
 VALID_CURRENCIES = {
     "AED", "ARS", "AUD", "BRL", "CAD", "CHF", "CLP", "CNY",
@@ -29,7 +26,6 @@ class ExpenseCreate(BaseModel):
     category: ExpenseCategory
     date: date_t
     description: str | None = None
-    payment_method: PaymentMethod | None = None
     payment_method_id: UUID | None = None
     billable: bool = True  # CRÍTICO: default True
     loyalty_card_id: UUID | None = None
@@ -57,7 +53,6 @@ class ExpenseUpdate(BaseModel):
     category: ExpenseCategory | None = None
     date: date_t | None = None
     description: str | None = None
-    payment_method: PaymentMethod | None = None
     payment_method_id: UUID | None = None
     billable: bool | None = None
     loyalty_card_id: UUID | None = None
@@ -95,7 +90,6 @@ class ExpenseRead(BaseModel):
     category: ExpenseCategory
     description: str | None
     date: date_t
-    payment_method: PaymentMethod | None
     payment_method_id: UUID | None = None
     billable: bool
     loyalty_card_id: UUID | None

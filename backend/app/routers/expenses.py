@@ -44,7 +44,7 @@ async def create_expense(
     category: str = Form(...),
     date: date_t = Form(...),
     description: str | None = Form(None),
-    payment_method: str | None = Form(None),
+    payment_method_id: UUID | None = Form(None),
     billable: bool = Form(True),
     loyalty_card_id: UUID | None = Form(None),
     id: UUID | None = Form(None),
@@ -57,7 +57,7 @@ async def create_expense(
     data = ExpenseCreate(
         id=id, trip_id=trip_id, amount=amount, currency=currency,
         category=category, date=date, description=description,
-        payment_method=payment_method, billable=billable,
+        payment_method_id=payment_method_id, billable=billable,
         loyalty_card_id=loyalty_card_id, location_name=location_name,
     )
     expense = await expense_service.create(db, user, data, image=image)

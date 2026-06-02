@@ -54,6 +54,8 @@ async def _save_local(content: bytes, user_id: UUID, expense_id: UUID, mime_type
 async def upload_receipt(
     file: UploadFile = File(...),
     trip_id: UUID = Form(...),
+    exif_lat: float | None = Form(None),
+    exif_lng: float | None = Form(None),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_not_guest),
@@ -79,12 +81,15 @@ async def upload_receipt(
         trip_id, ocr.confidence, ocr.date, ocr.amount, ocr.currency,
     )
 
-    # 1. Intentar GPS EXIF de la imagen (solo para imágenes, no PDFs)
+    # 1. GPS EXIF: FormData fields (exifr frontend) → bytes EXIF → None
     exif_coords: tuple[float, float] | None = None
-    if mime_type != "application/pdf":
+    if exif_lat is not None and exif_lng is not None:
+        exif_coords = (exif_lat, exif_lng)
+        logger.info("OCR upload: GPS de FormData → %.6f, %.6f", exif_lat, exif_lng)
+    elif mime_type != "application/pdf":
         exif_coords = extract_exif_gps(content)
         if exif_coords:
-            logger.info("OCR upload: GPS EXIF encontrado → %.6f, %.6f", exif_coords[0], exif_coords[1])
+            logger.info("OCR upload: GPS EXIF de bytes → %.6f, %.6f", exif_coords[0], exif_coords[1])
 
     from uuid import uuid4
     expense_id = uuid4()

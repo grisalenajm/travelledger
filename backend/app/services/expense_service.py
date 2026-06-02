@@ -21,32 +21,37 @@ logger = logging.getLogger(__name__)
 
 
 def extract_exif_gps(content: bytes) -> tuple[float, float] | None:
-    """Return (lat, lng) from image EXIF GPS data, or None if not present."""
+    """Return (lat, lng) from image EXIF GPS data, or None if not present.
+
+    Uses getexif().get_ifd(0x8825) with direct numeric GPS tag keys so that
+    IFDRational values from Android cameras are handled correctly by float().
+    """
     try:
         from PIL import Image
-        from PIL.ExifTags import GPSTAGS
 
         img = Image.open(io.BytesIO(content))
-        exif = img.getexif()
-        if not exif:
+        exif_data = img.getexif()
+        if not exif_data:
             return None
-        gps_ifd = exif.get_ifd(0x8825)  # 0x8825 = GPSInfo tag
+        gps_ifd = exif_data.get_ifd(0x8825)
         if not gps_ifd:
             return None
-        gps = {GPSTAGS.get(k, k): v for k, v in gps_ifd.items()}
-        lat_dms = gps.get("GPSLatitude")
-        lat_ref = gps.get("GPSLatitudeRef")
-        lng_dms = gps.get("GPSLongitude")
-        lng_ref = gps.get("GPSLongitudeRef")
-        if not (lat_dms and lat_ref and lng_dms and lng_ref):
+
+        def to_decimal(dms, ref: str) -> float:
+            d, m, s = float(dms[0]), float(dms[1]), float(dms[2])
+            result = d + m / 60 + s / 3600
+            return round(-result if ref in ("S", "W") else result, 6)
+
+        # GPS tag IDs: 1=LatRef, 2=Lat, 3=LngRef, 4=Lng
+        lat = to_decimal(gps_ifd.get(2, (0, 0, 0)), gps_ifd.get(1, "N"))
+        lng = to_decimal(gps_ifd.get(4, (0, 0, 0)), gps_ifd.get(3, "E"))
+
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            return None
+        if lat == 0.0 and lng == 0.0:
             return None
 
-        def _dms(dms: tuple) -> float:
-            return float(dms[0]) + float(dms[1]) / 60 + float(dms[2]) / 3600
-
-        lat = _dms(lat_dms) * (-1 if lat_ref == "S" else 1)
-        lng = _dms(lng_dms) * (-1 if lng_ref == "W" else 1)
-        return (lat, lng)
+        return lat, lng
     except Exception:
         return None
 

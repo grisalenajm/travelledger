@@ -39,14 +39,6 @@ class Settings(BaseSettings):
 
     ALLOW_REGISTRATION: bool = False
 
-    # ── SMTP (envío de emails de invitación) ───────────────────────────
-    SMTP_HOST: str | None = None
-    SMTP_PORT: int = 587
-    SMTP_USER: str | None = None
-    SMTP_PASSWORD: str | None = None
-    SMTP_FROM: str | None = None   # "Ledger <ledger@dominio.com>" — por defecto usa SMTP_USER
-    SMTP_TLS: bool = True          # True → STARTTLS (puerto 587); False → SMTP_SSL (465)
-
     # ── URL pública de la app (para construir enlaces de invitación) ───
     APP_URL: str = "http://localhost:3000"
 

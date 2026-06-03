@@ -85,7 +85,21 @@
     "email": "E-mail",
     "password": "Mot de passe",
     "welcome": "Bienvenue",
-    "sign_in_subtitle": "Connectez-vous pour continuer"
+    "sign_in_subtitle": "Connectez-vous pour continuer",
+    "register": "Créer un compte",
+    "register_title": "Créer un compte",
+    "register_subtitle": "Remplissez le formulaire pour vous inscrire",
+    "name": "Nom",
+    "name_placeholder": "Votre nom",
+    "name_required": "Le nom est obligatoire",
+    "email_invalid": "E-mail invalide",
+    "password_required": "Mot de passe requis",
+    "confirm_password": "Confirmer le mot de passe",
+    "passwords_no_match": "Les mots de passe ne correspondent pas",
+    "registration_closed": "L'inscription est fermée. Contactez l'administrateur.",
+    "back_to_login": "Retour à la connexion",
+    "have_account": "Déjà un compte ?",
+    "register_error": "Erreur lors de la création du compte. Réessayez."
   },
   "scan": {
     "title": "Ajouter une dépense",

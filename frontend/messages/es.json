@@ -85,7 +85,21 @@
     "email": "Email",
     "password": "Contraseña",
     "welcome": "Bienvenido",
-    "sign_in_subtitle": "Inicia sesión para continuar"
+    "sign_in_subtitle": "Inicia sesión para continuar",
+    "register": "Crear cuenta",
+    "register_title": "Crear cuenta",
+    "register_subtitle": "Completa el formulario para registrarte",
+    "name": "Nombre",
+    "name_placeholder": "Tu nombre",
+    "name_required": "El nombre es obligatorio",
+    "email_invalid": "Email inválido",
+    "password_required": "Contraseña requerida",
+    "confirm_password": "Confirmar contraseña",
+    "passwords_no_match": "Las contraseñas no coinciden",
+    "registration_closed": "El registro está cerrado. Contacta con el administrador.",
+    "back_to_login": "Volver al inicio de sesión",
+    "have_account": "¿Ya tienes cuenta?",
+    "register_error": "Error al crear la cuenta. Inténtalo de nuevo."
   },
   "scan": {
     "title": "Añadir gasto",

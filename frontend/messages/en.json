@@ -85,7 +85,21 @@
     "email": "Email",
     "password": "Password",
     "welcome": "Welcome back",
-    "sign_in_subtitle": "Sign in to continue your journey"
+    "sign_in_subtitle": "Sign in to continue your journey",
+    "register": "Create account",
+    "register_title": "Create account",
+    "register_subtitle": "Fill in the form to register",
+    "name": "Name",
+    "name_placeholder": "Your name",
+    "name_required": "Name is required",
+    "email_invalid": "Invalid email",
+    "password_required": "Password is required",
+    "confirm_password": "Confirm password",
+    "passwords_no_match": "Passwords don't match",
+    "registration_closed": "Registration is closed. Contact the administrator.",
+    "back_to_login": "Back to sign in",
+    "have_account": "Already have an account?",
+    "register_error": "Error creating account. Please try again."
   },
   "scan": {
     "title": "Add expense",

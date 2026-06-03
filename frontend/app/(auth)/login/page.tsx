@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useEffect, useState } from "react"
 import { useI18n } from "@/lib/i18n"
 import { LanguageSelector } from "@/components/language-selector"
 
@@ -18,6 +19,15 @@ type LoginForm = z.infer<typeof schema>
 export default function LoginPage() {
   const router = useRouter()
   const { t } = useI18n()
+  const [showSetup, setShowSetup] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/proxy/auth/status")
+      .then((r) => r.json())
+      .then((d) => { if (!d.has_users) setShowSetup(true) })
+      .catch(() => {})
+  }, [])
+
   const {
     register,
     handleSubmit,
@@ -177,6 +187,15 @@ export default function LoginPage() {
             >
               {isSubmitting ? t("common.loading") : t("auth.login")}
             </button>
+
+            {showSetup && (
+              <p className="text-center text-sm text-on-surface-variant font-body">
+                ¿Primera vez?{" "}
+                <a href="/setup" className="text-primary hover:underline font-medium">
+                  Configura tu instancia
+                </a>
+              </p>
+            )}
           </form>
         </div>
       </div>

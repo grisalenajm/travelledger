@@ -92,7 +92,10 @@ python -c "import secrets; print(secrets.token_hex(32))"
 docker compose up -d
 ```
 
-Open `http://localhost:3000/register` — the first user automatically becomes admin.
+Open **`http://localhost:3000/setup`** to create your admin account.
+
+> The `/setup` page is only shown when no users exist. After the first account is created it
+> redirects to `/login` automatically. Invite additional users from Settings → Users.
 
 ### 3. Configure in Settings
 

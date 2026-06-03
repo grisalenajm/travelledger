@@ -1,0 +1,194 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+
+const PASSWORD_RE = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/
+
+const schema = z
+  .object({
+    name: z.string().min(1, "El nombre es obligatorio"),
+    email: z.string().email("Email inválido"),
+    password: z
+      .string()
+      .regex(PASSWORD_RE, "≥12 caracteres, mayúscula, minúscula, número y carácter especial"),
+    confirm: z.string(),
+  })
+  .refine((d) => d.password === d.confirm, {
+    path: ["confirm"],
+    message: "Las contraseñas no coinciden",
+  })
+
+type FormValues = z.infer<typeof schema>
+
+const inputClass =
+  "w-full bg-transparent border-b border-outline py-3 text-on-surface " +
+  "placeholder:text-on-surface-variant/40 focus:border-primary focus:outline-none " +
+  "transition-colors font-body text-sm"
+const labelClass =
+  "font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant"
+const errorClass = "text-error text-xs font-body mt-1"
+
+export function SetupForm() {
+  const router = useRouter()
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+
+  const onSubmit = async (data: FormValues) => {
+    try {
+      const res = await fetch("/api/proxy/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError("root", {
+          message: body?.detail ?? "Error al crear la cuenta. Inténtalo de nuevo.",
+        })
+        return
+      }
+      router.push("/login?setup=1")
+    } catch {
+      setError("root", { message: "Error de conexión. Inténtalo de nuevo." })
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-surface flex relative">
+      {/* Left panel — brand */}
+      <div className="hidden lg:flex lg:w-[45%] bg-primary items-center justify-center p-16 relative overflow-hidden">
+        <div className="relative z-10 max-w-sm">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed/20 flex items-center justify-center mb-8">
+            <span className="material-symbols-outlined text-primary-fixed text-2xl">
+              flight_takeoff
+            </span>
+          </div>
+          <h1 className="font-headline text-5xl font-extrabold tracking-tight text-on-primary leading-none">
+            Ledger
+          </h1>
+          <p className="mt-4 font-body text-primary-fixed/70 text-lg leading-relaxed">
+            Configuración inicial de tu instancia.
+          </p>
+          <div className="mt-16 space-y-4">
+            {[
+              "Cuenta de administrador única",
+              "Invita a más usuarios después",
+              "Datos 100% en tu servidor",
+            ].map((feat) => (
+              <div key={feat} className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary-fixed text-base">
+                  check_circle
+                </span>
+                <span className="font-body text-sm text-primary-fixed/80">{feat}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-primary-container opacity-40" />
+        <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full bg-primary-container opacity-20" />
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden mb-10 text-center">
+            <h1 className="font-headline text-4xl font-extrabold text-primary">Ledger</h1>
+          </div>
+
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-label font-bold tracking-widest uppercase">
+              <span className="material-symbols-outlined text-[13px]">settings</span>
+              Configuración inicial
+            </span>
+          </div>
+
+          <h2 className="font-headline text-2xl font-bold text-on-surface mt-4">
+            Crear cuenta de administrador
+          </h2>
+          <p className="mt-1 font-body text-sm text-on-surface-variant">
+            Eres el primer usuario. Esta cuenta tendrá permisos de administrador.
+          </p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-10 space-y-7" noValidate>
+            <div className="space-y-1.5">
+              <label className={labelClass}>Nombre completo</label>
+              <input
+                {...register("name")}
+                type="text"
+                autoComplete="name"
+                placeholder="Tu nombre"
+                className={inputClass}
+              />
+              {errors.name && <p className={errorClass}>{errors.name.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={labelClass}>Email</label>
+              <input
+                {...register("email")}
+                type="email"
+                autoComplete="email"
+                placeholder="admin@ejemplo.com"
+                className={inputClass}
+              />
+              {errors.email && <p className={errorClass}>{errors.email.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={labelClass}>Contraseña</label>
+              <input
+                {...register("password")}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Mín. 12 caracteres"
+                className={inputClass}
+              />
+              {errors.password && <p className={errorClass}>{errors.password.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={labelClass}>Confirmar contraseña</label>
+              <input
+                {...register("confirm")}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Repite la contraseña"
+                className={inputClass}
+              />
+              {errors.confirm && <p className={errorClass}>{errors.confirm.message}</p>}
+            </div>
+
+            {errors.root && (
+              <div className="bg-error-container rounded-xl px-4 py-3">
+                <p className="text-error text-sm font-body">{errors.root.message}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-2 w-full bg-primary text-on-primary py-4 rounded-full
+                         font-label font-bold text-sm uppercase tracking-wider
+                         hover:bg-primary-container transition-colors
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         shadow-[0_8px_32px_rgba(0,77,100,0.25)]"
+            >
+              {isSubmitting ? "Creando cuenta…" : "Crear cuenta de administrador"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}

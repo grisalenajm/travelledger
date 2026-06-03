@@ -27,6 +27,6 @@ export default withAuth(
 export const config = {
   matcher: [
     // Excluye: rutas API, login, register, invite (pública), set-password (auth propia), assets
-    "/((?!api/auth|api/health|api/register|api/proxy|login|register|invite|_next/static|_next/image|favicon\\.ico).*)",
+    "/((?!api/auth|api/health|api/register|api/proxy|login|register|invite|setup|_next/static|_next/image|favicon\\.ico).*)",
   ],
 }

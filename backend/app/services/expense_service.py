@@ -25,6 +25,7 @@ def extract_exif_gps(content: bytes) -> tuple[float, float] | None:
 
     Uses getexif().get_ifd(0x8825) with direct numeric GPS tag keys so that
     IFDRational values from Android cameras are handled correctly by float().
+    Returns None explicitly when any required GPS tag is missing.
     """
     try:
         from PIL import Image
@@ -37,18 +38,24 @@ def extract_exif_gps(content: bytes) -> tuple[float, float] | None:
         if not gps_ifd:
             return None
 
+        # GPS tag IDs: 1=LatRef, 2=Lat, 3=LngRef, 4=Lng
+        lat_vals = gps_ifd.get(2)
+        lat_ref = gps_ifd.get(1)
+        lng_vals = gps_ifd.get(4)
+        lng_ref = gps_ifd.get(3)
+
+        if not all([lat_vals, lat_ref, lng_vals, lng_ref]):
+            return None
+
         def to_decimal(dms, ref: str) -> float:
             d, m, s = float(dms[0]), float(dms[1]), float(dms[2])
             result = d + m / 60 + s / 3600
             return round(-result if ref in ("S", "W") else result, 6)
 
-        # GPS tag IDs: 1=LatRef, 2=Lat, 3=LngRef, 4=Lng
-        lat = to_decimal(gps_ifd.get(2, (0, 0, 0)), gps_ifd.get(1, "N"))
-        lng = to_decimal(gps_ifd.get(4, (0, 0, 0)), gps_ifd.get(3, "E"))
+        lat = to_decimal(lat_vals, lat_ref)
+        lng = to_decimal(lng_vals, lng_ref)
 
         if not (-90 <= lat <= 90 and -180 <= lng <= 180):
-            return None
-        if lat == 0.0 and lng == 0.0:
             return None
 
         return lat, lng

@@ -120,23 +120,41 @@ class TripLegBase(BaseModel):
 
 ### EXIF GPS con Pillow
 
-```python
-from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
-import io
+Usar siempre `getexif().get_ifd(0x8825)` — `_getexif()` es privado y devuelve IFDRational en Android que no convierte a float correctamente.
 
-def extract_gps(image_bytes: bytes) -> tuple[float, float] | None:
+```python
+import io
+from PIL import Image
+
+def extract_exif_gps(content: bytes) -> tuple[float, float] | None:
     try:
-        img = Image.open(io.BytesIO(image_bytes))
-        exif = img._getexif()
-        if not exif:
+        img = Image.open(io.BytesIO(content))
+        exif_data = img.getexif()
+        if not exif_data:
             return None
-        for tag, value in exif.items():
-            if TAGS.get(tag) == "GPSInfo":
-                lat = _dms_to_decimal(value[2], value[1])
-                lng = _dms_to_decimal(value[4], value[3])
-                return lat, lng
-        return None
+        gps_ifd = exif_data.get_ifd(0x8825)
+        if not gps_ifd:
+            return None
+
+        # GPS tag IDs: 1=LatRef, 2=Lat, 3=LngRef, 4=Lng
+        lat_vals = gps_ifd.get(2)
+        lat_ref = gps_ifd.get(1)
+        lng_vals = gps_ifd.get(4)
+        lng_ref = gps_ifd.get(3)
+
+        if not all([lat_vals, lat_ref, lng_vals, lng_ref]):
+            return None
+
+        def to_decimal(dms, ref: str) -> float:
+            d, m, s = float(dms[0]), float(dms[1]), float(dms[2])
+            result = d + m / 60 + s / 3600
+            return round(-result if ref in ("S", "W") else result, 6)
+
+        lat = to_decimal(lat_vals, lat_ref)
+        lng = to_decimal(lng_vals, lng_ref)
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            return None
+        return lat, lng
     except Exception:
         return None
 ```
@@ -435,3 +453,5 @@ Requiere ROCm 6.x instalado. Seguir guía oficial: https://github.com/ollama/oll
 | Fix 41 | Scan desde inicio sin `tripId` en URL → confirm page mostraba "Parámetros incorrectos" sin recovery. Fix: añadir selector de viaje en confirm si `tripIdParam` vacío; `GET /api/trips/active` + `useActiveTrip()` para resolución server-side. |
 | Fix 42 | Localización no propuesta al confirmar gasto OCR. Fix: pipeline EXIF GPS → OCR merchant → Nominatim BackgroundTask en `receipts.py`; `OcrResult` añade `location_lat/lng/name`; confirm page muestra badge + campo editable + lo envía en el PUT. `_extract_exif_gps` renombrado a `extract_exif_gps` (función pública reutilizada desde receipts.py). |
 | Fix 43 | Parser de emails de viaje generalizado → `travel_email_parser.py`. Arquitectura dos fases: clasificación por keywords (ES/EN/FR) → extracción específica por tipo (flight/hotel/car_rental/train). ICS tiene prioridad sobre texto plano. Retorna `TravelParseResult` (único leg); `parse_travel_email_text()` para callers con texto ya extraído (webhook + IMAP). Notificaciones tipo `email_import` / `email_imap`. `IMAP_SENDER_FILTER` vacío = aceptar todos los remitentes. |
+| Fix 44 | (ver TODO.md) |
+| Fix 45 | `extract_exif_gps` reescrita con `getexif().get_ifd(0x8825)` + check explícito `if not all([lat_vals, lat_ref, lng_vals, lng_ref])` — evita IFDRational de Android y retorna None limpio si falta cualquier tag GPS. Frontend: `exifr` extrae GPS antes del upload y lo envía como `exif_lat/exif_lng` en el FormData; backend lo usa directamente sin releer los bytes EXIF. |

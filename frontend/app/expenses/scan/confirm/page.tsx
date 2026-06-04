@@ -314,7 +314,7 @@ function ConfirmPageContent() {
               <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
                 <span className="material-symbols-outlined text-[13px] text-green-600">my_location</span>
                 <span className="text-green-700 font-medium">Ubicación detectada</span>
-                <span className="opacity-60">— {locationLat?.toFixed(4)}, {locationLng?.toFixed(4)}</span>
+                <span className="opacity-60">— {locationLat != null ? Number(locationLat).toFixed(4) : '—'}, {locationLng != null ? Number(locationLng).toFixed(4) : '—'}</span>
               </p>
             )}
 

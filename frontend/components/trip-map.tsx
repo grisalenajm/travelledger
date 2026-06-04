@@ -101,12 +101,12 @@ export default function TripMap({ tripId, data, showExpenses, showLegs }: TripMa
 
     const withCoords = data.expenses.filter(
       (e) => e.location_lat != null && e.location_lng != null &&
-             isFinite(e.location_lat) && isFinite(e.location_lng)
+             isFinite(Number(e.location_lat)) && isFinite(Number(e.location_lng))
     )
 
     for (const exp of withCoords) {
-      const lat = exp.location_lat as number
-      const lng = exp.location_lng as number
+      const lat = Number(exp.location_lat)
+      const lng = Number(exp.location_lng)
       const color = CATEGORY_COLORS[exp.category] ?? "#718096"
       const marker = L.circleMarker([lat, lng], {
         radius: 8,
@@ -169,8 +169,8 @@ export default function TripMap({ tripId, data, showExpenses, showLegs }: TripMa
     if (showExpenses) {
       for (const e of data.expenses) {
         if (e.location_lat != null && e.location_lng != null &&
-            isFinite(e.location_lat) && isFinite(e.location_lng)) {
-          allPoints.push([e.location_lat, e.location_lng])
+            isFinite(Number(e.location_lat)) && isFinite(Number(e.location_lng))) {
+          allPoints.push([Number(e.location_lat), Number(e.location_lng)])
         }
       }
     }

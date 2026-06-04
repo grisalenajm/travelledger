@@ -1,5 +1,6 @@
 import io
 import logging
+import math
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -18,6 +19,19 @@ from app.services import currency_service, geocoding_service, paperless_service,
 from app.services.trip_service import get_or_404 as get_trip_or_404
 
 logger = logging.getLogger(__name__)
+
+
+def safe_coordinate(value: object) -> Decimal | None:
+    """Convert a coordinate value to Decimal, returning None for NaN/Inf/invalid."""
+    if value is None:
+        return None
+    try:
+        f = float(value)  # type: ignore[arg-type]
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return Decimal(str(f))
+    except (TypeError, ValueError):
+        return None
 
 
 def extract_exif_gps(content: bytes) -> tuple[float, float] | None:
@@ -87,8 +101,8 @@ async def geocode_expense_bg(expense_id: UUID, query: str) -> None:
                 logger.debug("geocode_expense_bg: sin resultado para '%s' (expense=%s)", query, expense_id)
                 return
 
-            expense.location_lat = Decimal(str(coords[0]))
-            expense.location_lng = Decimal(str(coords[1]))
+            expense.location_lat = safe_coordinate(coords[0])
+            expense.location_lng = safe_coordinate(coords[1])
             expense.location_name = query  # escribir nombre solo si hay coords reales
             await db.commit()
             logger.info(
@@ -201,8 +215,8 @@ async def create(
         **data.model_dump(exclude={"id"}),
     )
     if exif_coords and expense.location_lat is None:
-        expense.location_lat = Decimal(str(exif_coords[0]))
-        expense.location_lng = Decimal(str(exif_coords[1]))
+        expense.location_lat = safe_coordinate(exif_coords[0])
+        expense.location_lng = safe_coordinate(exif_coords[1])
     db.add(expense)
     await db.commit()
     await db.refresh(expense)

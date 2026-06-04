@@ -1,5 +1,6 @@
+import math
 from datetime import date as date_t, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -102,6 +103,19 @@ class ExpenseRead(BaseModel):
     location_lat: Decimal | None = None
     location_lng: Decimal | None = None
     location_name: str | None = None
+
+    @field_validator("location_lat", "location_lng", mode="before")
+    @classmethod
+    def nan_to_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        try:
+            f = float(v)  # type: ignore[arg-type]
+            if math.isnan(f) or math.isinf(f):
+                return None
+            return v
+        except (TypeError, ValueError, InvalidOperation):
+            return None
 
     @computed_field
     @property

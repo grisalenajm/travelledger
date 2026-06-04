@@ -16,7 +16,7 @@ from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.expense import ExpenseRead
 from app.services import currency_service, paperless_service, settings_service
-from app.services.expense_service import extract_exif_gps, geocode_expense_bg
+from app.services.expense_service import extract_exif_gps, geocode_expense_bg, safe_coordinate
 from app.services.ocr_factory import get_ocr_provider
 from app.services.ocr_providers.base import OcrProviderNotConfiguredError
 from app.services.trip_service import get_or_404 as get_trip_or_404
@@ -141,8 +141,8 @@ async def upload_receipt(
     location_name: str | None = None  # NO asignar merchant aquí — solo si hay coords
 
     if exif_coords:
-        location_lat = Decimal(str(exif_coords[0]))
-        location_lng = Decimal(str(exif_coords[1]))
+        location_lat = safe_coordinate(exif_coords[0])
+        location_lng = safe_coordinate(exif_coords[1])
         # location_name permanece None — no tenemos nombre textual del GPS
 
     expense = Expense(

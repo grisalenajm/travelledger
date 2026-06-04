@@ -136,7 +136,7 @@ async def _create_expense_from_image(
     from app.services.ocr_factory import get_ocr_provider
     from app.services.ocr_providers.base import OcrProviderNotConfiguredError
     from app.services import currency_service
-    from app.services.expense_service import extract_exif_gps, geocode_expense_bg
+    from app.services.expense_service import extract_exif_gps, geocode_expense_bg, safe_coordinate
 
     try:
         provider = await get_ocr_provider(db, user.id)
@@ -187,8 +187,8 @@ async def _create_expense_from_image(
     location_lat = None
     location_lng = None
     if exif_coords:
-        location_lat = Decimal(str(exif_coords[0]))
-        location_lng = Decimal(str(exif_coords[1]))
+        location_lat = safe_coordinate(exif_coords[0])
+        location_lng = safe_coordinate(exif_coords[1])
 
     expense = Expense(
         id=expense_id,

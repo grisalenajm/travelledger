@@ -14,6 +14,7 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.expense import ExpenseCreate, ExpenseRead, ExpenseUpdate
 from app.services import expense_service, geocoding_service, paperless_service
+from app.services.expense_service import safe_coordinate
 from sqlalchemy import select
 from app.models.expense import Expense
 
@@ -120,8 +121,8 @@ async def geocode_expense(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "El gasto no tiene nombre de ubicación para geocodificar")
     coords = await geocoding_service.geocode(expense.location_name)
     if coords:
-        expense.location_lat = Decimal(str(coords[0]))
-        expense.location_lng = Decimal(str(coords[1]))
+        expense.location_lat = safe_coordinate(coords[0])
+        expense.location_lng = safe_coordinate(coords[1])
         await db.flush()
         await db.refresh(expense)
     return expense

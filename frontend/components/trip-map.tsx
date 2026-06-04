@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
@@ -58,6 +59,7 @@ interface TripMapProps {
 }
 
 export default function TripMap({ tripId, data, showExpenses, showLegs }: TripMapProps) {
+  const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const expenseLayerRef = useRef<L.LayerGroup | null>(null)
@@ -117,17 +119,26 @@ export default function TripMap({ tripId, data, showExpenses, showLegs }: TripMa
         fillOpacity: 0.85,
       })
       const label = exp.location_name ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+      const btnId = `expense-nav-${exp.id}`
       marker.bindPopup(
-        `<div style="min-width:140px">
+        `<div style="min-width:160px">
           <p style="font-weight:600;margin:0 0 4px">${exp.description ?? exp.category}</p>
           <p style="margin:0;font-size:13px;color:#555">${exp.currency} ${Number(exp.amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })}</p>
           <p style="margin:2px 0 0;font-size:11px;color:#888">${label}</p>
           <p style="margin:2px 0 0;font-size:11px;color:#aaa">${exp.date}</p>
+          <button id="${btnId}" style="margin-top:8px;background:#004d64;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;width:100%">Ver / Editar →</button>
         </div>`
       )
+      marker.on("popupopen", () => {
+        document.getElementById(btnId)?.addEventListener(
+          "click",
+          () => router.push(`/trips/${tripId}/expenses/${exp.id}`),
+          { once: true }
+        )
+      })
       layer.addLayer(marker)
     }
-  }, [data.expenses, showExpenses])
+  }, [data.expenses, showExpenses, tripId, router])
 
   // Redraw leg layer when data or toggle changes
   useEffect(() => {

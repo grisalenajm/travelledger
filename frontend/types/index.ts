@@ -262,8 +262,8 @@ export interface MapExpense {
   currency: string
   category: string
   date: string
-  location_lat: number
-  location_lng: number
+  location_lat: number | null
+  location_lng: number | null
   location_name: string | null
 }
 

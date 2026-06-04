@@ -12,7 +12,8 @@ const CATEGORY_EMOJI: Record<Expense["category"], string> = {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-ES", {
+  const [y, m, d] = iso.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-ES", {
     day: "numeric",
     month: "short",
   })

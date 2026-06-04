@@ -18,7 +18,8 @@ import type { TripLeg, TripStats, TripSummary } from "@/types/index"
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-ES", {
+  const [y, m, d] = iso.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-ES", {
     day: "numeric",
     month: "short",
     year: "numeric",

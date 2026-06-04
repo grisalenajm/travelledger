@@ -9,7 +9,8 @@ import type { Trip } from "@/types"
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-ES", {
+  const [y, m, d] = iso.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-ES", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -17,7 +18,8 @@ function fmtDate(iso: string) {
 }
 
 function fmtDateShort(iso: string) {
-  return new Date(iso).toLocaleDateString("es-ES", {
+  const [y, m, d] = iso.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-ES", {
     day: "numeric",
     month: "short",
   })
@@ -32,8 +34,10 @@ function getTodayString(): string {
 }
 
 function getDayNumber(startDate: string, todayStr: string): number {
-  const start = new Date(startDate)
-  const today = new Date(todayStr)
+  const [sy, sm, sd] = startDate.split("-").map(Number)
+  const [ty, tm, td] = todayStr.split("-").map(Number)
+  const start = new Date(sy, sm - 1, sd)
+  const today = new Date(ty, tm - 1, td)
   const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
   return diff + 1
 }

@@ -292,10 +292,12 @@ async def _process_attachment(
     image_bytes: bytes,
     user: User,
     active_trip_id: UUID,
+    processed_bp_keys: set[str],
 ) -> str:
     """Procesa un adjunto de email intentando primero boarding pass, luego receipt.
 
-    Devuelve: "boarding_pass_linked" | "boarding_pass_new" | "expense" | "skipped"
+    processed_bp_keys: conjunto mutable para deduplicar boarding passes en el mismo email.
+    Devuelve: "boarding_pass_linked" | "boarding_pass_new" | "boarding_pass_duplicate" | "expense" | "skipped"
     """
     from app.services.ocr_factory import get_ocr_provider
     from app.services.ocr_providers.base import OcrProviderNotConfiguredError
@@ -314,6 +316,12 @@ async def _process_attachment(
         logger.debug("email_processor: boarding pass extraction failed silently: %s", exc)
 
     if bp and bp.flight_number:
+        dedup_key = f"{bp.flight_number.upper().replace(' ', '')}|{bp.departure_local.date().isoformat() if bp.departure_local else ''}"
+        if dedup_key in processed_bp_keys:
+            logger.info("email_processor: boarding pass duplicado ignorado: %s", dedup_key)
+            return "boarding_pass_duplicate"
+        processed_bp_keys.add(dedup_key)
+
         existing_leg = await _find_leg_by_flight_number(db, active_trip_id, bp.flight_number)
         if existing_leg:
             doc_path = await _save_attachment_for_leg(
@@ -369,9 +377,10 @@ async def _process_raw_email(db: AsyncSession, raw: RawEmail, user: User) -> dic
     if raw.image_attachments:
         active_trip_id = await _get_active_trip_id(db, user.id)
         if active_trip_id:
+            processed_bp_keys: set[str] = set()
             for mime_type, image_bytes in raw.image_attachments:
                 result_type = await _process_attachment(
-                    db, mime_type, image_bytes, user, active_trip_id
+                    db, mime_type, image_bytes, user, active_trip_id, processed_bp_keys
                 )
                 if result_type == "expense":
                     expenses_created += 1

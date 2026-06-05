@@ -40,21 +40,77 @@ _RECEIPT_PROMPT = (
     "No incluyas explicaciones. Solo el JSON."
 )
 
-_BOARDING_PASS_PROMPT = (
-    "Analiza esta tarjeta de embarque (boarding pass) y extrae los siguientes campos en JSON.\n"
-    "Si un campo no está visible o no puedes determinarlo con certeza, devuelve null.\n\n"
-    "Campos:\n"
-    "- origin: código IATA del aeropuerto de origen (3 letras, ej: MAD) o nombre de ciudad\n"
-    "- destination: código IATA del aeropuerto de destino (3 letras, ej: BCN) o nombre de ciudad\n"
-    "- departure_local: fecha y hora de salida ISO 8601 (YYYY-MM-DDTHH:MM:00), hora local del origen\n"
-    "- arrival_local: fecha y hora de llegada ISO 8601 (YYYY-MM-DDTHH:MM:00), hora local del destino\n"
-    "- flight_number: número de vuelo completo (ej: IB6827, VY1234)\n"
-    "- carrier: nombre de la aerolínea (ej: Iberia, Vueling)\n"
-    "- seat: asiento asignado (ej: 12A, 34C)\n"
-    "- locator_code: código de reserva/localizador (ej: XYZABC) — suele ser 6 chars alfanuméricos\n"
-    "- confidence: nivel de confianza general entre 0.0 y 1.0\n\n"
-    "Responde SOLO con el JSON, sin texto adicional, sin markdown, sin backticks."
-)
+_BOARDING_PASS_PROMPT = """\
+You are an expert aviation data extractor. Your task is to extract structured data
+from an airline boarding pass image or PDF and return ONLY a valid JSON object.
+
+Return this exact JSON structure (use null for any field not found):
+
+{
+  "flight_number": "BA120",
+  "carrier_name": "British Airways",
+  "carrier_iata": "BA",
+  "origin_iata": "CVG",
+  "origin_name": "Cincinnati/Northern Kentucky International Airport",
+  "destination_iata": "LHR",
+  "destination_name": "London Heathrow Airport",
+  "departure_date": "2026-06-05",
+  "departure_time": "21:10",
+  "arrival_date": null,
+  "arrival_time": null,
+  "seat": "15F",
+  "locator_code": "7ZRJ7R",
+  "confidence": 0.95
+}
+
+CRITICAL RULES — follow exactly:
+
+1. IATA AIRPORT CODES (origin_iata, destination_iata):
+   Use your aviation knowledge to determine the 3-letter IATA code even when it is
+   NOT printed on the boarding pass. Map from the airport name or city shown:
+   - "Cincinnati Northern Kentucky" or "Cincinnati" -> CVG
+   - "London Heathrow" -> LHR
+   - "London Gatwick" -> LGW
+   - "Madrid Barajas" or "Adolfo Suarez" -> MAD
+   - "Barcelona El Prat" -> BCN
+   - "Paris Charles de Gaulle" or "Roissy" -> CDG
+   - "Paris Orly" -> ORY
+   - "Jerez de la Frontera" or "La Parra" -> XRY
+   - "Sevilla" or "Seville" -> SVQ
+   - "New York JFK" or "John F. Kennedy" -> JFK
+   - "New York Newark" -> EWR
+   - "Chicago O'Hare" -> ORD
+   - "Chicago Midway" -> MDW
+   - Apply this logic to any airport worldwide.
+   NEVER put city names, random text, or non-IATA strings in origin_iata/destination_iata.
+   If you cannot determine the IATA code with high confidence, return null.
+
+2. AIRLINE IATA CODE (carrier_iata):
+   Use the standard 2-letter IATA airline code:
+   - "British Airways" -> "BA"
+   - "Iberia" -> "IB"
+   - "American Airlines" -> "AA"
+   - "Lufthansa" -> "LH"
+   - "Air France" -> "AF"
+   - "KLM" -> "KL"
+   - "Ryanair" -> "FR"
+   - "Vueling" -> "VY"
+   - "easyJet" -> "U2"
+   - "Delta" -> "DL"
+   - "United" -> "UA"
+   If the carrier code appears in the flight number (e.g. "BA120"), the first letters
+   are the carrier code.
+
+3. FLIGHT NUMBER: Extract exactly as printed (e.g. "BA120", "IB3456"). Include the
+   airline prefix. Never return just the numeric part.
+
+4. DATES: Use ISO format YYYY-MM-DD. departure_date is the LOCAL date at origin.
+   Do not convert to UTC.
+
+5. TIMES: Use HH:MM 24-hour format. These are LOCAL times at origin/destination.
+
+6. Return ONLY the JSON object. No markdown, no explanation, no code blocks.\
+"""
 
 
 def _strip_markdown(raw: str) -> str:
@@ -158,24 +214,51 @@ def _parse_receipt_json(raw_text: str) -> OcrResult:
         return OcrResult(raw_text=raw_text)
 
 
+def _build_datetime(date_str: str | None, time_str: str | None) -> datetime | None:
+    """Build a naive local datetime from separate date and time strings."""
+    if not date_str:
+        return None
+    try:
+        t = time_str or "00:00"
+        return datetime.strptime(f"{date_str} {t}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return None
+
+
 def _parse_boarding_pass_json(raw_text: str) -> BoardingPassResult:
     try:
         cleaned = _strip_markdown(raw_text)
         data = json.loads(cleaned)
 
-        departure_local: datetime | None = None
-        if data.get("departure_local"):
+        # New prompt returns split date+time fields; old format had departure_local ISO string
+        departure_local = _build_datetime(
+            data.get("departure_date"), data.get("departure_time")
+        )
+        if departure_local is None and data.get("departure_local"):
             try:
                 departure_local = datetime.fromisoformat(str(data["departure_local"]))
             except (ValueError, TypeError):
                 pass
 
-        arrival_local: datetime | None = None
-        if data.get("arrival_local"):
+        arrival_local = _build_datetime(
+            data.get("arrival_date"), data.get("arrival_time")
+        )
+        if arrival_local is None and data.get("arrival_local"):
             try:
                 arrival_local = datetime.fromisoformat(str(data["arrival_local"]))
             except (ValueError, TypeError):
                 pass
+
+        # New prompt: origin_iata / destination_iata; old prompt: origin / destination
+        origin = data.get("origin_iata") or data.get("origin") or None
+        destination = data.get("destination_iata") or data.get("destination") or None
+
+        # carrier_name preferred over legacy carrier field
+        carrier = data.get("carrier_name") or data.get("carrier") or None
+        carrier_iata = data.get("carrier_iata") or None
 
         confidence = 0.0
         try:
@@ -184,12 +267,13 @@ def _parse_boarding_pass_json(raw_text: str) -> BoardingPassResult:
             pass
 
         return BoardingPassResult(
-            origin=data.get("origin") or None,
-            destination=data.get("destination") or None,
+            origin=origin,
+            destination=destination,
             departure_local=departure_local,
             arrival_local=arrival_local,
             flight_number=data.get("flight_number") or None,
-            carrier=data.get("carrier") or None,
+            carrier=carrier,
+            carrier_iata=carrier_iata,
             seat=data.get("seat") or None,
             locator_code=data.get("locator_code") or None,
             confidence=confidence,
@@ -248,7 +332,7 @@ class ClaudeHaikuAdapter(LlmOcrProvider):
         content_block, extra_kwargs = _build_content_and_kwargs(image_bytes, mime_type)
         messages_kwargs: dict = {
             "model": _MODEL,
-            "max_tokens": 512,
+            "max_tokens": 1024,
             "system": [
                 {
                     "type": "text",

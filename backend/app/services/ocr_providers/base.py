@@ -33,12 +33,13 @@ class BoardingPassResult:
     Campos equivalentes a BoardingPassOcrResult de Pydantic.
     """
 
-    origin: str | None = None
-    destination: str | None = None
+    origin: str | None = None           # código IATA 3 letras
+    destination: str | None = None      # código IATA 3 letras
     departure_local: datetime | None = None
     arrival_local: datetime | None = None
     flight_number: str | None = None
-    carrier: str | None = None
+    carrier: str | None = None          # nombre completo de la aerolínea
+    carrier_iata: str | None = None     # código IATA 2 letras
     seat: str | None = None
     locator_code: str | None = None
     confidence: float = 0.0

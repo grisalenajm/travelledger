@@ -5,6 +5,14 @@ import type { TripLeg, LegMode } from "@/types/index"
 import { AirlineLogo } from "@/components/airline-logo"
 import { getIataByName } from "@/lib/airlines-lookup"
 
+const AIRLINE_NAMES: Record<string, string> = {
+  BA: "British Airways", IB: "Iberia", VY: "Vueling", FR: "Ryanair",
+  U2: "easyJet", AA: "American Airlines", DL: "Delta", UA: "United",
+  LH: "Lufthansa", AF: "Air France", KL: "KLM", AZ: "ITA Airways",
+  SK: "SAS", TP: "TAP Air Portugal", UX: "Air Europa", LX: "Swiss",
+  OS: "Austrian", EI: "Aer Lingus", EW: "Eurowings", W6: "Wizz Air",
+}
+
 function fmtDateTime(iso: string | null) {
   if (!iso) return "—"
   return new Date(iso).toLocaleString("es-ES", {
@@ -124,14 +132,27 @@ function isTransport(mode: LegMode) {
   return mode === "flight" || mode === "train" || mode === "bus" || mode === "ferry" || mode === "other"
 }
 
+function resolveCarrierDisplay(leg: TripLeg): { name: string | null; iataHint: string | null } {
+  if (leg.carrier?.trim()) return { name: leg.carrier, iataHint: null }
+  if (leg.flight_number) {
+    const iata = leg.flight_number.match(/^([A-Z]{2})/)?.[1] ?? null
+    if (iata) return { name: AIRLINE_NAMES[iata] ?? null, iataHint: iata }
+  }
+  return { name: null, iataHint: null }
+}
+
 function TransportContent({ leg }: { leg: TripLeg }) {
   const [carrierIata, setCarrierIata] = useState<string | null>(null)
+  const { name: carrierName, iataHint } = resolveCarrierDisplay(leg)
 
   useEffect(() => {
-    if (leg.mode === "flight" && leg.carrier) {
-      getIataByName(leg.carrier).then((iata) => setCarrierIata(iata))
+    if (leg.mode !== "flight") return
+    if (carrierName) {
+      getIataByName(carrierName).then((iata) => setCarrierIata(iata ?? iataHint))
+    } else if (iataHint) {
+      setCarrierIata(iataHint)
     }
-  }, [leg.mode, leg.carrier])
+  }, [leg.mode, carrierName, iataHint])
 
   return (
     <>
@@ -144,12 +165,12 @@ function TransportContent({ leg }: { leg: TripLeg }) {
       </div>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="text-xs text-on-surface-variant">{fmtDateTime(leg.departure_local)}</span>
-        {leg.carrier && (
+        {carrierName && (
           <span className="flex items-center gap-1.5 text-xs text-on-surface-variant">
             {leg.mode === "flight" && carrierIata && (
-              <AirlineLogo iata={carrierIata} name={leg.carrier} size={18} />
+              <AirlineLogo iata={carrierIata} name={carrierName} size={18} />
             )}
-            {leg.carrier}
+            {carrierName}
           </span>
         )}
         {leg.flight_number && (

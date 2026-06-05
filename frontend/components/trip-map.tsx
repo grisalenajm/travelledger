@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
 import markerIcon from "leaflet/dist/images/marker-icon.png"
 import markerShadow from "leaflet/dist/images/marker-shadow.png"
-import type { TripMapData } from "@/types/index"
+import { toast } from "@/hooks/use-toast"
+import type { MapExpense, TripMapData } from "@/types/index"
 
 // Leaflet marker icon fix for webpack bundlers
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
@@ -51,14 +52,82 @@ function makeLegIcon(mode: string): L.DivIcon {
   })
 }
 
+function makeExpenseDotIcon(color: string): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      width:16px;height:16px;
+      border-radius:50%;
+      background:${color};
+      border:2.5px solid white;
+      box-shadow:0 1px 4px rgba(0,0,0,.35);
+      cursor:grab;
+    "></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -10],
+  })
+}
+
+async function handleMarkerDragEnd(
+  exp: MapExpense,
+  marker: L.Marker,
+  onUpdate: (id: string, lat: number, lng: number, name: string) => void,
+) {
+  const { lat, lng } = marker.getLatLng()
+  const newLat = Math.round(lat * 1e6) / 1e6
+  const newLng = Math.round(lng * 1e6) / 1e6
+
+  try {
+    let newName = exp.location_name ?? ""
+    try {
+      const geoRes = await fetch(
+        `/api/proxy/geocoding/reverse?lat=${newLat}&lng=${newLng}`
+      )
+      if (geoRes.ok) {
+        const geoData = await geoRes.json()
+        newName = geoData.name || newName
+      }
+    } catch {
+      // reverse geocoding fallback silencioso
+    }
+
+    const res = await fetch(`/api/proxy/expenses/${exp.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location_lat: newLat,
+        location_lng: newLng,
+        location_name: newName || null,
+      }),
+    })
+    if (!res.ok) throw new Error("PUT failed")
+
+    toast.success(`Ubicación actualizada: ${newName || "nueva posición"}`)
+    onUpdate(exp.id, newLat, newLng, newName)
+  } catch {
+    toast.error("Error al guardar la nueva ubicación")
+    if (exp.location_lat != null && exp.location_lng != null) {
+      marker.setLatLng([exp.location_lat, exp.location_lng])
+    }
+  }
+}
+
 interface TripMapProps {
   tripId: string
   data: TripMapData
   showExpenses: boolean
   showLegs: boolean
+  onExpenseLocationUpdated?: (id: string, lat: number, lng: number, name: string) => void
 }
 
-export default function TripMap({ tripId, data, showExpenses, showLegs }: TripMapProps) {
+export default function TripMap({
+  tripId,
+  data,
+  showExpenses,
+  showLegs,
+  onExpenseLocationUpdated,
+}: TripMapProps) {
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
@@ -110,14 +179,10 @@ export default function TripMap({ tripId, data, showExpenses, showLegs }: TripMa
       const lat = Number(exp.location_lat)
       const lng = Number(exp.location_lng)
       const color = CATEGORY_COLORS[exp.category] ?? "#718096"
-      const marker = L.circleMarker([lat, lng], {
-        radius: 8,
-        fillColor: color,
-        color: "#fff",
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.85,
-      })
+      const icon = makeExpenseDotIcon(color)
+
+      const marker = L.marker([lat, lng], { icon, draggable: true })
+
       const label = exp.location_name ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
       const btnId = `expense-nav-${exp.id}`
       marker.bindPopup(
@@ -136,9 +201,21 @@ export default function TripMap({ tripId, data, showExpenses, showLegs }: TripMa
           { once: true }
         )
       })
+
+      const currentOnUpdate = onExpenseLocationUpdated ?? (() => {})
+      marker.on("dragend", () => {
+        handleMarkerDragEnd(exp, marker, currentOnUpdate)
+      })
+
+      // cursor visual tras añadir al mapa
+      marker.on("add", () => {
+        const el = marker.getElement()
+        if (el) el.style.cursor = "grab"
+      })
+
       layer.addLayer(marker)
     }
-  }, [data.expenses, showExpenses, tripId, router])
+  }, [data.expenses, showExpenses, tripId, router, onExpenseLocationUpdated])
 
   // Redraw leg layer when data or toggle changes
   useEffect(() => {

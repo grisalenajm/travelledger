@@ -110,6 +110,88 @@ async def search_hotels(query: str) -> list[dict]:
             return []
 
 
+async def search(query: str, limit: int = 5) -> list[dict]:
+    """Busca ubicaciones por texto libre en Nominatim (multi-resultado genérico).
+
+    Comparte el rate-limit (1 req/s) con geocode() y search_hotels().
+    Devuelve la lista raw de Nominatim con todos los campos.
+    """
+    if not query or len(query.strip()) < 3:
+        return []
+
+    cache_key = f"search:{limit}:{query.strip()}"
+    if cache_key in _places_cache:
+        return _places_cache[cache_key]
+
+    async with _lock:
+        if cache_key in _places_cache:
+            return _places_cache[cache_key]
+
+        global _last_request_time
+        elapsed = time.monotonic() - _last_request_time
+        if elapsed < _RATE_LIMIT_SECONDS:
+            await asyncio.sleep(_RATE_LIMIT_SECONDS - elapsed)
+
+        try:
+            async with httpx.AsyncClient(
+                headers={"User-Agent": _USER_AGENT},
+                timeout=10.0,
+            ) as client:
+                r = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={
+                        "q": query.strip(),
+                        "format": "json",
+                        "limit": limit,
+                        "addressdetails": 1,
+                    },
+                )
+                _last_request_time = time.monotonic()
+                r.raise_for_status()
+                data = r.json()
+                _places_cache[cache_key] = data
+                return data
+        except Exception as exc:
+            logger.warning("geocoding_service: search '%s' failed: %s", query, exc)
+            _last_request_time = time.monotonic()
+            return []
+
+
+async def reverse_geocode(lat: float, lng: float) -> dict | None:
+    """Convierte coordenadas a nombre de lugar via Nominatim reverse geocoding."""
+    async with _lock:
+        global _last_request_time
+        elapsed = time.monotonic() - _last_request_time
+        if elapsed < _RATE_LIMIT_SECONDS:
+            await asyncio.sleep(_RATE_LIMIT_SECONDS - elapsed)
+
+        try:
+            async with httpx.AsyncClient(
+                headers={"User-Agent": _USER_AGENT},
+                timeout=10.0,
+            ) as client:
+                r = await client.get(
+                    "https://nominatim.openstreetmap.org/reverse",
+                    params={
+                        "lat": lat,
+                        "lon": lng,
+                        "format": "json",
+                        "addressdetails": 1,
+                    },
+                )
+                _last_request_time = time.monotonic()
+                if r.status_code == 404:
+                    return None
+                r.raise_for_status()
+                return r.json()
+        except Exception as exc:
+            logger.warning(
+                "geocoding_service: reverse_geocode (%s, %s) failed: %s", lat, lng, exc
+            )
+            _last_request_time = time.monotonic()
+            return None
+
+
 async def search_places(query: str, place_type: str = "city") -> list[dict]:
     """Busca lugares (ciudades o negocios) via Nominatim con caché en memoria.
 

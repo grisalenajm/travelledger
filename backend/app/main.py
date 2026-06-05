@@ -12,7 +12,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
 from app.core.limiter import limiter
 from app.database import engine
-from app.routers import airlines as airlines_router, airports, auth, currencies, email as email_router, expenses, health, legs, loyalty_cards, notifications as notifications_router, payment_methods as payment_methods_router, pending_legs as pending_legs_router, places as places_router, receipts, reports, settings as settings_router, stats as stats_router, trips, users, webhooks as webhooks_router
+from app.routers import airlines as airlines_router, airports, auth, currencies, email as email_router, expenses, geocoding as geocoding_router, health, legs, loyalty_cards, notifications as notifications_router, payment_methods as payment_methods_router, pending_legs as pending_legs_router, places as places_router, receipts, reports, settings as settings_router, stats as stats_router, trips, users, webhooks as webhooks_router
 
 logger = logging.getLogger(__name__)
 
@@ -102,4 +102,5 @@ app.include_router(notifications_router.router)
 app.include_router(webhooks_router.router)
 app.include_router(email_router.router)
 app.include_router(pending_legs_router.router)
+app.include_router(geocoding_router.router)
 app.include_router(places_router.router)

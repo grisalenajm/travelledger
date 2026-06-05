@@ -63,11 +63,19 @@ def _apply_iata_coords(leg: TripLeg) -> None:
     if leg.mode in ("flight", "train", "bus", "ferry", "other"):
         if not leg.origin_lat and leg.origin:
             coords = airport_service.get_coords(leg.origin)
+            if not coords:
+                found = airport_service.search_by_name(leg.origin)
+                if found:
+                    coords = (found.lat, found.lng)
             if coords:
                 leg.origin_lat = Decimal(str(coords[0]))
                 leg.origin_lng = Decimal(str(coords[1]))
         if not leg.destination_lat and leg.destination:
             coords = airport_service.get_coords(leg.destination)
+            if not coords:
+                found = airport_service.search_by_name(leg.destination)
+                if found:
+                    coords = (found.lat, found.lng)
             if coords:
                 leg.destination_lat = Decimal(str(coords[0]))
                 leg.destination_lng = Decimal(str(coords[1]))

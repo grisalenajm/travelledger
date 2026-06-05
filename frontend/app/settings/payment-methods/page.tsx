@@ -16,6 +16,7 @@ export default function PaymentMethodsPage() {
   const remove = useDeletePaymentMethod()
   const [newName, setNewName] = useState("")
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleCreate = async () => {
     const name = newName.trim()
@@ -77,6 +78,10 @@ export default function PaymentMethodsPage() {
             <p className="text-sm text-on-surface-variant">Sin métodos de pago</p>
           </div>
         ) : (
+          <>
+          {deleteError && (
+            <p className="text-sm text-error bg-error/10 rounded-lg px-3 py-2 mb-2">{deleteError}</p>
+          )}
           <ul className="space-y-2">
             {methods.map((pm) => (
               <li
@@ -96,13 +101,23 @@ export default function PaymentMethodsPage() {
                     <button
                       type="button"
                       onClick={async () => {
-                        await remove.mutateAsync(pm.id)
-                        setConfirmDeleteId(null)
+                        setDeleteError(null)
+                        try {
+                          await remove.mutateAsync(pm.id)
+                          setConfirmDeleteId(null)
+                        } catch (err: unknown) {
+                          const msg =
+                            err instanceof Error
+                              ? err.message
+                              : "No se puede eliminar este método de pago."
+                          setDeleteError(msg)
+                          setConfirmDeleteId(null)
+                        }
                       }}
                       disabled={remove.isPending}
                       className="text-xs text-white bg-error px-3 py-1 rounded-full disabled:opacity-50"
                     >
-                      Eliminar
+                      {remove.isPending ? "…" : "Eliminar"}
                     </button>
                   </div>
                 ) : (
@@ -118,6 +133,7 @@ export default function PaymentMethodsPage() {
               </li>
             ))}
           </ul>
+          </>
         )}
 
       </div>

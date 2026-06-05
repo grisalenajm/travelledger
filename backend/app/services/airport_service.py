@@ -1,5 +1,6 @@
 import csv
 import logging
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -71,9 +72,55 @@ class AirportService:
         results.sort(key=lambda a: (0 if a.iata == q_upper else 1, a.iata))
         return results[:limit]
 
+    def get_by_iata(self, iata: str) -> "Airport | None":
+        """Exact lookup by IATA code (case-insensitive)."""
+        return self._by_iata.get(iata.strip().upper())
+
+    def search_by_name(
+        self, query: str, country: str | None = None
+    ) -> "Airport | None":
+        """Search by airport name or city, with accent normalization.
+
+        Priority: 1) exact match, 2) starts-with, 3) contains.
+        Falls back to global search if country-filtered search returns nothing.
+        """
+        if not query or len(query.strip()) < 2:
+            return None
+        q = _normalize(query)
+
+        candidates = list(self._by_iata.values())
+        if country:
+            country_norm = _normalize(country)
+            filtered = [a for a in candidates if _normalize(a.country) == country_norm]
+            result = self._search_candidates(q, filtered)
+            if result:
+                return result
+            # retry without country filter
+        return self._search_candidates(q, candidates)
+
+    def _search_candidates(
+        self, q: str, candidates: "list[Airport]"
+    ) -> "Airport | None":
+        for a in candidates:
+            if _normalize(a.name) == q or _normalize(a.city) == q:
+                return a
+        for a in candidates:
+            if _normalize(a.name).startswith(q) or _normalize(a.city).startswith(q):
+                return a
+        for a in candidates:
+            if q in _normalize(a.name) or q in _normalize(a.city):
+                return a
+        return None
+
     @property
     def count(self) -> int:
         return len(self._by_iata)
+
+
+def _normalize(text: str) -> str:
+    """Lowercase, strip accents/diacritics, trim whitespace."""
+    nfd = unicodedata.normalize("NFD", text.lower().strip())
+    return "".join(c for c in nfd if unicodedata.category(c) != "Mn")
 
 
 airport_service = AirportService()

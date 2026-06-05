@@ -38,6 +38,32 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Regex para extraer código IATA entre paréntesis: "Jerez de la Frontera (XRY)"
+_IATA_IN_PARENS_RE = re.compile(r'\(([A-Z]{3})\)')
+
+
+def _resolve_to_iata(text: str) -> str:
+    """Resolve a city/airport text fragment to an IATA code if possible.
+
+    Priority:
+    1. Code between parentheses: "Jerez de la Frontera (XRY)" → "XRY"
+    2. Pure 3-letter uppercase code: "XRY" → "XRY"
+    3. Name lookup via airport_service
+    4. Return original text unchanged
+    """
+    from app.services.airport_service import airport_service  # local import to avoid cycle
+
+    text = text.strip()
+    m = _IATA_IN_PARENS_RE.search(text)
+    if m:
+        return m.group(1)
+    if re.match(r'^[A-Z]{3}$', text.upper()):
+        return text.upper()
+    found = airport_service.search_by_name(text)
+    if found:
+        return found.iata
+    return text
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Resultado del parser
@@ -390,10 +416,10 @@ def parse_flight(text: str, source_format: str = "text") -> TravelParseResult:
             text, re.IGNORECASE
         )
         if orig_m:
-            result.origin = orig_m.group(1).strip()
+            result.origin = _resolve_to_iata(orig_m.group(1).strip())
             fields_found += 1
         if dest_m:
-            result.destination = dest_m.group(1).strip()
+            result.destination = _resolve_to_iata(dest_m.group(1).strip())
             fields_found += 1
 
     # ── Fechas de salida y llegada ────────────────────────────────────────────

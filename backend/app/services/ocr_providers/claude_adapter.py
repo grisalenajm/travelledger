@@ -85,7 +85,10 @@ def _build_content_and_kwargs(
                 "data": encoded,
             },
         }
-        extra_kwargs: dict = {"betas": ["pdfs-2024-09-25"]}
+        # Use extra_headers so the standard messages API handles prompt caching
+        # alongside the PDF beta — beta.messages.create(betas=["pdfs-2024-09-25"])
+        # conflicts with cache_control in system messages.
+        extra_kwargs: dict = {"extra_headers": {"anthropic-beta": "pdfs-2024-09-25"}}
     else:
         content_block = {
             "type": "image",
@@ -228,13 +231,7 @@ class ClaudeHaikuAdapter(LlmOcrProvider):
         logger.info("ClaudeHaiku OCR receipt — mime=%s bytes=%d", mime_type, len(image_bytes))
 
         try:
-            if extra_kwargs:
-                response = await self._client.beta.messages.create(
-                    **messages_kwargs, **extra_kwargs
-                )
-            else:
-                response = await self._client.messages.create(**messages_kwargs)
-
+            response = await self._client.messages.create(**messages_kwargs, **extra_kwargs)
             raw_text = response.content[0].text
             logger.info("ClaudeHaiku OCR raw: %.300s", raw_text)
             return _parse_receipt_json(raw_text)
@@ -275,13 +272,7 @@ class ClaudeHaikuAdapter(LlmOcrProvider):
         )
 
         try:
-            if extra_kwargs:
-                response = await self._client.beta.messages.create(
-                    **messages_kwargs, **extra_kwargs
-                )
-            else:
-                response = await self._client.messages.create(**messages_kwargs)
-
+            response = await self._client.messages.create(**messages_kwargs, **extra_kwargs)
             raw_text = response.content[0].text
             logger.info("ClaudeHaiku boarding pass raw: %.300s", raw_text)
             return _parse_boarding_pass_json(raw_text)

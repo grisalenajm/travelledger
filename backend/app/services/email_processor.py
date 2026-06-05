@@ -220,6 +220,127 @@ async def _create_expense_from_image(
     return expense
 
 
+async def _find_leg_by_flight_number(
+    db: AsyncSession, trip_id: UUID, flight_number: str
+) -> TripLeg | None:
+    """Busca un leg de vuelo en el viaje activo por número de vuelo normalizado."""
+    normalized = flight_number.upper().replace(" ", "")
+    result = await db.execute(
+        select(TripLeg).where(
+            TripLeg.trip_id == trip_id,
+            TripLeg.mode == "flight",
+            TripLeg.flight_number.isnot(None),
+        )
+    )
+    for leg in result.scalars().all():
+        if leg.flight_number and leg.flight_number.upper().replace(" ", "") == normalized:
+            return leg
+    return None
+
+
+async def _save_attachment_for_leg(
+    file_bytes: bytes, mime_type: str, user_id: UUID, leg_id: UUID
+) -> str:
+    """Guarda el archivo en /app/uploads/legs/ y devuelve la ruta interna."""
+    ext = ".pdf" if mime_type == "application/pdf" else ".jpg"
+    dir_path = f"/app/uploads/legs/{user_id}"
+    await aiofiles.os.makedirs(dir_path, exist_ok=True)
+    path = f"{dir_path}/{leg_id}{ext}"
+    async with aiofiles.open(path, "wb") as f:
+        await f.write(file_bytes)
+    return path
+
+
+async def _create_leg_from_boarding_pass(
+    db: AsyncSession,
+    user_id: UUID,
+    trip_id: UUID,
+    bp: "BoardingPassResult",
+    file_bytes: bytes,
+    mime_type: str,
+) -> TripLeg:
+    """Crea un TripLeg mode=flight a partir de los datos de un boarding pass."""
+    from app.services.ocr_providers.base import BoardingPassResult  # noqa: F401
+
+    leg_id = uuid4()
+    doc_path = await _save_attachment_for_leg(file_bytes, mime_type, user_id, leg_id)
+    leg = TripLeg(
+        id=leg_id,
+        trip_id=trip_id,
+        user_id=user_id,
+        mode="flight",
+        source="email_boarding_pass",
+        confirmed=False,
+        flight_number=bp.flight_number,
+        carrier=bp.carrier,
+        origin=bp.origin,
+        destination=bp.destination,
+        departure_local=bp.departure_local,
+        arrival_local=bp.arrival_local,
+        seat=bp.seat,
+        locator_code=bp.locator_code,
+        document_path=doc_path,
+    )
+    db.add(leg)
+    await db.flush()
+    return leg
+
+
+async def _process_attachment(
+    db: AsyncSession,
+    mime_type: str,
+    image_bytes: bytes,
+    user: User,
+    active_trip_id: UUID,
+) -> str:
+    """Procesa un adjunto de email intentando primero boarding pass, luego receipt.
+
+    Devuelve: "boarding_pass_linked" | "boarding_pass_new" | "expense" | "skipped"
+    """
+    from app.services.ocr_factory import get_ocr_provider
+    from app.services.ocr_providers.base import OcrProviderNotConfiguredError
+
+    try:
+        provider = await get_ocr_provider(db, user.id)
+    except OcrProviderNotConfiguredError:
+        logger.warning("email_processor: OCR no configurado para user=%s", user.id)
+        return "skipped"
+
+    # ── Intento 1: boarding pass ─────────────────────────────────────────────
+    bp = None
+    try:
+        bp = await provider.extract_boarding_pass(image_bytes, mime_type)
+    except Exception as exc:
+        logger.debug("email_processor: boarding pass extraction failed silently: %s", exc)
+
+    if bp and bp.flight_number:
+        existing_leg = await _find_leg_by_flight_number(db, active_trip_id, bp.flight_number)
+        if existing_leg:
+            doc_path = await _save_attachment_for_leg(
+                image_bytes, mime_type, user.id, existing_leg.id
+            )
+            existing_leg.document_path = doc_path
+            await db.flush()
+            logger.info(
+                "email_processor: boarding pass vinculado a leg=%s (vuelo %s)",
+                existing_leg.id, bp.flight_number,
+            )
+            return "boarding_pass_linked"
+        else:
+            await _create_leg_from_boarding_pass(
+                db, user.id, active_trip_id, bp, image_bytes, mime_type
+            )
+            logger.info(
+                "email_processor: leg creado desde boarding pass (vuelo %s)",
+                bp.flight_number,
+            )
+            return "boarding_pass_new"
+
+    # ── Intento 2: receipt normal ────────────────────────────────────────────
+    expense = await _create_expense_from_image(db, image_bytes, mime_type, user, active_trip_id, None)
+    return "expense" if expense else "skipped"
+
+
 async def _process_raw_email(db: AsyncSession, raw: RawEmail, user: User) -> dict:
     """Procesa un email crudo. Devuelve {legs, expenses}."""
     existing = await db.execute(
@@ -243,16 +364,21 @@ async def _process_raw_email(db: AsyncSession, raw: RawEmail, user: User) -> dic
 
     # ── Procesar adjuntos de imagen ────────────────────────────────────────
     expenses_created = 0
+    bp_linked = 0
+    bp_new = 0
     if raw.image_attachments:
         active_trip_id = await _get_active_trip_id(db, user.id)
         if active_trip_id:
             for mime_type, image_bytes in raw.image_attachments:
-                expense = await _create_expense_from_image(
-                    db, image_bytes, mime_type, user,
-                    active_trip_id, raw.subject,
+                result_type = await _process_attachment(
+                    db, mime_type, image_bytes, user, active_trip_id
                 )
-                if expense:
+                if result_type == "expense":
                     expenses_created += 1
+                elif result_type == "boarding_pass_linked":
+                    bp_linked += 1
+                elif result_type == "boarding_pass_new":
+                    bp_new += 1
         else:
             logger.info(
                 "email_processor: adjuntos de imagen ignorados — no hay viaje activo para user=%s",
@@ -263,13 +389,17 @@ async def _process_raw_email(db: AsyncSession, raw: RawEmail, user: User) -> dic
     db.add(EmailImport(
         message_id=raw.message_id,
         user_id=user.id,
-        legs_created=legs_created + expenses_created,
+        legs_created=legs_created + bp_new + expenses_created,
     ))
 
     # ── Notificación ──────────────────────────────────────────────────────
     parts = []
     if legs_created:
         parts.append(f"{legs_created} tramo pendiente de asignación")
+    if bp_linked:
+        parts.append(f"boarding pass vinculado")
+    if bp_new:
+        parts.append(f"{bp_new} tramo de vuelo desde boarding pass")
     if expenses_created:
         parts.append(f"{expenses_created} gasto{'s' if expenses_created > 1 else ''} en borrador")
 

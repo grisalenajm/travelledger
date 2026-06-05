@@ -1,12 +1,9 @@
 import logging
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
 from uuid import UUID, uuid4
 
-import aiofiles
-import aiofiles.os
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,8 +15,6 @@ from app.schemas.trip import TripCreate, TripSummary, TripUpdate
 from app.services import currency_service, unsplash_service
 
 logger = logging.getLogger(__name__)
-
-_COVERS_DIR = Path("/app/uploads/covers")
 
 
 async def get_active_trip(db: AsyncSession, user_id: UUID) -> Trip | None:
@@ -68,16 +63,8 @@ async def create(db: AsyncSession, user_id: UUID, data: TripCreate) -> Trip:
     await db.refresh(trip)
 
     try:
-        img_bytes = await unsplash_service.fetch_cover(data.destination)
-        if img_bytes:
-            await aiofiles.os.makedirs(_COVERS_DIR, exist_ok=True)
-            cover_path = _COVERS_DIR / f"{trip.id}.jpg"
-            async with aiofiles.open(cover_path, "wb") as f:
-                await f.write(img_bytes)
-            trip.cover_image_path = f"covers/{trip.id}.jpg"
-            await db.flush()
-            await db.commit()
-            await db.refresh(trip)
+        await unsplash_service.fetch_and_save_cover(trip.id, data.destination)
+        await db.refresh(trip)
     except Exception as exc:
         logger.warning("trip_service.create: portada automática falló para %s: %s", trip.id, exc)
 
@@ -95,13 +82,30 @@ async def get_or_404(db: AsyncSession, trip_id: UUID, user_id: UUID) -> Trip:
 
 
 async def update(
-    db: AsyncSession, trip_id: UUID, user_id: UUID, data: TripUpdate
+    db: AsyncSession,
+    trip_id: UUID,
+    user_id: UUID,
+    data: TripUpdate,
+    background_tasks: BackgroundTasks | None = None,
 ) -> Trip:
     trip = await get_or_404(db, trip_id, user_id)
+    old_destination = trip.destination
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(trip, field, value)
     await db.flush()
     await db.refresh(trip)
+
+    if (
+        background_tasks is not None
+        and data.destination
+        and data.destination != old_destination
+    ):
+        background_tasks.add_task(
+            unsplash_service.fetch_and_save_cover,
+            trip.id,
+            data.destination,
+        )
+
     return trip
 
 

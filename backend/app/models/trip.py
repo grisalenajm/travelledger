@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, func
@@ -18,6 +19,8 @@ class Trip(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     destination: Mapped[str] = mapped_column(String(100), nullable=False)
+    destination_lat: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
+    destination_lng: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     start_date: Mapped[date] = mapped_column(nullable=False)
     end_date: Mapped[date] = mapped_column(nullable=False)
     primary_currency: Mapped[str] = mapped_column(String(3), nullable=False)

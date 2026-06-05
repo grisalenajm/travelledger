@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useQueryClient } from "@tanstack/react-query"
 import { useTrip, useUpdateTrip, useDeleteTrip } from "@/hooks/use-trips"
+import { LocationAutocomplete } from "@/components/location-autocomplete"
 
 const CURRENCIES = [
   "EUR", "USD", "GBP", "CHF", "JPY",
@@ -25,6 +27,8 @@ const schema = z
   .object({
     name: z.string().min(1, "Obligatorio"),
     destination: z.string().min(1, "Obligatorio"),
+    destination_lat: z.union([z.number(), z.null(), z.undefined()]).optional(),
+    destination_lng: z.union([z.number(), z.null(), z.undefined()]).optional(),
     start_date: z.string().min(1, "Obligatorio"),
     end_date: z.string().min(1, "Obligatorio"),
     primary_currency: z.string().min(1),
@@ -63,6 +67,7 @@ function PageSkeleton() {
 export default function TripEditPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: trip, isLoading, isError } = useTrip(id)
   const updateTrip = useUpdateTrip()
   const deleteTrip = useDeleteTrip()
@@ -71,14 +76,19 @@ export default function TripEditPage() {
   const [coverUploading, setCoverUploading] = useState(false)
   const [coverError, setCoverError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
+
+  const destinationValue = watch("destination") ?? ""
 
   // Pre-fill form when trip data arrives
   useEffect(() => {
@@ -86,6 +96,8 @@ export default function TripEditPage() {
       reset({
         name: trip.name,
         destination: trip.destination,
+        destination_lat: trip.destination_lat ?? undefined,
+        destination_lng: trip.destination_lng ?? undefined,
         start_date: trip.start_date,
         end_date: trip.end_date,
         primary_currency: trip.primary_currency,
@@ -117,7 +129,6 @@ export default function TripEditPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Instant local preview
     const objectUrl = URL.createObjectURL(file)
     setCoverPreview(objectUrl)
     setCoverError(null)
@@ -139,12 +150,35 @@ export default function TripEditPage() {
     }
   }
 
+  async function handleRegenerateCover() {
+    setIsRegenerating(true)
+    try {
+      const res = await fetch(`/api/proxy/trips/${id}/cover/regenerate`, { method: "POST" })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { detail?: string }).detail ?? "Error al regenerar")
+      }
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["trips", id] })
+        queryClient.invalidateQueries({ queryKey: ["trips"] })
+        setCoverPreview(`/api/proxy/trips/${id}/cover?t=${Date.now()}`)
+      }, 3000)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al regenerar"
+      setCoverError(msg)
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
   const onSubmit = async (values: FormValues) => {
     await updateTrip.mutateAsync({
       id,
       data: {
         name: values.name,
         destination: values.destination,
+        destination_lat: values.destination_lat ?? null,
+        destination_lng: values.destination_lng ?? null,
         start_date: values.start_date,
         end_date: values.end_date,
         primary_currency: values.primary_currency,
@@ -277,6 +311,19 @@ export default function TripEditPage() {
             className="hidden"
             onChange={handleCoverChange}
           />
+
+          {/* Botón Regenerar portada */}
+          <button
+            type="button"
+            disabled={isRegenerating || !destinationValue}
+            onClick={handleRegenerateCover}
+            className="mt-2 flex items-center gap-1.5 text-xs font-label font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className={`material-symbols-outlined text-[14px] leading-none ${isRegenerating ? "animate-spin" : ""}`}>
+              refresh
+            </span>
+            {isRegenerating ? "Regenerando…" : "Regenerar portada con Unsplash"}
+          </button>
         </div>
 
         {/* Nombre */}
@@ -295,12 +342,16 @@ export default function TripEditPage() {
         {/* Destino */}
         <div>
           <label htmlFor="destination" className={FIELD_LABEL}>Destino *</label>
-          <input
-            id="destination"
-            type="text"
-            placeholder="Tokyo, Japan"
+          <LocationAutocomplete
+            value={destinationValue}
+            onChange={(val) => setValue("destination", val)}
+            onSelect={(place) => {
+              setValue("destination", place.name)
+              setValue("destination_lat", place.lat)
+              setValue("destination_lng", place.lng)
+            }}
+            placeholder="Busca el destino del viaje…"
             className={FIELD_INPUT}
-            {...register("destination")}
           />
           {errors.destination && (
             <p className="mt-1 text-[11px] text-error">{errors.destination.message}</p>

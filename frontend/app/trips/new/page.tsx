@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useCreateTrip } from "@/hooks/use-trips"
 import { Button } from "@/components/ui/button"
+import { LocationAutocomplete } from "@/components/location-autocomplete"
 
 const CURRENCIES = [
   "EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD", "SEK", "NOK", "DKK",
@@ -18,6 +19,8 @@ const schema = z
   .object({
     name: z.string().min(1, "Nombre requerido"),
     destination: z.string().min(1, "Destino requerido"),
+    destination_lat: z.union([z.number(), z.null(), z.undefined()]).optional(),
+    destination_lng: z.union([z.number(), z.null(), z.undefined()]).optional(),
     start_date: z.string().min(1, "Fecha inicio requerida"),
     end_date: z.string().min(1, "Fecha fin requerida"),
     primary_currency: z.string().min(1, "Moneda principal requerida"),
@@ -50,6 +53,8 @@ export default function NewTripPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -60,11 +65,15 @@ export default function NewTripPage() {
     },
   })
 
+  const destinationValue = watch("destination") ?? ""
+
   const onSubmit = async (data: FormValues) => {
     try {
       const trip = await createTrip.mutateAsync({
         name: data.name,
         destination: data.destination,
+        destination_lat: data.destination_lat ?? null,
+        destination_lng: data.destination_lng ?? null,
         start_date: data.start_date,
         end_date: data.end_date,
         primary_currency: data.primary_currency,
@@ -106,9 +115,15 @@ export default function NewTripPage() {
 
           <div className="space-y-1.5">
             <label className={labelClass}>Destino *</label>
-            <input
-              {...register("destination")}
-              placeholder="Tokyo, Japan"
+            <LocationAutocomplete
+              value={destinationValue}
+              onChange={(val) => setValue("destination", val)}
+              onSelect={(place) => {
+                setValue("destination", place.name)
+                setValue("destination_lat", place.lat)
+                setValue("destination_lng", place.lng)
+              }}
+              placeholder="Busca el destino del viaje…"
               className={inputClass}
             />
             {errors.destination && <p className={errorClass}>{errors.destination.message}</p>}

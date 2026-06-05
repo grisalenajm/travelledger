@@ -19,6 +19,8 @@ export interface TripCreate {
   name: string
   description?: string | null
   destination: string
+  destination_lat?: number | null
+  destination_lng?: number | null
   start_date: string
   end_date: string
   primary_currency: string

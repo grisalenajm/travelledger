@@ -5,7 +5,7 @@ from uuid import UUID
 
 import aiofiles
 import aiofiles.os
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,7 @@ from app.models.user import User
 from app.schemas.map import TripMapData
 from app.schemas.stats import TripStats
 from app.schemas.trip import TripCreate, TripRead, TripSummary, TripUpdate
-from app.services import map_service, paperless_service, stats_service, trip_service
+from app.services import map_service, paperless_service, stats_service, trip_service, unsplash_service
 
 logger = logging.getLogger(__name__)
 _COVERS_DIR = Path("/app/uploads/covers")
@@ -65,10 +65,33 @@ async def get_trip(
 async def update_trip(
     trip_id: UUID,
     data: TripUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_not_guest),
 ):
-    return await trip_service.update(db, trip_id, user.id, data)
+    return await trip_service.update(db, trip_id, user.id, data, background_tasks)
+
+
+@router.post("/{trip_id}/cover/regenerate")
+async def regenerate_trip_cover(
+    trip_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_not_guest),
+):
+    """Dispara la búsqueda de portada en Unsplash para el destino actual del viaje."""
+    trip = await trip_service.get_or_404(db, trip_id, user.id)
+    if not trip.destination:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El viaje no tiene destino configurado.",
+        )
+    background_tasks.add_task(
+        unsplash_service.fetch_and_save_cover,
+        trip.id,
+        trip.destination,
+    )
+    return {"ok": True, "message": "Regenerando portada…"}
 
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)

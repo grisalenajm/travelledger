@@ -28,6 +28,8 @@ class TripCreate(BaseModel):
     name: str = Field(max_length=100)
     description: str | None = None
     destination: str = Field(max_length=100)
+    destination_lat: float | None = None
+    destination_lng: float | None = None
     start_date: date
     end_date: date
     primary_currency: str = Field(min_length=3, max_length=3)
@@ -40,6 +42,13 @@ class TripCreate(BaseModel):
     def validate_currency(cls, v: str) -> str:
         return _check_currency(v)
 
+    @field_validator("destination_lat", "destination_lng", mode="before")
+    @classmethod
+    def empty_str_float_to_none(cls, v: object) -> object:
+        if v == "" or v is None:
+            return None
+        return v
+
     @model_validator(mode="after")
     def end_after_start(self) -> "TripCreate":
         if self.end_date < self.start_date:
@@ -51,6 +60,8 @@ class TripUpdate(BaseModel):
     name: str | None = Field(default=None, max_length=100)
     description: str | None = None
     destination: str | None = Field(default=None, max_length=100)
+    destination_lat: float | None = None
+    destination_lng: float | None = None
     start_date: date | None = None
     end_date: date | None = None
     primary_currency: str | None = Field(default=None, min_length=3, max_length=3)
@@ -62,6 +73,13 @@ class TripUpdate(BaseModel):
     @classmethod
     def validate_currency(cls, v: str | None) -> str | None:
         return _check_currency(v) if v else v
+
+    @field_validator("destination_lat", "destination_lng", mode="before")
+    @classmethod
+    def empty_str_float_to_none(cls, v: object) -> object:
+        if v == "" or v is None:
+            return None
+        return v
 
 
 class TripRead(TripCreate):

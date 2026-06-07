@@ -5,15 +5,18 @@ import { useParams, useRouter } from "next/navigation"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useQueryClient } from "@tanstack/react-query"
 import { useExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/use-expenses"
 import { useGeocodeExpense } from "@/hooks/use-trip-map"
 import { useTripLegs } from "@/hooks/use-trip-legs"
 import { usePaymentMethods } from "@/hooks/use-payment-methods"
+import { useTrips } from "@/hooks/use-trips"
 import { LegCard } from "@/components/leg-card"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { useIsGuest } from "@/hooks/use-is-guest"
 import { LocationAutocomplete } from "@/components/location-autocomplete"
+import type { Trip } from "@/types/index"
 
 const CATEGORIES = [
   "Dining",
@@ -86,18 +89,49 @@ function PageSkeleton() {
 export default function ExpenseDetailPage() {
   const { id: tripId, expenseId } = useParams<{ id: string; expenseId: string }>()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: expense, isLoading, isError } = useExpense(expenseId)
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
   const geocodeExpense = useGeocodeExpense()
   const { data: legs } = useTripLegs(tripId)
   const { data: paymentMethods } = usePaymentMethods()
+  const { data: allTrips } = useTrips()
   const linkedLeg = legs?.find((l) => l.expense_id === expenseId) ?? null
   const isGuest = useIsGuest()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [receiptObjectUrl, setReceiptObjectUrl] = useState<string | null>(null)
   const [receiptContentType, setReceiptContentType] = useState<string | null>(null)
+  const [reassignOpen, setReassignOpen] = useState(false)
+  const [targetTripId, setTargetTripId] = useState("")
+  const [isReassigning, setIsReassigning] = useState(false)
+
+  const otherTrips = (allTrips ?? []).filter((t: Trip) => t.id !== tripId)
+
+  const handleReassign = async () => {
+    if (!targetTripId) return
+    setIsReassigning(true)
+    try {
+      const res = await fetch(`/api/proxy/expenses/${expenseId}/reassign`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trip_id: targetTripId }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { detail?: string }).detail ?? "Error al reasignar")
+      }
+      queryClient.invalidateQueries({ queryKey: ["expenses"] })
+      queryClient.invalidateQueries({ queryKey: ["trips"] })
+      router.back()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al reasignar")
+    } finally {
+      setIsReassigning(false)
+      setReassignOpen(false)
+    }
+  }
 
   const receiptUrl = expense?.has_receipt
     ? `/api/proxy/expenses/${expenseId}/receipt-image`
@@ -498,7 +532,7 @@ export default function ExpenseDetailPage() {
             Cancelar
           </button>
 
-          {/* Eliminar + Guardar */}
+          {/* Eliminar + Reasignar + Guardar */}
           {!isGuest && (
             <div className="flex items-center gap-2">
               <button
@@ -520,6 +554,16 @@ export default function ExpenseDetailPage() {
               </button>
 
               <button
+                type="button"
+                onClick={() => { setTargetTripId(""); setReassignOpen(true) }}
+                disabled={isPending || otherTrips.length === 0}
+                title="Mover a otro viaje"
+                className="h-10 w-10 flex items-center justify-center rounded-full text-on-surface-variant border border-outline-variant hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                <span className="material-symbols-outlined text-[18px] leading-none">swap_horiz</span>
+              </button>
+
+              <button
                 type="submit"
                 form="expense-form"
                 disabled={isPending}
@@ -532,6 +576,52 @@ export default function ExpenseDetailPage() {
 
         </div>
       </footer>
+
+      {/* ── Reassign dialog ── */}
+      {reassignOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl">
+            <h2 className="font-headline text-base font-bold text-on-surface">Reasignar gasto</h2>
+            <p className="text-sm text-on-surface-variant">
+              Selecciona el viaje al que quieres mover este gasto.
+              {linkedLeg && (
+                <span className="block mt-1 text-amber-600 dark:text-amber-400">
+                  Este gasto está vinculado a un tramo — el tramo quedará desvinculado en el viaje original.
+                </span>
+              )}
+            </p>
+            <select
+              value={targetTripId}
+              onChange={(e) => setTargetTripId(e.target.value)}
+              className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="">Selecciona un viaje…</option>
+              {otherTrips.map((t: Trip) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.start_date} → {t.end_date})
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setReassignOpen(false)}
+                className="h-10 px-4 rounded-full text-sm font-label font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!targetTripId || isReassigning}
+                onClick={handleReassign}
+                className="h-10 px-5 rounded-full text-sm font-label font-semibold text-white bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {isReassigning ? "Moviendo…" : "Mover gasto"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightboxOpen && receiptUrl && (

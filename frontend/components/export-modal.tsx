@@ -16,37 +16,43 @@ export function ExportModal({ open, onClose, tripId, tripName }: ExportModalProp
   const [onlyBillable, setOnlyBillable] = useState(true)
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
-  const [downloading, setDownloading] = useState<"csv" | "zip" | null>(null)
+  const [exportFormat, setExportFormat] = useState<"xlsx" | "csv">("xlsx")
+  const [downloading, setDownloading] = useState<"data" | "zip" | null>(null)
 
-  function buildUrl(type: "csv" | "zip") {
+  function buildParams(includeFormat = true) {
     const params = new URLSearchParams()
+    if (includeFormat) params.set("format", exportFormat)
     if (onlyBillable) params.set("only_billable", "true")
     if (fromDate) params.set("from", fromDate)
     if (toDate) params.set("to", toDate)
-    const qs = params.toString() ? `?${params.toString()}` : ""
-    if (type === "csv") {
-      return `/api/proxy/reports/export/${tripId}?format=csv${params.toString() ? `&${params.toString()}` : ""}`
-    }
-    return `/api/proxy/reports/export/${tripId}/bundle${qs}`
+    return params.toString()
   }
 
-  async function handleDownload(type: "csv" | "zip") {
+  async function handleDownload(type: "data" | "zip") {
     setDownloading(type)
     try {
-      const res = await fetch(buildUrl(type))
+      const qs = buildParams()
+      const url =
+        type === "zip"
+          ? `/api/proxy/reports/export/${tripId}/bundle?${qs}`
+          : `/api/proxy/reports/export/${tripId}?${qs}`
+
+      const res = await fetch(url)
       if (!res.ok) throw new Error(`Export failed: ${res.status}`)
       const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
+      const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement("a")
-      a.href = url
-      const date = new Date().toISOString().split("T")[0]
-      a.download = type === "csv"
-        ? `gastos_${tripName}_${date}.csv`
-        : `bundle_${tripName}_${date}.zip`
+      a.href = objectUrl
+      const dateStr = new Date().toISOString().split("T")[0]
+      if (type === "zip") {
+        a.download = `bundle_${tripName}_${dateStr}.zip`
+      } else {
+        a.download = `gastos_${tripName}_${dateStr}.${exportFormat}`
+      }
       document.body.appendChild(a)
       a.click()
       a.remove()
-      URL.revokeObjectURL(url)
+      URL.revokeObjectURL(objectUrl)
     } catch (e) {
       console.error("Export failed", e)
     } finally {
@@ -61,6 +67,46 @@ export function ExportModal({ open, onClose, tripId, tripName }: ExportModalProp
       </DialogHeader>
 
       <div className="space-y-5">
+        {/* Format selector */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wide">
+            Formato
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setExportFormat("xlsx")}
+              className={[
+                "flex-1 py-2 rounded-lg text-sm font-label font-semibold border transition-colors",
+                exportFormat === "xlsx"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-surface border-outline-variant text-on-surface-variant hover:bg-surface-container",
+              ].join(" ")}
+            >
+              <span className="material-symbols-outlined text-sm align-middle mr-1">grid_on</span>
+              Excel (.xlsx)
+            </button>
+            <button
+              type="button"
+              onClick={() => setExportFormat("csv")}
+              className={[
+                "flex-1 py-2 rounded-lg text-sm font-label font-semibold border transition-colors",
+                exportFormat === "csv"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-surface border-outline-variant text-on-surface-variant hover:bg-surface-container",
+              ].join(" ")}
+            >
+              <span className="material-symbols-outlined text-sm align-middle mr-1">table_view</span>
+              CSV
+            </button>
+          </div>
+          {exportFormat === "csv" && (
+            <p className="text-[11px] text-on-surface-variant">
+              Separador <code className="bg-surface-container px-1 rounded">;</code> · decimal <code className="bg-surface-container px-1 rounded">,</code> · compatible con Excel en español
+            </p>
+          )}
+        </div>
+
         <div className="flex items-center justify-between gap-4">
           <label htmlFor="only-billable" className="text-sm text-on-surface cursor-pointer select-none">
             Solo facturables
@@ -98,12 +144,18 @@ export function ExportModal({ open, onClose, tripId, tripName }: ExportModalProp
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleDownload("csv")}
+          onClick={() => handleDownload("data")}
           disabled={downloading !== null}
           className="flex-1 sm:flex-none"
         >
-          <span className="material-symbols-outlined text-sm mr-1">table_view</span>
-          {downloading === "csv" ? "Descargando…" : "CSV"}
+          <span className="material-symbols-outlined text-sm mr-1">
+            {exportFormat === "xlsx" ? "grid_on" : "table_view"}
+          </span>
+          {downloading === "data"
+            ? "Descargando…"
+            : exportFormat === "xlsx"
+            ? "Descargar Excel"
+            : "Descargar CSV"}
         </Button>
         <Button
           size="sm"

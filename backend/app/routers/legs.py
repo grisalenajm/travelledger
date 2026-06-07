@@ -6,6 +6,7 @@ from uuid import UUID
 import aiofiles
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,9 +16,13 @@ from app.models.trip_leg import TripLeg
 from app.models.user import User
 from app.schemas.boarding_pass import BoardingPassOcrResult
 from app.schemas.trip_leg import TripLegCreate, TripLegRead, TripLegUpdate
-from app.services import boarding_pass_service, leg_service, settings_service
+from app.services import boarding_pass_service, expense_service, leg_service, settings_service
 from app.services.ocr_providers.base import OcrProviderNotConfiguredError
 from app.services.trip_service import get_or_404 as get_trip_or_404
+
+
+class ReassignRequest(BaseModel):
+    trip_id: UUID
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +98,39 @@ async def delete_leg(
     user: User = Depends(require_not_guest),
 ):
     await leg_service.delete(db, trip_id, leg_id, user.id)
+
+
+@router.put("/{trip_id}/legs/{leg_id}/reassign", response_model=TripLegRead)
+async def reassign_leg(
+    trip_id: UUID,
+    leg_id: UUID,
+    body: ReassignRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_not_guest),
+):
+    """Move a leg to another trip owned by the same user.
+    If the leg has a linked expense (leg.expense_id), it is moved too.
+    """
+    leg = await leg_service._get_leg_or_404(db, trip_id, leg_id, user.id)
+
+    new_trip = await get_trip_or_404(db, body.trip_id, user.id)
+    if not new_trip:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Viaje destino no encontrado")
+
+    if leg.trip_id == body.trip_id:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El tramo ya pertenece a este viaje")
+
+    if leg.expense_id:
+        try:
+            linked_expense = await expense_service.get_or_404(db, leg.expense_id, user.id)
+            linked_expense.trip_id = body.trip_id
+        except HTTPException:
+            pass
+
+    leg.trip_id = body.trip_id
+    await db.commit()
+    await db.refresh(leg)
+    return leg
 
 
 @router.post("/{trip_id}/legs/{leg_id}/document", response_model=TripLegRead)

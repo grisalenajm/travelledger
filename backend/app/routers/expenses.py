@@ -7,16 +7,19 @@ import aiofiles
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_effective_user_id, require_not_guest
 from app.database import get_db
+from app.models.expense import Expense
+from app.models.trip_leg import TripLeg
 from app.models.user import User
 from app.schemas.expense import ExpenseCreate, ExpenseRead, ExpenseUpdate
 from app.services import expense_service, geocoding_service, paperless_service
 from app.services.expense_service import safe_coordinate
-from sqlalchemy import select
-from app.models.expense import Expense
+from app.services.trip_service import get_or_404 as get_trip_or_404
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"], redirect_slashes=False)
 
@@ -135,6 +138,43 @@ async def delete_expense(
     user: User = Depends(require_not_guest),
 ):
     await expense_service.delete(db, expense_id, user.id)
+
+
+class ReassignRequest(BaseModel):
+    trip_id: UUID
+
+
+@router.put("/{expense_id}/reassign", response_model=ExpenseRead)
+async def reassign_expense(
+    expense_id: UUID,
+    body: ReassignRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_not_guest),
+):
+    """Move an expense to another trip owned by the same user.
+    If the expense is linked to a leg (leg.expense_id), the leg is unlinked
+    and stays in the original trip.
+    """
+    expense = await expense_service.get_or_404(db, expense_id, user.id)
+
+    new_trip = await get_trip_or_404(db, body.trip_id, user.id)
+    if not new_trip:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Viaje destino no encontrado")
+
+    if expense.trip_id == body.trip_id:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El gasto ya pertenece a este viaje")
+
+    # Unlink any leg that references this expense in the original trip
+    await db.execute(
+        update(TripLeg)
+        .where(TripLeg.expense_id == expense_id)
+        .values(expense_id=None)
+    )
+
+    expense.trip_id = body.trip_id
+    await db.commit()
+    await db.refresh(expense)
+    return expense
 
 
 @router.get("/{expense_id}/receipt-url")

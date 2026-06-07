@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { useTrip } from "@/hooks/use-trips"
+import { useQueryClient } from "@tanstack/react-query"
+import { useTrip, useTrips } from "@/hooks/use-trips"
 import { useExpenses } from "@/hooks/use-expenses"
 import { useTripLegs, useDeleteLeg, useCreateLeg } from "@/hooks/use-trip-legs"
 import { LegCard } from "@/components/leg-card"
@@ -11,7 +12,7 @@ import { AddLegModal } from "@/components/add-leg-modal"
 import { BoardingPassScanner } from "@/components/boarding-pass-scanner"
 import { Button } from "@/components/ui/button"
 import { useIsGuest } from "@/hooks/use-is-guest"
-import type { TripLeg, LegMode } from "@/types/index"
+import type { TripLeg, LegMode, Trip } from "@/types/index"
 
 type FilterMode = "all" | "flight" | "accommodation" | "car_rental" | "ground"
 
@@ -53,19 +54,54 @@ function PageSkeleton() {
 
 export default function ItineraryPage() {
   const { id } = useParams<{ id: string }>()
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<FilterMode>("all")
   const [modalOpen, setModalOpen] = useState(false)
   const [editLeg, setEditLeg] = useState<TripLeg | undefined>()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [bpScannerLeg, setBpScannerLeg] = useState<TripLeg | null>(null)
   const [bpCreating, setBpCreating] = useState(false)
+  const [reassignLeg, setReassignLeg] = useState<TripLeg | null>(null)
+  const [targetTripId, setTargetTripId] = useState("")
+  const [isReassigning, setIsReassigning] = useState(false)
 
   const { data: trip, isLoading: tripLoading } = useTrip(id)
   const { data: legs, isLoading: legsLoading, refetch: refetchLegs } = useTripLegs(id)
   const { data: expenses } = useExpenses(id)
+  const { data: allTrips } = useTrips()
   const deleteLeg = useDeleteLeg(id)
   const createLeg = useCreateLeg(id)
   const isGuest = useIsGuest()
+
+  const otherTrips = (allTrips ?? []).filter((t: Trip) => t.id !== id)
+
+  const handleReassignLeg = async () => {
+    if (!reassignLeg || !targetTripId) return
+    setIsReassigning(true)
+    try {
+      const res = await fetch(
+        `/api/proxy/trips/${reassignLeg.trip_id}/legs/${reassignLeg.id}/reassign`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trip_id: targetTripId }),
+        }
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { detail?: string }).detail ?? "Error al reasignar")
+      }
+      queryClient.invalidateQueries({ queryKey: ["legs", id] })
+      queryClient.invalidateQueries({ queryKey: ["trips"] })
+      refetchLegs()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al reasignar")
+    } finally {
+      setIsReassigning(false)
+      setReassignLeg(null)
+      setTargetTripId("")
+    }
+  }
 
   const handleEdit = (leg: TripLeg) => {
     setEditLeg(leg)
@@ -222,6 +258,16 @@ export default function ItineraryPage() {
                     </button>
                   </div>
                 )}
+                {!isGuest && otherTrips.length > 0 && (
+                  <button
+                    type="button"
+                    title="Mover a otro viaje"
+                    onClick={() => { setReassignLeg(leg); setTargetTripId("") }}
+                    className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant/50 hover:bg-surface-container hover:text-on-surface-variant transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px] leading-none">swap_horiz</span>
+                  </button>
+                )}
               </div>
             ))
           )}
@@ -250,6 +296,52 @@ export default function ItineraryPage() {
             refetchLegs()
           }}
         />
+      )}
+
+      {/* Reassign leg dialog */}
+      {reassignLeg && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl">
+            <h2 className="font-headline text-base font-bold text-on-surface">Reasignar tramo</h2>
+            <p className="text-sm text-on-surface-variant">
+              Selecciona el viaje al que quieres mover este tramo.
+              {reassignLeg.expense_id && (
+                <span className="block mt-1 text-amber-600 dark:text-amber-400">
+                  El gasto vinculado a este tramo también se moverá al nuevo viaje.
+                </span>
+              )}
+            </p>
+            <select
+              value={targetTripId}
+              onChange={(e) => setTargetTripId(e.target.value)}
+              className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="">Selecciona un viaje…</option>
+              {otherTrips.map((t: Trip) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.start_date} → {t.end_date})
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => { setReassignLeg(null); setTargetTripId("") }}
+                className="h-10 px-4 rounded-full text-sm font-label font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!targetTripId || isReassigning}
+                onClick={handleReassignLeg}
+                className="h-10 px-5 rounded-full text-sm font-label font-semibold text-white bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {isReassigning ? "Moviendo…" : "Mover tramo"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   )

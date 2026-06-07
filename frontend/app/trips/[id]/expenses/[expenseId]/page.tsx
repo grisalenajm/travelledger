@@ -558,7 +558,7 @@ export default function ExpenseDetailPage() {
                 onClick={() => { setTargetTripId(""); setReassignOpen(true) }}
                 disabled={isPending || otherTrips.length === 0}
                 title="Mover a otro viaje"
-                className="h-10 w-10 flex items-center justify-center rounded-full text-on-surface-variant border border-outline-variant hover:bg-surface-container transition-colors disabled:opacity-40"
+                className="ml-2 h-10 w-10 flex items-center justify-center rounded-full text-on-surface-variant border border-outline-variant hover:bg-surface-container transition-colors disabled:opacity-40"
               >
                 <span className="material-symbols-outlined text-[18px] leading-none">swap_horiz</span>
               </button>

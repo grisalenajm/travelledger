@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel any in-flight run for the same branch/PR when a new push arrives
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # Backend — pytest (SQLite in-memory, no PostgreSQL service needed)
+  # ─────────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend tests (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        env:
+          # conftest.py sets these via os.environ.setdefault, but explicit is clearer
+          DATABASE_URL: "postgresql+asyncpg://test:test@localhost:5433/test"
+          SECRET_KEY: "ci-secret-key-minimum-32-chars-for-testing-ok"
+          WEBHOOK_SECRET: "ci-webhook-secret-min-32-characters-ok!"
+          WEBHOOK_USER_EMAIL: "test@ledger.dev"
+          ALLOW_REGISTRATION: "true"
+          SLOWAPI_NO_LIMITS: "1"
+        run: |
+          pytest tests \
+            --asyncio-mode=auto \
+            --tb=short \
+            -q \
+            --no-header
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Frontend — TypeScript type check
+  # ─────────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend typecheck (tsc)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit

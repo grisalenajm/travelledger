@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -32,6 +32,11 @@ class User(Base):
     )
     invited_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    # Revocación de refresh tokens: el JWT lleva este valor en el claim "tv";
+    # incrementar el campo invalida todos los refresh tokens emitidos
+    token_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
     )
     fcm_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

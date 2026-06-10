@@ -132,3 +132,80 @@ async def test_refresh_with_access_token_fails(client: AsyncClient):
 
     r = await client.post(REFRESH_URL, json={"refresh_token": access_token})
     assert r.status_code == 401
+
+
+LOGOUT_URL = "/api/auth/logout"
+
+
+@pytest.mark.asyncio
+async def test_logout_revokes_refresh_token(client: AsyncClient):
+    """Tras logout, el refresh token emitido en el login queda invalidado."""
+    await client.post(REGISTER_URL, json=USER_PAYLOAD)
+    login_r = await client.post(LOGIN_URL, json={"email": USER_PAYLOAD["email"], "password": USER_PAYLOAD["password"]})
+    access_token = login_r.json()["access_token"]
+    refresh_token = login_r.json()["refresh_token"]
+
+    # Antes del logout, el refresh funciona
+    r = await client.post(REFRESH_URL, json={"refresh_token": refresh_token})
+    assert r.status_code == 200
+
+    logout_r = await client.post(LOGOUT_URL, headers={"Authorization": f"Bearer {access_token}"})
+    assert logout_r.status_code == 204
+
+    # Después del logout, el mismo refresh token es rechazado
+    # (limpiar cookies: el endpoint es cookie-first y el client las conserva)
+    client.cookies.clear()
+    r = await client.post(REFRESH_URL, json={"refresh_token": refresh_token})
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_old_refresh_rejected_after_relogin(client: AsyncClient):
+    """Un refresh token de una sesión anterior al logout no revive con un nuevo login."""
+    await client.post(REGISTER_URL, json=USER_PAYLOAD)
+    creds = {"email": USER_PAYLOAD["email"], "password": USER_PAYLOAD["password"]}
+
+    first_login = await client.post(LOGIN_URL, json=creds)
+    old_refresh = first_login.json()["refresh_token"]
+    old_access = first_login.json()["access_token"]
+
+    await client.post(LOGOUT_URL, headers={"Authorization": f"Bearer {old_access}"})
+
+    # Nuevo login → nuevos tokens válidos con la versión incrementada
+    second_login = await client.post(LOGIN_URL, json=creds)
+    new_refresh = second_login.json()["refresh_token"]
+    client.cookies.clear()  # el endpoint es cookie-first; forzar uso del body
+    r = await client.post(REFRESH_URL, json={"refresh_token": new_refresh})
+    assert r.status_code == 200
+
+    # El token de la sesión antigua sigue revocado
+    client.cookies.clear()
+    r = await client.post(REFRESH_URL, json={"refresh_token": old_refresh})
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_refresh_without_tv_claim_rejected(client: AsyncClient, db):
+    """Tokens del formato antiguo (sin claim tv) se rechazan — fuerza re-login tras el deploy."""
+    from jose import jwt as jose_jwt
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import select
+
+    from app.config import settings
+    from app.models.user import User
+
+    await client.post(REGISTER_URL, json=USER_PAYLOAD)
+    result = await db.execute(select(User).where(User.email == USER_PAYLOAD["email"]))
+    user = result.scalar_one()
+
+    legacy_token = jose_jwt.encode(
+        {
+            "sub": str(user.id),
+            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+            "type": "refresh",
+        },
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+    r = await client.post(REFRESH_URL, json={"refresh_token": legacy_token})
+    assert r.status_code == 401

@@ -25,10 +25,12 @@ def create_access_token(subject: str) -> str:
     )
 
 
-def create_refresh_token(subject: str) -> str:
+def create_refresh_token(subject: str, token_version: int) -> str:
+    """El claim "tv" ata el token a User.token_version: si el usuario hace
+    logout, el campo se incrementa y todos los refresh emitidos quedan inválidos."""
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     return jwt.encode(
-        {"sub": subject, "exp": expire, "type": "refresh"},
+        {"sub": subject, "exp": expire, "type": "refresh", "tv": token_version},
         settings.SECRET_KEY,
         algorithm=settings.ALGORITHM,
     )

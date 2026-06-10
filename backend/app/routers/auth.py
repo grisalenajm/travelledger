@@ -107,7 +107,7 @@ async def login(request: Request, response: Response, payload: UserLogin, db: As
         extra={"user_id": str(user.id), "ip": request.client.host},
     )
     access_token = create_access_token(str(user.id))
-    refresh_token = create_refresh_token(str(user.id))
+    refresh_token = create_refresh_token(str(user.id), user.token_version)
     _set_refresh_cookie(response, refresh_token)
     return Token(access_token=access_token, refresh_token=refresh_token)
 
@@ -143,14 +143,32 @@ async def refresh(request: Request, response: Response, db: AsyncSession = Depen
     if not user:
         raise exc
 
+    # Revocación: el claim "tv" debe coincidir con la versión actual en BD.
+    # Tokens emitidos antes de un logout (o sin claim "tv") quedan rechazados.
+    if data.get("tv") != user.token_version:
+        security_logger.warning(
+            "refresh_revoked_token",
+            extra={"user_id": str(user.id), "ip": request.client.host},
+        )
+        raise exc
+
     new_access = create_access_token(str(user.id))
-    new_refresh = create_refresh_token(str(user.id))
+    new_refresh = create_refresh_token(str(user.id), user.token_version)
     _set_refresh_cookie(response, new_refresh)
     return Token(access_token=new_access, refresh_token=new_refresh)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(response: Response, current_user: User = Depends(get_current_user)):
+async def logout(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Invalida todos los refresh tokens del usuario (claim "tv" deja de coincidir).
+    # Los access tokens en vuelo siguen siendo válidos hasta su expiración (30 min).
+    current_user.token_version += 1
+    db.add(current_user)
+    security_logger.info("logout", extra={"user_id": str(current_user.id)})
     response.delete_cookie(
         key=_REFRESH_COOKIE,
         path="/api",

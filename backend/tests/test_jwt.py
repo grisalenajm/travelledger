@@ -24,10 +24,11 @@ def test_access_token_type():
 
 
 def test_refresh_token_type():
-    token = create_refresh_token("user-id-123")
+    token = create_refresh_token("user-id-123", token_version=1)
     payload = decode_token(token)
     assert payload["sub"] == "user-id-123"
     assert payload["type"] == "refresh"
+    assert payload["tv"] == 1
 
 
 def test_invalid_token_raises():

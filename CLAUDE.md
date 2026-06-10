@@ -189,6 +189,7 @@ invite_token: str | None    # token de un solo uso enviado por email al invitar
 invite_token_expires_at: datetime | None  # expiración del invite_token
 must_change_password: bool  # DEFAULT False — True tras aceptar invitación, hasta cambiar password
 invited_by: UUID | None     # FK → users.id — admin que generó la invitación
+token_version: int          # DEFAULT 1 — claim "tv" del refresh JWT; logout lo incrementa y revoca todos los refresh emitidos
 fcm_token: str | None       # aparcado, no usar en MVP
 telegram_chat_id: str | None  # aparcado, no usar en MVP
 created_at: datetime
@@ -368,7 +369,7 @@ UNIQUE(from_currency, to_currency, date)
 POST   /api/auth/register    → {name, email, password, confirm_password} → UserRead + tokens
 POST   /api/auth/login       → {email, password} → tokens
 POST   /api/auth/refresh     → {refresh_token} → tokens
-POST   /api/auth/logout      → invalida refresh token
+POST   /api/auth/logout      → incrementa User.token_version → revoca todos los refresh tokens (access tokens en vuelo expiran a los 30 min)
 GET    /api/auth/status      → {registration_open: bool, has_users: bool}
 ```
 
@@ -511,7 +512,7 @@ Fuente de tipos de cambio: **open.er-api.com** (gratuito, sin key). No usar exch
 |---------|---------------|
 | Passwords | bcrypt |
 | JWT access | 30 min |
-| JWT refresh | 7 días — HttpOnly cookie (web) |
+| JWT refresh | 7 días — HttpOnly cookie (web) — revocable: claim `tv` debe coincidir con `User.token_version` |
 | API keys en BD | Cifrado Fernet (SECRET_KEY del .env) |
 | CORS | Orígenes explícitos, nunca `*` en prod |
 | Uploads | Validar MIME por magic bytes, no por extensión |

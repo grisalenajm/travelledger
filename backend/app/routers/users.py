@@ -153,7 +153,7 @@ async def accept_invite(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
     access_token = create_access_token(str(user.id))
-    refresh_token = create_refresh_token(str(user.id))
+    refresh_token = create_refresh_token(str(user.id), user.token_version)
     _set_refresh_cookie(response, refresh_token)
     return Token(access_token=access_token, refresh_token=refresh_token)
 

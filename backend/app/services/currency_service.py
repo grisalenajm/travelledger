@@ -65,19 +65,37 @@ async def convert(
     return (amount * rate).quantize(Decimal("0.01")), rate_date
 
 
+# Tabla completa de tipos por divisa base, cacheada en memoria por día natural.
+# open.er-api.com devuelve TODAS las divisas en una llamada — sin esta caché,
+# un día con gastos en 3 monedas distintas hacía 3 llamadas HTTP idénticas.
+_latest_rates: dict[str, tuple[date, dict[str, Decimal]]] = {}
+
+
+async def _fetch_all_rates(base: str) -> dict[str, Decimal]:
+    url = f"https://open.er-api.com/v6/latest/{base.upper()}"
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("result") != "success":
+            raise ValueError("API returned non-success")
+        return {symbol: Decimal(str(rate)) for symbol, rate in data["rates"].items()}
+
+
 async def _fetch_rate(from_currency: str, to_currency: str, rate_date: date) -> Decimal:
-    url = f"https://open.er-api.com/v6/latest/{from_currency.upper()}"
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            data = response.json()
-            if data.get("result") != "success":
-                raise ValueError("API returned non-success")
-            rate = data["rates"].get(to_currency.upper())
-            if rate is None:
-                raise ValueError(f"Rate not found for {to_currency}")
-            return Decimal(str(rate))
+        today = date.today()
+        cached = _latest_rates.get(from_currency)
+        if cached is None or cached[0] != today:
+            if len(_latest_rates) > 20:
+                _latest_rates.clear()
+            rates = await _fetch_all_rates(from_currency)
+            _latest_rates[from_currency] = (today, rates)
+            cached = (today, rates)
+        rate = cached[1].get(to_currency.upper())
+        if rate is None:
+            raise ValueError(f"Rate not found for {to_currency}")
+        return rate
     except Exception as e:
         logger.error(f"open.er-api.com failed: {e}")
         raise HTTPException(503, "Exchange rate service unavailable")

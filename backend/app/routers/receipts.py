@@ -18,6 +18,7 @@ from app.models.user import User
 from app.schemas.expense import ExpenseRead
 from app.services import currency_service, paperless_service, settings_service
 from app.services.expense_service import extract_exif_gps, geocode_expense_bg, safe_coordinate
+from app.services.image_utils import downscale_for_ocr
 from app.services.ocr_factory import get_ocr_provider
 from app.services.ocr_providers.base import OcrProviderNotConfiguredError
 from app.services.trip_service import get_or_404 as get_trip_or_404
@@ -85,7 +86,7 @@ async def upload_receipt(
     except OcrProviderNotConfiguredError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
 
-    ocr = await provider.extract(content, mime_type)
+    ocr = await provider.extract(downscale_for_ocr(content, mime_type), mime_type)
     logger.info(
         "OCR complete trip_id=%s confidence=%.2f date=%s amount=%s currency=%s",
         trip_id, ocr.confidence, ocr.date, ocr.amount, ocr.currency,

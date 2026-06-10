@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.boarding_pass import BoardingPassOcrResult
+from app.services.image_utils import downscale_for_ocr
 from app.services.ocr_factory import get_ocr_provider
 from app.services.ocr_providers.base import BoardingPassResult
 
@@ -60,5 +61,7 @@ async def extract_boarding_pass(
         media_type,
         len(image_bytes),
     )
-    result = await provider.extract_boarding_pass(image_bytes, media_type)
+    result = await provider.extract_boarding_pass(
+        downscale_for_ocr(image_bytes, media_type), media_type
+    )
     return _to_schema(result)

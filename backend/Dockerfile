@@ -28,6 +28,9 @@ RUN groupadd --system --gid 1001 appgroup \
     && chown -R appuser:appgroup /app
 USER appuser
 EXPOSE 8000
+# alembic upgrade head en el arranque: el esquema siempre va sincronizado con el
+# código (las migraciones 0019/0020/0022/0023 requirieron paso manual por SSH).
 # --proxy-headers: el backend solo es alcanzable desde la red Docker interna
-# (frontend proxy / NPM), por eso es seguro confiar en X-Forwarded-For
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# (frontend proxy / NPM), por eso es seguro confiar en X-Forwarded-For.
+# exec: uvicorn hereda PID 1 y recibe las señales de docker stop.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips '*'"]

@@ -35,22 +35,20 @@ def _spawn_bg(coro) -> None:
 
 
 async def _get_imap_config(db: AsyncSession, user_id: UUID) -> dict:
-    """Lee config IMAP de user_settings, fallback a env vars."""
-    from app.services.settings_service import get as get_setting
+    """Lee config IMAP de user_settings (una sola query), fallback a env vars."""
+    from app.services.settings_service import get_all
 
-    host = await get_setting(db, user_id, "mail_host") or settings.IMAP_HOST
-    port_raw = await get_setting(db, user_id, "mail_imap_port")
-    port = int(port_raw) if port_raw else settings.IMAP_PORT
-    user = await get_setting(db, user_id, "mail_user") or settings.IMAP_USER
-    password = await get_setting(db, user_id, "mail_password") or settings.IMAP_PASSWORD
-    folder = await get_setting(db, user_id, "mail_imap_folder") or settings.IMAP_FOLDER
-    sender_filter = await get_setting(db, user_id, "mail_sender_filter") or settings.IMAP_SENDER_FILTER
-    enabled_str = await get_setting(db, user_id, "mail_enabled")
-    enabled = enabled_str == "true"
+    data = await get_all(db, user_id)
 
+    port_raw = data.get("mail_imap_port")
     return {
-        "host": host, "port": port, "user": user, "password": password,
-        "folder": folder, "sender_filter": sender_filter, "enabled": enabled,
+        "host": data.get("mail_host") or settings.IMAP_HOST,
+        "port": int(port_raw) if port_raw else settings.IMAP_PORT,
+        "user": data.get("mail_user") or settings.IMAP_USER,
+        "password": data.get("mail_password") or settings.IMAP_PASSWORD,
+        "folder": data.get("mail_imap_folder") or settings.IMAP_FOLDER,
+        "sender_filter": data.get("mail_sender_filter") or settings.IMAP_SENDER_FILTER,
+        "enabled": data.get("mail_enabled") == "true",
     }
 
 
@@ -89,8 +87,10 @@ async def _create_expense_from_image(
         logger.warning("email_processor: OCR no configurado para user=%s", user.id)
         return None
 
+    from app.services.image_utils import downscale_for_ocr
+
     try:
-        ocr = await provider.extract(image_bytes, mime_type)
+        ocr = await provider.extract(downscale_for_ocr(image_bytes, mime_type), mime_type)
     except Exception as exc:
         logger.error("email_processor: OCR failed: %s", exc)
         return None
@@ -254,9 +254,13 @@ async def _process_attachment(
         return "skipped"
 
     # ── Intento 1: boarding pass ─────────────────────────────────────────────
+    from app.services.image_utils import downscale_for_ocr
+
     bp = None
     try:
-        bp = await provider.extract_boarding_pass(image_bytes, mime_type)
+        bp = await provider.extract_boarding_pass(
+            downscale_for_ocr(image_bytes, mime_type), mime_type
+        )
     except Exception as exc:
         logger.debug("email_processor: boarding pass extraction failed silently: %s", exc)
 

@@ -42,13 +42,14 @@ async def test_connection(
     current_user: User = Depends(require_not_guest),
     db: AsyncSession = Depends(get_db),
 ) -> TestConnectionResult:
-    from app.services.settings_service import get as get_setting
+    from app.services.settings_service import get_all
 
-    host = await get_setting(db, current_user.id, "mail_host") or settings.IMAP_HOST
-    port_raw = await get_setting(db, current_user.id, "mail_imap_port")
+    data = await get_all(db, current_user.id)
+    host = data.get("mail_host") or settings.IMAP_HOST
+    port_raw = data.get("mail_imap_port")
     port = int(port_raw) if port_raw else settings.IMAP_PORT
-    user = await get_setting(db, current_user.id, "mail_user") or settings.IMAP_USER
-    password = await get_setting(db, current_user.id, "mail_password") or settings.IMAP_PASSWORD
+    user = data.get("mail_user") or settings.IMAP_USER
+    password = data.get("mail_password") or settings.IMAP_PASSWORD
 
     if not (host and user and password):
         return TestConnectionResult(ok=False, error="Credenciales IMAP no configuradas")

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user, get_effective_user_id
 from app.database import get_db
 from app.models.user import User
-from app.services import expense_service, export_service, loyalty_card_service
+from app.services import expense_service, export_service, loyalty_card_service, payment_method_service
 from app.services.trip_service import get_or_404 as get_trip_or_404
 
 
@@ -95,12 +95,15 @@ async def export_trip(
     )
     slug = export_service._slugify(trip.name)
 
+    methods = await payment_method_service.list_payment_methods(db, effective_id)
+    pm_map = {str(m.id): m.name for m in methods}
+
     if format == ExportFormat.xlsx:
-        content = export_service.generate_xlsx(expenses, trip, current_user)
+        content = export_service.generate_xlsx(expenses, trip, current_user, pm_map)
         filename = f"gastos_{slug}_{date.today()}.xlsx"
         media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     else:
-        content = export_service.generate_csv(expenses, trip, current_user)
+        content = export_service.generate_csv(expenses, trip, current_user, pm_map)
         filename = f"gastos_{slug}_{date.today()}.csv"
         media_type = "text/csv; charset=utf-8-sig"
 
@@ -136,9 +139,11 @@ async def export_trip_bundle(
     )
     cards = await loyalty_card_service.list_cards(db, effective_id)
     loyalty_map = {str(c.id): (c.alias or c.program_name) for c in cards}
+    methods = await payment_method_service.list_payment_methods(db, effective_id)
+    pm_map = {str(m.id): m.name for m in methods}
 
     zip_bytes = await export_service.build_bundle(
-        db, trip, current_user, expenses, loyalty_map, format=format
+        db, trip, current_user, expenses, loyalty_map, format=format, payment_methods=pm_map
     )
     slug = export_service._slugify(trip.name)
     filename = f"bundle_{slug}_{date.today()}.zip"

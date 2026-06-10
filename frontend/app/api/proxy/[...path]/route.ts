@@ -44,6 +44,12 @@ async function proxy(req: NextRequest, pathSegments: string[], method: string) {
   if (cookieHeader) {
     fetchHeaders["Cookie"] = cookieHeader
   }
+  // Forward the real client IP (set by nginx-proxy-manager) so backend rate
+  // limiting and security logs are per-client instead of per-proxy
+  const forwardedFor = req.headers.get("x-forwarded-for") ?? req.ip
+  if (forwardedFor) {
+    fetchHeaders["X-Forwarded-For"] = forwardedFor
+  }
 
   const hasBody = ["POST", "PUT", "PATCH"].includes(method)
   let body: BodyInit | undefined

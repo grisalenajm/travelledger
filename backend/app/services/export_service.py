@@ -156,6 +156,7 @@ async def build_bundle(
     expenses: list[Expense],
     loyalty_cards: dict[str, str],
     format: str = "xlsx",
+    payment_methods: dict[str, str] | None = None,
 ) -> bytes:
     paperless_url, paperless_token = await paperless_service.get_credentials(db, user.id)
     images = await _collect_images(expenses, paperless_url, paperless_token)
@@ -164,7 +165,7 @@ async def build_bundle(
     trip_slug = _slugify(trip.name)
 
     if format == "xlsx":
-        data_bytes = generate_xlsx(expenses, trip, user)
+        data_bytes = generate_xlsx(expenses, trip, user, payment_methods)
         data_filename = f"gastos_{trip_slug}.xlsx"
     else:
         data_bytes = await build_csv(db, trip, user, expenses, loyalty_cards, image_map)
@@ -186,7 +187,18 @@ def _fmt_decimal_eu(value: Decimal | float) -> str:
     return formatted.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def generate_csv(expenses: list[Expense], trip: Trip, user: User) -> bytes:
+def _payment_method_name(exp: Expense, payment_methods: dict[str, str] | None) -> str:
+    if exp.payment_method_id and payment_methods:
+        return payment_methods.get(str(exp.payment_method_id), "")
+    return ""
+
+
+def generate_csv(
+    expenses: list[Expense],
+    trip: Trip,
+    user: User,
+    payment_methods: dict[str, str] | None = None,
+) -> bytes:
     """
     European CSV: field separator=';', decimal=','.
     UTF-8 BOM so Excel in Spanish opens without conversion.
@@ -214,7 +226,7 @@ def generate_csv(expenses: list[Expense], trip: Trip, user: User) -> bytes:
             user.currency_base,
             _fmt_decimal_eu(exp.amount_base),
             "Sí" if exp.billable else "No",
-            exp.payment_method or "",
+            _payment_method_name(exp, payment_methods),
         ])
         currency_totals[exp.currency] = (
             currency_totals.get(exp.currency, Decimal("0")) + Decimal(str(exp.amount))
@@ -232,7 +244,12 @@ def generate_csv(expenses: list[Expense], trip: Trip, user: User) -> bytes:
     return ("﻿" + output.getvalue()).encode("utf-8")
 
 
-def generate_xlsx(expenses: list[Expense], trip: Trip, user: User) -> bytes:
+def generate_xlsx(
+    expenses: list[Expense],
+    trip: Trip,
+    user: User,
+    payment_methods: dict[str, str] | None = None,
+) -> bytes:
     wb = Workbook()
 
     # ── Sheet 1: Gastos ───────────────────────────────────────────────────
@@ -275,7 +292,7 @@ def generate_xlsx(expenses: list[Expense], trip: Trip, user: User) -> bytes:
         base_cell = ws.cell(row=row_num, column=7, value=float(exp.amount_base))
         base_cell.number_format = "#,##0.00"
         ws.cell(row=row_num, column=8, value="Sí" if exp.billable else "No")
-        ws.cell(row=row_num, column=9, value=exp.payment_method or "")
+        ws.cell(row=row_num, column=9, value=_payment_method_name(exp, payment_methods))
 
         currency_totals[exp.currency] = (
             currency_totals.get(exp.currency, Decimal("0")) + Decimal(str(exp.amount))

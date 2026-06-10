@@ -54,7 +54,7 @@ async def _create_trip(client, auth_headers) -> str:
 @pytest.mark.asyncio
 async def test_create_flight_leg(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
-    res = await client.post(f"/api/trips/{trip_id}/legs/", json=FLIGHT_LEG, headers=auth_headers)
+    res = await client.post(f"/api/trips/{trip_id}/legs", json=FLIGHT_LEG, headers=auth_headers)
     assert res.status_code == 201
     data = res.json()
     assert data["mode"] == "flight"
@@ -66,7 +66,7 @@ async def test_create_flight_leg(client, auth_headers):
 @pytest.mark.asyncio
 async def test_flight_haversine_distance_computed(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
-    res = await client.post(f"/api/trips/{trip_id}/legs/", json=FLIGHT_LEG, headers=auth_headers)
+    res = await client.post(f"/api/trips/{trip_id}/legs", json=FLIGHT_LEG, headers=auth_headers)
     assert res.status_code == 201
     distance = float(res.json()["distance_km"])
     # MAD → BCN ≈ 480–510 km
@@ -77,7 +77,7 @@ async def test_flight_haversine_distance_computed(client, auth_headers):
 async def test_accommodation_leg_no_distance(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     res = await client.post(
-        f"/api/trips/{trip_id}/legs/", json=ACCOMMODATION_LEG, headers=auth_headers
+        f"/api/trips/{trip_id}/legs", json=ACCOMMODATION_LEG, headers=auth_headers
     )
     assert res.status_code == 201
     data = res.json()
@@ -90,7 +90,7 @@ async def test_accommodation_leg_no_distance(client, auth_headers):
 async def test_car_rental_leg(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     res = await client.post(
-        f"/api/trips/{trip_id}/legs/", json=CAR_RENTAL_LEG, headers=auth_headers
+        f"/api/trips/{trip_id}/legs", json=CAR_RENTAL_LEG, headers=auth_headers
     )
     assert res.status_code == 201
     data = res.json()
@@ -103,9 +103,9 @@ async def test_car_rental_leg(client, auth_headers):
 async def test_list_legs_chronological_order(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     # Accommodation check_in 14:00, flight departure 10:00 → flight first
-    await client.post(f"/api/trips/{trip_id}/legs/", json=ACCOMMODATION_LEG, headers=auth_headers)
-    await client.post(f"/api/trips/{trip_id}/legs/", json=FLIGHT_LEG, headers=auth_headers)
-    res = await client.get(f"/api/trips/{trip_id}/legs/", headers=auth_headers)
+    await client.post(f"/api/trips/{trip_id}/legs", json=ACCOMMODATION_LEG, headers=auth_headers)
+    await client.post(f"/api/trips/{trip_id}/legs", json=FLIGHT_LEG, headers=auth_headers)
+    res = await client.get(f"/api/trips/{trip_id}/legs", headers=auth_headers)
     assert res.status_code == 200
     legs = res.json()
     assert len(legs) == 2
@@ -117,11 +117,11 @@ async def test_list_legs_chronological_order(client, auth_headers):
 async def test_update_leg(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     create_res = await client.post(
-        f"/api/trips/{trip_id}/legs/", json=ACCOMMODATION_LEG, headers=auth_headers
+        f"/api/trips/{trip_id}/legs", json=ACCOMMODATION_LEG, headers=auth_headers
     )
     leg_id = create_res.json()["id"]
     update_res = await client.put(
-        f"/api/trips/{trip_id}/legs/{leg_id}/",
+        f"/api/trips/{trip_id}/legs/{leg_id}",
         json={"accommodation_name": "Hotel W"},
         headers=auth_headers,
     )
@@ -133,12 +133,12 @@ async def test_update_leg(client, auth_headers):
 async def test_delete_leg(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
     create_res = await client.post(
-        f"/api/trips/{trip_id}/legs/", json=FLIGHT_LEG, headers=auth_headers
+        f"/api/trips/{trip_id}/legs", json=FLIGHT_LEG, headers=auth_headers
     )
     leg_id = create_res.json()["id"]
-    del_res = await client.delete(f"/api/trips/{trip_id}/legs/{leg_id}/", headers=auth_headers)
+    del_res = await client.delete(f"/api/trips/{trip_id}/legs/{leg_id}", headers=auth_headers)
     assert del_res.status_code == 204
-    list_res = await client.get(f"/api/trips/{trip_id}/legs/", headers=auth_headers)
+    list_res = await client.get(f"/api/trips/{trip_id}/legs", headers=auth_headers)
     assert list_res.json() == []
 
 
@@ -159,24 +159,37 @@ async def test_leg_requires_trip_ownership(client, auth_headers):
         json={"email": "other@ledger.dev", "password": "TestPass1!secret"},
     )
     headers_b = {"Authorization": f"Bearer {res_b.json()['access_token']}"}
-    res = await client.post(f"/api/trips/{trip_id}/legs/", json=FLIGHT_LEG, headers=headers_b)
+    res = await client.post(f"/api/trips/{trip_id}/legs", json=FLIGHT_LEG, headers=headers_b)
     assert res.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_update_distance_recalculated_when_coords_change(client, auth_headers):
+async def test_create_without_coords_resolves_iata_and_distance(client, auth_headers):
+    """Sin coords explícitas, los códigos IATA (MAD/BCN) se resuelven en el
+    momento de crear el leg (airport_service) y la distancia se calcula."""
     trip_id = await _create_trip(client, auth_headers)
     leg_without_coords = {**FLIGHT_LEG}
     for k in ("origin_lat", "origin_lng", "destination_lat", "destination_lng"):
         leg_without_coords.pop(k)
     create_res = await client.post(
-        f"/api/trips/{trip_id}/legs/", json=leg_without_coords, headers=auth_headers
+        f"/api/trips/{trip_id}/legs", json=leg_without_coords, headers=auth_headers
+    )
+    data = create_res.json()
+    assert data["origin_lat"] is not None
+    assert data["distance_km"] is not None
+    assert float(data["distance_km"]) > 400  # MAD→BCN ≈ 483 km
+
+
+@pytest.mark.asyncio
+async def test_update_distance_recalculated_when_coords_change(client, auth_headers):
+    trip_id = await _create_trip(client, auth_headers)
+    create_res = await client.post(
+        f"/api/trips/{trip_id}/legs", json=FLIGHT_LEG, headers=auth_headers
     )
     leg_id = create_res.json()["id"]
-    assert create_res.json()["distance_km"] is None
 
     update_res = await client.put(
-        f"/api/trips/{trip_id}/legs/{leg_id}/",
+        f"/api/trips/{trip_id}/legs/{leg_id}",
         json={
             "origin_lat": "40.4983",
             "origin_lng": "-3.5676",

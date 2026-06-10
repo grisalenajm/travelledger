@@ -40,7 +40,7 @@ async def _add_expense(client, auth_headers, trip_id: str, **kwargs):
 @pytest.mark.asyncio
 async def test_stats_empty_trip(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
-    res = await client.get(f"/api/trips/{trip_id}/stats/", headers=auth_headers)
+    res = await client.get(f"/api/trips/{trip_id}/stats", headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["expense_count"] == 0
@@ -54,7 +54,7 @@ async def test_stats_empty_trip(client, auth_headers):
 @pytest.mark.asyncio
 async def test_stats_structure(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers)
-    res = await client.get(f"/api/trips/{trip_id}/stats/", headers=auth_headers)
+    res = await client.get(f"/api/trips/{trip_id}/stats", headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert "trip_id" in data
@@ -73,7 +73,7 @@ async def test_stats_structure(client, auth_headers):
 async def test_stats_not_found(client, auth_headers):
     import uuid
     fake_id = str(uuid.uuid4())
-    res = await client.get(f"/api/trips/{fake_id}/stats/", headers=auth_headers)
+    res = await client.get(f"/api/trips/{fake_id}/stats", headers=auth_headers)
     assert res.status_code == 404
 
 
@@ -96,5 +96,5 @@ async def test_stats_other_user_forbidden(client, auth_headers):
     )
     other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-    res = await client.get(f"/api/trips/{trip_id}/stats/", headers=other_headers)
+    res = await client.get(f"/api/trips/{trip_id}/stats", headers=other_headers)
     assert res.status_code == 404

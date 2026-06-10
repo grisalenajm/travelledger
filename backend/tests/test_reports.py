@@ -68,12 +68,23 @@ async def test_get_trip_summary_empty_trip(client, auth_headers):
     assert data["by_currency"] == []
 
 
+def _expense_rows(text: str) -> list[str]:
+    """Filas de datos del CSV europeo: desde la cabecera hasta la primera línea en blanco."""
+    lines = text.splitlines()
+    rows = []
+    for line in lines[1:]:
+        if not line.strip().strip(";"):
+            break
+        rows.append(line)
+    return rows
+
+
 @pytest.mark.asyncio
 async def test_export_csv_format(client, auth_headers):
     trip_id = await _create_trip(client, auth_headers, {**TRIP_PAYLOAD, "name": "CSV Trip"})
     await _create_expense(client, auth_headers, trip_id, amount="75.00", category="Transport")
 
-    res = await client.get(f"/api/reports/export/{trip_id}", headers=auth_headers)
+    res = await client.get(f"/api/reports/export/{trip_id}?format=csv", headers=auth_headers)
     assert res.status_code == 200
     assert "text/csv" in res.headers["content-type"]
 
@@ -81,8 +92,22 @@ async def test_export_csv_format(client, auth_headers):
     assert content[:3] == b"\xef\xbb\xbf"  # UTF-8 BOM
     text = content.decode("utf-8-sig")
     lines = text.strip().splitlines()
-    assert lines[0].startswith("date,description,category")
-    assert len(lines) == 2  # header + 1 expense
+    # Formato europeo: ';' como separador, coma decimal, cabecera en español
+    assert lines[0].startswith("Fecha;")
+    assert "75,00" in text
+    assert "TOTALES POR MONEDA" in text
+    assert len(_expense_rows(text)) == 1
+
+
+@pytest.mark.asyncio
+async def test_export_xlsx_default_format(client, auth_headers):
+    trip_id = await _create_trip(client, auth_headers, {**TRIP_PAYLOAD, "name": "XLSX Trip"})
+    await _create_expense(client, auth_headers, trip_id, amount="42.00", category="Dining")
+
+    res = await client.get(f"/api/reports/export/{trip_id}", headers=auth_headers)
+    assert res.status_code == 200
+    assert "spreadsheetml" in res.headers["content-type"]
+    assert res.content[:2] == b"PK"  # XLSX = ZIP container
 
 
 @pytest.mark.asyncio
@@ -91,11 +116,10 @@ async def test_export_csv_only_billable(client, auth_headers):
     await _create_expense(client, auth_headers, trip_id, amount="30.00", billable="true")
     await _create_expense(client, auth_headers, trip_id, amount="20.00", billable="false", date="2026-07-03")
 
-    res = await client.get(f"/api/reports/export/{trip_id}?only_billable=true", headers=auth_headers)
+    res = await client.get(f"/api/reports/export/{trip_id}?format=csv&only_billable=true", headers=auth_headers)
     assert res.status_code == 200
     text = res.content.decode("utf-8-sig")
-    lines = text.strip().splitlines()
-    assert len(lines) == 2  # header + 1 billable expense only
+    assert len(_expense_rows(text)) == 1  # only the billable expense
 
 
 @pytest.mark.asyncio
@@ -106,13 +130,12 @@ async def test_export_csv_date_range(client, auth_headers):
     await _create_expense(client, auth_headers, trip_id, date="2026-07-09", amount="30.00")
 
     res = await client.get(
-        f"/api/reports/export/{trip_id}?from=2026-07-03&to=2026-07-07",
+        f"/api/reports/export/{trip_id}?format=csv&from=2026-07-03&to=2026-07-07",
         headers=auth_headers,
     )
     assert res.status_code == 200
     text = res.content.decode("utf-8-sig")
-    lines = text.strip().splitlines()
-    assert len(lines) == 2  # header + only the 2026-07-05 expense
+    assert len(_expense_rows(text)) == 1  # only the 2026-07-05 expense
 
 
 @pytest.mark.asyncio
@@ -133,7 +156,8 @@ async def test_export_bundle_returns_zip(client, auth_headers):
 
     zf = zipfile.ZipFile(io.BytesIO(res.content))
     names = zf.namelist()
-    assert any(name.endswith(".csv") for name in names)
+    # Default format is xlsx
+    assert any(name.endswith(".xlsx") for name in names)
 
 
 @pytest.mark.asyncio
@@ -146,7 +170,9 @@ async def test_export_bundle_csv_inside_zip(client, auth_headers):
         new_callable=AsyncMock,
         return_value=(None, None),
     ):
-        res = await client.get(f"/api/reports/export/{trip_id}/bundle", headers=auth_headers)
+        res = await client.get(
+            f"/api/reports/export/{trip_id}/bundle?format=csv", headers=auth_headers
+        )
 
     zf = zipfile.ZipFile(io.BytesIO(res.content))
     csv_name = next(n for n in zf.namelist() if n.endswith(".csv"))

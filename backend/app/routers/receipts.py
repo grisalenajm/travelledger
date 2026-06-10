@@ -5,12 +5,13 @@ from uuid import UUID
 
 import aiofiles
 import aiofiles.os
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, require_not_guest
+from app.core.limiter import limiter
 from app.database import get_db
 from app.models.expense import Expense
 from app.models.user import User
@@ -24,6 +25,8 @@ from app.services.trip_service import get_or_404 as get_trip_or_404
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/receipts", tags=["receipts"], redirect_slashes=False)
+
+_MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB
 
 
 def _detect_mime(data: bytes) -> str | None:
@@ -51,7 +54,9 @@ async def _save_local(content: bytes, user_id: UUID, expense_id: UUID, mime_type
 
 
 @router.post("/upload", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def upload_receipt(
+    request: Request,
     file: UploadFile = File(...),
     trip_id: UUID = Form(...),
     exif_lat: float | None = Form(None),
@@ -61,6 +66,11 @@ async def upload_receipt(
     user: User = Depends(require_not_guest),
 ):
     content = await file.read()
+    if len(content) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            "Archivo demasiado grande. Máximo 15 MB.",
+        )
     mime_type = _detect_mime(content)
     if mime_type is None:
         raise HTTPException(

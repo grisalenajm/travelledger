@@ -241,6 +241,11 @@ async def upload_document(
 ) -> TripLeg:
     leg = await _get_leg_or_404(db, trip_id, leg_id, user_id)
     content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            "Archivo demasiado grande. Máximo 10 MB.",
+        )
     ext = _validate_and_get_ext(content, file.filename)
     await aiofiles.os.makedirs(_LEGS_DIR, exist_ok=True)
     file_path = str(_LEGS_DIR / f"{leg_id}{ext}")

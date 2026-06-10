@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, require_admin
+from app.core.dependencies import get_current_user, require_admin, require_not_guest
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -81,7 +81,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
 @router.put("/me", response_model=UserRead)
 async def update_me(
     payload: UserUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_not_guest),
     db: AsyncSession = Depends(get_db),
 ):
     if payload.name is not None:
@@ -112,7 +112,7 @@ async def update_me(
 @router.post("/set-password", status_code=status.HTTP_204_NO_CONTENT)
 async def force_set_password(
     payload: SetPasswordPayload,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_not_guest),
     db: AsyncSession = Depends(get_db),
 ):
     """Cambio forzado de contraseña — solo disponible cuando must_change_password=True."""

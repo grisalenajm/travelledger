@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_not_guest
 from app.core.limiter import limiter
 from app.core.security import (
     create_access_token,
@@ -163,7 +163,7 @@ async def logout(response: Response, current_user: User = Depends(get_current_us
 @router.post("/device", status_code=status.HTTP_204_NO_CONTENT)
 async def register_device(
     payload: DeviceRegister,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_not_guest),
     db: AsyncSession = Depends(get_db),
 ):
     current_user.fcm_token = payload.fcm_token

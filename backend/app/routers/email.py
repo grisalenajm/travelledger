@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import require_not_guest
 from app.database import get_db
 from app.models.user import User
 from app.services import imap_service
@@ -31,7 +31,7 @@ class TestConnectionResult(BaseModel):
 
 @router.post("/poll-now", response_model=PollResult)
 async def poll_now(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_not_guest),
 ) -> PollResult:
     result = await process_pending_emails(force=True)
     return PollResult(**result)
@@ -39,7 +39,7 @@ async def poll_now(
 
 @router.post("/test-connection", response_model=TestConnectionResult)
 async def test_connection(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_not_guest),
     db: AsyncSession = Depends(get_db),
 ) -> TestConnectionResult:
     from app.services.settings_service import get as get_setting

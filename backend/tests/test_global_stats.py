@@ -44,7 +44,7 @@ async def _add_expense(client, auth_headers, trip_id: str, **kwargs):
 
 @pytest.mark.asyncio
 async def test_global_stats_empty(client, auth_headers):
-    res = await client.get("/api/stats/global/?period=year&year=2026", headers=auth_headers)
+    res = await client.get("/api/stats/global?period=year&year=2026", headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["expense_count"] == 0
@@ -61,7 +61,7 @@ async def test_global_stats_structure(client, auth_headers):
     await _add_expense(client, auth_headers, trip_id, category="Transport", amount="200.00")
     await _add_expense(client, auth_headers, trip_id, category="Dining", amount="50.00")
 
-    res = await client.get("/api/stats/global/?period=year&year=2026", headers=auth_headers)
+    res = await client.get("/api/stats/global?period=year&year=2026", headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["expense_count"] == 2
@@ -81,11 +81,11 @@ async def test_global_stats_year_filter(client, auth_headers):
     trip_2026_id = await _create_trip(client, auth_headers)
     await _add_expense(client, auth_headers, trip_2026_id, date="2026-03-02")
 
-    res_2026 = await client.get("/api/stats/global/?period=year&year=2026", headers=auth_headers)
+    res_2026 = await client.get("/api/stats/global?period=year&year=2026", headers=auth_headers)
     assert res_2026.status_code == 200
     data_2026 = res_2026.json()
 
-    res_2025 = await client.get("/api/stats/global/?period=year&year=2025", headers=auth_headers)
+    res_2025 = await client.get("/api/stats/global?period=year&year=2025", headers=auth_headers)
     assert res_2025.status_code == 200
     data_2025 = res_2025.json()
 
@@ -98,13 +98,13 @@ async def test_global_stats_year_filter(client, auth_headers):
 
 @pytest.mark.asyncio
 async def test_global_stats_requires_auth(client):
-    res = await client.get("/api/stats/global/?period=year&year=2026")
+    res = await client.get("/api/stats/global?period=year&year=2026")
     assert res.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_flight_stats_empty(client, auth_headers):
-    res = await client.get("/api/stats/flights/?period=year&year=2026", headers=auth_headers)
+    res = await client.get("/api/stats/flights?period=year&year=2026", headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["total_flights"] == 0
@@ -127,10 +127,10 @@ async def test_flight_stats_structure(client, auth_headers):
         "destination_lat": "41.2971",
         "destination_lng": "2.0785",
     }
-    res = await client.post(f"/api/trips/{trip_id}/legs/", json=leg_payload, headers=auth_headers)
+    res = await client.post(f"/api/trips/{trip_id}/legs", json=leg_payload, headers=auth_headers)
     assert res.status_code == 201
 
-    res = await client.get("/api/stats/flights/?period=year&year=2026", headers=auth_headers)
+    res = await client.get("/api/stats/flights?period=year&year=2026", headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["total_flights"] == 1
@@ -144,5 +144,5 @@ async def test_flight_stats_structure(client, auth_headers):
 
 @pytest.mark.asyncio
 async def test_flight_stats_requires_auth(client):
-    res = await client.get("/api/stats/flights/?period=year&year=2026")
+    res = await client.get("/api/stats/flights?period=year&year=2026")
     assert res.status_code == 401

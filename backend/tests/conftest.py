@@ -20,7 +20,9 @@ from app.main import app
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-@pytest_asyncio.fixture(scope="session")
+# function-scoped: cada test arranca con BD vacía (aislamiento real;
+# los routers hacen commit, así que el rollback del fixture db no basta)
+@pytest_asyncio.fixture
 async def engine():
     e = create_async_engine(TEST_DATABASE_URL, echo=False)
 

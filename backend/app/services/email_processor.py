@@ -17,24 +17,21 @@ from app.models.notification import Notification
 from app.models.trip import Trip
 from app.models.trip_leg import TripLeg
 from app.models.user import User
-from app.services.travel_email_parser import TravelParseResult, parse_travel_email_text
+from app.services.leg_import import leg_from_result, resolve_import_user
+from app.services.travel_email_parser import parse_travel_email_text
 from app.services.imap_service import RawEmail, fetch_unseen_emails
 
 logger = logging.getLogger(__name__)
 
+# Referencias a tareas fire-and-forget: sin esto el GC puede cancelarlas a medias
+# (https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task)
+_bg_tasks: set[asyncio.Task] = set()
 
-async def _resolve_user(db: AsyncSession) -> User | None:
-    if settings.WEBHOOK_USER_EMAIL:
-        result = await db.execute(
-            select(User).where(User.email == settings.WEBHOOK_USER_EMAIL)
-        )
-        user = result.scalar_one_or_none()
-        if user:
-            return user
-    result = await db.execute(
-        select(User).where(User.is_admin.is_(True)).limit(1)
-    )
-    return result.scalar_one_or_none()
+
+def _spawn_bg(coro) -> None:
+    task = asyncio.create_task(coro)
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
 
 
 async def _get_imap_config(db: AsyncSession, user_id: UUID) -> dict:
@@ -55,58 +52,6 @@ async def _get_imap_config(db: AsyncSession, user_id: UUID) -> dict:
         "host": host, "port": port, "user": user, "password": password,
         "folder": folder, "sender_filter": sender_filter, "enabled": enabled,
     }
-
-
-_LEG_TYPE_TO_MODE = {
-    "flight":     "flight",
-    "hotel":      "accommodation",
-    "car_rental": "car_rental",
-    "train":      "train",
-    "unknown":    "other",
-}
-
-
-def _leg_from_result(user_id: UUID, result: TravelParseResult) -> TripLeg:
-    """Convierte TravelParseResult en TripLeg pendiente de asignación a viaje."""
-    mode = _LEG_TYPE_TO_MODE.get(result.leg_type, "other")
-    leg = TripLeg(
-        trip_id=None,
-        user_id=user_id,
-        mode=mode,
-        source="email_import",
-        confirmed=False,
-        notes=result.parser_notes,
-    )
-    if result.leg_type == "flight":
-        leg.carrier = result.carrier
-        leg.flight_number = result.flight_number
-        leg.origin = result.origin
-        leg.destination = result.destination
-        leg.departure_local = result.departure_local
-        leg.arrival_local = result.arrival_local
-        leg.locator_code = result.locator_code
-    elif result.leg_type == "hotel":
-        leg.accommodation_name = result.accommodation_name
-        leg.accommodation_address = result.accommodation_address
-        leg.check_in = result.check_in
-        leg.check_out = result.check_out
-        leg.confirmation_number = result.confirmation_number
-    elif result.leg_type == "car_rental":
-        leg.rental_company = result.rental_company
-        leg.pickup_location = result.pickup_location
-        leg.dropoff_location = result.dropoff_location
-        leg.pickup_datetime = result.pickup_datetime
-        leg.dropoff_datetime = result.dropoff_datetime
-        leg.confirmation_number = result.confirmation_number
-    elif result.leg_type == "train":
-        leg.carrier = result.carrier
-        leg.flight_number = result.flight_number
-        leg.origin = result.origin
-        leg.destination = result.destination
-        leg.departure_local = result.departure_local
-        leg.arrival_local = result.arrival_local
-        leg.locator_code = result.locator_code
-    return leg
 
 
 async def _get_active_trip_id(db: AsyncSession, user_id: UUID) -> UUID | None:
@@ -215,7 +160,7 @@ async def _create_expense_from_image(
     await db.flush()
 
     if location_lat is None and ocr.description:
-        asyncio.create_task(geocode_expense_bg(expense.id, ocr.description))
+        _spawn_bg(geocode_expense_bg(expense.id, ocr.description))
 
     return expense
 
@@ -367,7 +312,7 @@ async def _process_raw_email(db: AsyncSession, raw: RawEmail, user: User) -> dic
 
     legs_created = 0
     if result.leg_type != "unknown" or result.confidence > 0:
-        db.add(_leg_from_result(user.id, result))
+        db.add(leg_from_result(user.id, result))
         legs_created = 1
 
     # ── Procesar adjuntos de imagen ────────────────────────────────────────
@@ -435,7 +380,7 @@ async def process_pending_emails(force: bool = False) -> dict:
     from app.database import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
-        user = await _resolve_user(db)
+        user = await resolve_import_user(db)
         if not user:
             logger.warning("email_processor: no hay usuario configurado")
             return {"processed": 0, "legs_created": 0, "expenses_created": 0}

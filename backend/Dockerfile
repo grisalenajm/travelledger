@@ -28,4 +28,6 @@ RUN groupadd --system --gid 1001 appgroup \
     && chown -R appuser:appgroup /app
 USER appuser
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# --proxy-headers: el backend solo es alcanzable desde la red Docker interna
+# (frontend proxy / NPM), por eso es seguro confiar en X-Forwarded-For
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--proxy-headers", "--forwarded-allow-ips", "*"]

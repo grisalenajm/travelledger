@@ -130,14 +130,14 @@ _FLIGHT_KEYWORDS = [
     # EN
     "flight", "boarding", "departure", "arrival", "airline", "aircraft",
     "gate", "seat", "itinerary", "e-ticket", "eticket",
-    # ES
-    "vuelo", "embarque", "salida", "llegada", "aerolínea", "aerolinea",
-    "puerta", "asiento", "billete", "localizador",
+    # ES — sin términos compartidos con tren (salida/llegada/billete/localizador)
+    "vuelo", "embarque", "aerolínea", "aerolinea",
+    "puerta", "asiento",
     # FR
-    "vol ", "embarquement", "départ", "arrivée", "compagnie aérienne",
-    "porte ", "siège", "billet",
-    # Códigos IATA frecuentes en asuntos
-    r"\b[A-Z]{2}\d{3,4}\b",   # IB6827, VY1234
+    "vol", "embarquement", "compagnie aérienne",
+    "porte", "siège",
+    # Códigos IATA frecuentes en asuntos (el texto se compara en minúsculas)
+    r"\b[a-z]{2}\d{3,4}\b",   # ib6827, vy1234
 ]
 
 _HOTEL_KEYWORDS = [
@@ -168,8 +168,8 @@ _TRAIN_KEYWORDS = [
     "train", "rail", "railway", "coach", "carriage",
     "eurostar", "thalys", "intercity",
     # ES
-    "tren", "ave ", "renfe", "ferroviario", "vagón", "vagon",
-    "ave", "regional", "cercanías", "cercanias",
+    "tren", "ave", "renfe", "ferroviario", "vagón", "vagon",
+    "regional", "cercanías", "cercanias",
     # FR
     "train", "sncf", "tgv", "voiture", "quai",
     # Operadoras
@@ -238,11 +238,13 @@ def classify_email(text: str) -> tuple[str, float]:
     text_lower = text.lower()
 
     def score(keywords: list[str]) -> int:
-        count = 0
-        for kw in keywords:
-            if re.search(kw if kw.startswith(r"\b") else re.escape(kw), text_lower):
-                count += 1
-        return count
+        # \b en ambos extremos: sin él, "ave" puntuaba dentro de "save",
+        # "tren" dentro de "strength", etc.
+        patterns = {
+            kw if kw.startswith(r"\b") else r"\b" + re.escape(kw.strip()) + r"\b"
+            for kw in keywords
+        }
+        return sum(1 for p in patterns if re.search(p, text_lower))
 
     scores = {
         "flight":     score(_FLIGHT_KEYWORDS),
@@ -367,6 +369,27 @@ def _extract_locator(text: str) -> Optional[str]:
     return None
 
 
+def _search_route_endpoint(text: str, labels: str) -> Optional[str]:
+    """Busca 'Etiqueta: VALOR' priorizando códigos IATA en mayúsculas.
+
+    Ignora líneas que contienen '@' — cabeceras From:/To: de emails
+    reenviados, que no son origen/destino de viaje.
+    """
+    # 1º: código IATA estricto (mayúsculas) tras la etiqueta
+    m = re.search(rf"(?i:{labels})[:\s]+([A-Z]{{3}})\b", text)
+    if m:
+        return m.group(1)
+    # 2º: texto libre (nombre de ciudad), saltando líneas con direcciones de email
+    for m in re.finditer(rf"(?:{labels})[:\s]+(\w[\w\s]{{2,30}})", text, re.IGNORECASE):
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        line_end = text.find("\n", m.start())
+        line = text[line_start : line_end if line_end != -1 else len(text)]
+        if "@" in line:
+            continue
+        return m.group(1).strip()
+    return None
+
+
 def _extract_iata_codes(text: str) -> list[str]:
     """Extrae todos los códigos IATA de aeropuerto (3 letras mayúsculas)."""
     _STOPWORDS = {"THE", "AND", "FOR", "NOT", "YOU", "ARE", "BUT",
@@ -405,21 +428,19 @@ def parse_flight(text: str, source_format: str = "text") -> TravelParseResult:
         result.destination = route_m.group(2).upper()
         fields_found += 2
     else:
-        orig_m = re.search(
-            r"(?:from|de|origen|origin|departure\s*city|ciudad\s*de\s*salida|ville\s*de\s*départ)"
-            r"[:\s]+([A-Z]{3}|\w[\w\s]{2,30})",
-            text, re.IGNORECASE
+        origin_val = _search_route_endpoint(
+            text,
+            r"from|de|origen|origin|departure\s*city|ciudad\s*de\s*salida|ville\s*de\s*départ",
         )
-        dest_m = re.search(
-            r"(?:to|a|destino|destination|arrival\s*city|ciudad\s*de\s*llegada|ville\s*d[\'']arrivée)"
-            r"[:\s]+([A-Z]{3}|\w[\w\s]{2,30})",
-            text, re.IGNORECASE
+        dest_val = _search_route_endpoint(
+            text,
+            r"to|a|destino|destination|arrival\s*city|ciudad\s*de\s*llegada|ville\s*d[\'']arrivée",
         )
-        if orig_m:
-            result.origin = _resolve_to_iata(orig_m.group(1).strip())
+        if origin_val:
+            result.origin = _resolve_to_iata(origin_val)
             fields_found += 1
-        if dest_m:
-            result.destination = _resolve_to_iata(dest_m.group(1).strip())
+        if dest_val:
+            result.destination = _resolve_to_iata(dest_val)
             fields_found += 1
 
     # ── Fechas de salida y llegada ────────────────────────────────────────────

@@ -14,6 +14,14 @@ _last_request_time: float = 0.0
 
 _RATE_LIMIT_SECONDS = 1.0
 _USER_AGENT = "Ledger/2.0 (homelab; self-hosted travel expenses app)"
+_MAX_CACHE_ENTRIES = 1000
+
+
+def _cache_put(cache: dict, key, value) -> None:
+    """Inserta en caché con límite de tamaño (reset simple al llegar al tope)."""
+    if len(cache) >= _MAX_CACHE_ENTRIES:
+        cache.clear()
+    cache[key] = value
 
 
 async def geocode(address: str) -> tuple[float, float] | None:
@@ -48,9 +56,9 @@ async def geocode(address: str) -> tuple[float, float] | None:
                 results = r.json()
                 if results:
                     coords: tuple[float, float] = (float(results[0]["lat"]), float(results[0]["lon"]))
-                    _cache[address] = coords
+                    _cache_put(_cache, address, coords)
                     return coords
-                _cache[address] = None
+                _cache_put(_cache, address, None)
                 return None
         except Exception as exc:
             logger.warning("geocoding_service: geocode '%s' failed: %s", address, exc)
@@ -102,7 +110,7 @@ async def search_hotels(query: str) -> list[dict]:
                     for item in data
                     if item.get("display_name")
                 ]
-                _hotel_cache[query] = results
+                _cache_put(_hotel_cache, query, results)
                 return results
         except Exception as exc:
             logger.warning("geocoding_service: hotel search '%s' failed: %s", query, exc)
@@ -149,7 +157,7 @@ async def search(query: str, limit: int = 5) -> list[dict]:
                 _last_request_time = time.monotonic()
                 r.raise_for_status()
                 data = r.json()
-                _places_cache[cache_key] = data
+                _cache_put(_places_cache, cache_key, data)
                 return data
         except Exception as exc:
             logger.warning("geocoding_service: search '%s' failed: %s", query, exc)
@@ -245,7 +253,7 @@ async def search_places(query: str, place_type: str = "city") -> list[dict]:
                     for item in data
                     if item.get("display_name")
                 ]
-                _places_cache[cache_key] = results
+                _cache_put(_places_cache, cache_key, results)
                 return results
         except Exception as exc:
             logger.warning("geocoding_service: place search '%s' (%s) failed: %s", query, place_type, exc)

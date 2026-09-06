@@ -5,15 +5,9 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-TripStatus = Literal["active", "closed", "draft"]
+from app.core.currencies import VALID_CURRENCIES
 
-VALID_CURRENCIES = {
-    "AED", "ARS", "AUD", "BRL", "CAD", "CHF", "CLP", "CNY",
-    "COP", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR",
-    "ILS", "INR", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD",
-    "PEN", "PHP", "PLN", "RON", "RUB", "SAR", "SEK", "SGD",
-    "THB", "TRY", "TWD", "UAH", "USD", "ZAR",
-}
+TripStatus = Literal["active", "closed", "draft"]
 
 
 def _check_currency(v: str) -> str:

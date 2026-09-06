@@ -17,3 +17,8 @@ class ConvertResponse(BaseModel):
     result: Decimal
     rate: Decimal
     rate_date: date
+
+
+class CurrencyOption(BaseModel):
+    code: str
+    name: str

@@ -12,13 +12,7 @@ import { api } from "@/lib/api"
 import type { User } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useSettings, useUpdateSetting, useVerifyOcr, useVerifyPaperless } from "@/hooks/use-settings"
-
-const CURRENCIES = [
-  "EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD", "SEK", "NOK", "DKK",
-  "ARS", "BRL", "MXN", "CLP", "COP", "PEN",
-  "CNY", "HKD", "SGD", "KRW", "THB", "INR",
-  "AED", "TRY", "PLN", "CZK", "HUF", "RON",
-]
+import { useCurrencies } from "@/hooks/use-currencies"
 
 const labelClass =
   "font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant"
@@ -54,11 +48,13 @@ function AccountSection({ user }: { user: User }) {
   const [saved, setSaved] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const qc = useQueryClient()
+  const { data: currencies } = useCurrencies()
 
   const {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<AccountForm>({
     resolver: zodResolver(accountSchema),
@@ -115,9 +111,13 @@ function AccountSection({ user }: { user: User }) {
 
         <div className="space-y-1.5">
           <label className={labelClass}>Moneda base (reporting)</label>
-          <select {...register("currency_base")} className={selectClass}>
-            {CURRENCIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+          <select
+            {...register("currency_base")}
+            value={watch("currency_base") ?? ""}
+            className={selectClass}
+          >
+            {(currencies ?? []).map((c) => (
+              <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
             ))}
           </select>
           {errors.currency_base && <p className={errorClass}>{errors.currency_base.message}</p>}

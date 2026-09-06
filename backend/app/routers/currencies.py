@@ -4,10 +4,11 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currencies import CURRENCY_NAMES
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.user import User
-from app.schemas.currency import ConvertResponse, RatesResponse
+from app.schemas.currency import ConvertResponse, CurrencyOption, RatesResponse
 from app.services import currency_service
 
 COMMON_CURRENCIES = [
@@ -16,6 +17,14 @@ COMMON_CURRENCIES = [
 ]
 
 router = APIRouter(prefix="/api/currencies", tags=["currencies"])
+
+
+@router.get("/list", response_model=list[CurrencyOption])
+async def list_currencies(user: User = Depends(get_current_user)):
+    return [
+        CurrencyOption(code=code, name=name)
+        for code, name in sorted(CURRENCY_NAMES.items())
+    ]
 
 
 @router.get("/rates", response_model=RatesResponse)

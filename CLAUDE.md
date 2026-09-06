@@ -432,6 +432,7 @@ POST   /api/receipts/upload  → Flujo B: imagen → Haiku OCR → Paperless/loc
 
 ### Currency
 ```
+GET    /api/currencies/list      → [{code, name}] — 61 monedas soportadas, ordenadas por código
 GET    /api/currencies/rates
 GET    /api/currencies/convert
 ```
@@ -472,6 +473,25 @@ Expense.rate_date    → fecha del tipo de cambio (= fecha del gasto)
 ```
 
 Fuente de tipos de cambio: **open.er-api.com** (gratuito, sin key). No usar exchangerate.host.
+
+### Fuente única de verdad — `backend/app/core/currencies.py`
+
+`CURRENCY_NAMES: dict[str, str]` (código ISO 4217 → nombre en español) y
+`VALID_CURRENCIES: frozenset[str]` derivado de sus claves. **61 monedas.**
+
+- Cualquier fichero que valide o liste monedas **importa de aquí** — nunca
+  redefinir el set. `schemas/expense.py`, `schemas/trip.py` y `schemas/auth.py`
+  (como `_VALID_CURRENCIES`) importan de este módulo.
+- El frontend **no** tiene arrays de monedas hardcodeados: consume
+  `GET /api/currencies/list` a través del hook `frontend/hooks/use-currencies.ts`
+  (React Query, `staleTime` 24h — la lista solo cambia con un deploy).
+- Añadir una moneda = una sola línea en `CURRENCY_NAMES` + rebuild del backend.
+- `COMMON_CURRENCIES` en `routers/currencies.py` es una lista aparte y más corta,
+  usada solo para las tasas de `/api/currencies/rates`. No mezclar ambas.
+- Los `<select>` de moneda del frontend son **controlados**
+  (`value={watch("campo")}` junto al `register`) — la lista llega de forma
+  asíncrona y sin el `value` el navegador reasignaría `selectedIndex=0` al
+  insertarse las opciones, mostrando una moneda distinta de la guardada.
 
 ---
 

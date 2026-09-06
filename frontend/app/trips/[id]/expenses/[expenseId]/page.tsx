@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { useIsGuest } from "@/hooks/use-is-guest"
 import { LocationAutocomplete } from "@/components/location-autocomplete"
+import { useCurrencies } from "@/hooks/use-currencies"
 import type { Trip } from "@/types/index"
 
 const CATEGORIES = [
@@ -27,11 +28,6 @@ const CATEGORIES = [
   "Health",
   "Other",
 ] as const
-
-const COMMON_CURRENCIES = [
-  "EUR", "USD", "GBP", "CHF", "JPY", "ARS", "MXN", "BRL",
-  "CAD", "AUD", "CNY", "INR", "THB", "SGD", "NOK", "SEK", "DKK",
-]
 
 // Editorial bottom-border inputs — stitch style
 const FIELD_INPUT =
@@ -88,6 +84,7 @@ function PageSkeleton() {
 
 export default function ExpenseDetailPage() {
   const { id: tripId, expenseId } = useParams<{ id: string; expenseId: string }>()
+  const { data: currencies } = useCurrencies()
   const router = useRouter()
   const queryClient = useQueryClient()
   const { data: expense, isLoading, isError } = useExpense(expenseId)
@@ -341,9 +338,14 @@ export default function ExpenseDetailPage() {
 
           <div>
             <label htmlFor="currency" className={FIELD_LABEL}>Moneda</label>
-            <select id="currency" className={FIELD_INPUT} {...register("currency")}>
-              {COMMON_CURRENCIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+            <select
+              id="currency"
+              className={FIELD_INPUT}
+              {...register("currency")}
+              value={watch("currency") ?? ""}
+            >
+              {(currencies ?? []).map((c) => (
+                <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
               ))}
             </select>
           </div>

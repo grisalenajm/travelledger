@@ -9,15 +9,11 @@ import { usePaymentMethods, useCreatePaymentMethod } from "@/hooks/use-payment-m
 import { PaymentMethodCombobox } from "@/components/payment-method-combobox"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/hooks/use-toast"
+import { useCurrencies } from "@/hooks/use-currencies"
 import type { ExpenseCategory } from "@/types/index"
 
 const CATEGORIES: ExpenseCategory[] = [
   "Dining", "Lodging", "Transport", "Culture", "Shopping", "Health", "Other",
-]
-
-const COMMON_CURRENCIES = [
-  "EUR", "USD", "GBP", "CHF", "JPY", "ARS", "MXN", "BRL",
-  "CAD", "AUD", "CNY", "INR", "THB", "SGD", "NOK", "SEK", "DKK",
 ]
 
 const FIELD_INPUT =
@@ -44,6 +40,7 @@ function ConfirmPageContent() {
   const updateExpense = useUpdateExpense()
   const { data: paymentMethods } = usePaymentMethods()
   const createPaymentMethod = useCreatePaymentMethod()
+  const { data: currencies } = useCurrencies()
 
   const [selectedTripId, setSelectedTripId] = useState<string>(tripIdParam)
 
@@ -266,7 +263,9 @@ function ConfirmPageContent() {
 
             <label htmlFor="currency" className={FIELD_LABEL}>Moneda</label>
             <select id="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} className={FIELD_INPUT}>
-              {COMMON_CURRENCIES.map((c) => (<option key={c} value={c}>{c}</option>))}
+              {(currencies ?? []).map((c) => (
+                <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+              ))}
             </select>
 
             <p className={FIELD_LABEL}>Categoría</p>

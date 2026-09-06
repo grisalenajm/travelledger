@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { api } from "@/lib/api"
 import { HotelAutocomplete } from "@/components/hotel-autocomplete"
+import { useCurrencies } from "@/hooks/use-currencies"
 
 const CATEGORIES = [
   "Dining",
@@ -25,11 +26,6 @@ const CATEGORIES = [
   "Health",
   "Other",
 ] as const
-
-const COMMON_CURRENCIES = [
-  "EUR", "USD", "GBP", "CHF", "JPY", "ARS", "MXN", "BRL",
-  "CAD", "AUD", "CNY", "INR", "THB", "SGD", "NOK", "SEK", "DKK",
-]
 
 const INPUT_CLASS =
   "mt-1 block w-full rounded border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
@@ -68,6 +64,8 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const today = new Date().toISOString().split("T")[0]
+
+  const { data: currencies } = useCurrencies()
 
   const {
     register,
@@ -202,10 +200,15 @@ export function AddExpenseModal({ trip, open, onClose, expense }: AddExpenseModa
 
           <div className="w-28">
             <Label htmlFor="currency">Moneda</Label>
-            <select id="currency" className={INPUT_CLASS} {...register("currency")}>
-              {COMMON_CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+            <select
+              id="currency"
+              className={INPUT_CLASS}
+              {...register("currency")}
+              value={watch("currency") ?? ""}
+            >
+              {(currencies ?? []).map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} — {c.name}
                 </option>
               ))}
             </select>

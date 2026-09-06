@@ -13,8 +13,7 @@ import { api } from "@/lib/api"
 import type { User } from "@/types"
 import type { Settings } from "@/hooks/use-settings"
 import { Button } from "@/components/ui/button"
-
-const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "JPY", "ARS", "BRL", "MXN", "CAD", "AUD"]
+import { useCurrencies } from "@/hooks/use-currencies"
 
 const labelClass =
   "font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant"
@@ -93,10 +92,13 @@ export default function SettingsPage() {
     if (settings) setImapEnabled(settings.mail_enabled ?? false)
   }, [settings])
 
+  const { data: currencies } = useCurrencies()
+
   const {
     register: registerProfile,
     handleSubmit: handleProfileSubmit,
     setError: setProfileError,
+    watch: watchProfile,
     formState: { errors: profileErrors, isSubmitting: profileSubmitting },
   } = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -303,9 +305,13 @@ export default function SettingsPage() {
 
             <div className="space-y-1.5">
               <label className={labelClass}>Moneda base</label>
-              <select {...registerProfile("currency_base")} className={selectClass}>
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+              <select
+                {...registerProfile("currency_base")}
+                value={watchProfile("currency_base") ?? ""}
+                className={selectClass}
+              >
+                {(currencies ?? []).map((c) => (
+                  <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
                 ))}
               </select>
               {profileErrors.currency_base && (

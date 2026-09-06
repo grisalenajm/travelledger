@@ -6,17 +6,11 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
+from app.core.currencies import VALID_CURRENCIES
+
 ExpenseCategory = Literal[
     "Dining", "Lodging", "Transport", "Culture", "Shopping", "Health", "Other"
 ]
-
-VALID_CURRENCIES = {
-    "AED", "ARS", "AUD", "BRL", "CAD", "CHF", "CLP", "CNY",
-    "COP", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR",
-    "ILS", "INR", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD",
-    "PEN", "PHP", "PLN", "RON", "RUB", "SAR", "SEK", "SGD",
-    "THB", "TRY", "TWD", "UAH", "USD", "ZAR",
-}
 
 
 class ExpenseCreate(BaseModel):

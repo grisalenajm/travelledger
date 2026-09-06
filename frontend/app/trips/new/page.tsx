@@ -7,13 +7,7 @@ import { z } from "zod"
 import { useCreateTrip } from "@/hooks/use-trips"
 import { Button } from "@/components/ui/button"
 import { LocationAutocomplete } from "@/components/location-autocomplete"
-
-const CURRENCIES = [
-  "EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD", "SEK", "NOK", "DKK",
-  "ARS", "BRL", "MXN", "CLP", "COP", "PEN",
-  "CNY", "HKD", "SGD", "KRW", "THB", "INR",
-  "AED", "TRY", "PLN", "CZK", "HUF", "RON",
-]
+import { useCurrencies } from "@/hooks/use-currencies"
 
 const schema = z
   .object({
@@ -49,6 +43,7 @@ const errorClass = "text-error text-xs font-body mt-1"
 export default function NewTripPage() {
   const router = useRouter()
   const createTrip = useCreateTrip()
+  const { data: currencies } = useCurrencies()
 
   const {
     register,
@@ -144,10 +139,14 @@ export default function NewTripPage() {
 
           <div className="space-y-1.5">
             <label className={labelClass}>Moneda principal *</label>
-            <select {...register("primary_currency")} className={selectClass}>
+            <select
+              {...register("primary_currency")}
+              value={watch("primary_currency") ?? ""}
+              className={selectClass}
+            >
               <option value="" disabled>Selecciona una moneda</option>
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+              {(currencies ?? []).map((c) => (
+                <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
               ))}
             </select>
             {errors.primary_currency && (
@@ -179,9 +178,13 @@ export default function NewTripPage() {
             </div>
             <div className="space-y-1.5">
               <label className={labelClass}>Moneda presupuesto</label>
-              <select {...register("budget_currency")} className={selectClass}>
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+              <select
+                {...register("budget_currency")}
+                value={watch("budget_currency") ?? ""}
+                className={selectClass}
+              >
+                {(currencies ?? []).map((c) => (
+                  <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
                 ))}
               </select>
             </div>

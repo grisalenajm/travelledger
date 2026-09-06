@@ -8,14 +8,7 @@ import { z } from "zod"
 import { useQueryClient } from "@tanstack/react-query"
 import { useTrip, useUpdateTrip, useDeleteTrip } from "@/hooks/use-trips"
 import { LocationAutocomplete } from "@/components/location-autocomplete"
-
-const CURRENCIES = [
-  "EUR", "USD", "GBP", "CHF", "JPY",
-  "ARS", "BRL", "MXN", "CAD", "AUD",
-  "CNY", "HKD", "SGD", "KRW", "THB", "INR",
-  "AED", "TRY", "PLN", "CZK", "HUF", "RON",
-  "SEK", "NOK", "DKK",
-]
+import { useCurrencies } from "@/hooks/use-currencies"
 
 const FIELD_INPUT =
   "block w-full border-0 border-b border-outline-variant bg-transparent pt-1 pb-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:border-primary focus:outline-none focus:ring-0 disabled:opacity-50 appearance-none"
@@ -71,6 +64,7 @@ export default function TripEditPage() {
   const { data: trip, isLoading, isError } = useTrip(id)
   const updateTrip = useUpdateTrip()
   const deleteTrip = useDeleteTrip()
+  const { data: currencies } = useCurrencies()
 
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [coverUploading, setCoverUploading] = useState(false)
@@ -379,8 +373,15 @@ export default function TripEditPage() {
         {/* Moneda principal */}
         <div>
           <label htmlFor="primary_currency" className={FIELD_LABEL}>Moneda principal</label>
-          <select id="primary_currency" className={FIELD_INPUT} {...register("primary_currency")}>
-            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          <select
+            id="primary_currency"
+            className={FIELD_INPUT}
+            {...register("primary_currency")}
+            value={watch("primary_currency") ?? ""}
+          >
+            {(currencies ?? []).map((c) => (
+              <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+            ))}
           </select>
         </div>
 
@@ -400,8 +401,15 @@ export default function TripEditPage() {
           </div>
           <div>
             <label htmlFor="budget_currency" className={FIELD_LABEL}>Moneda presupuesto</label>
-            <select id="budget_currency" className={FIELD_INPUT} {...register("budget_currency")}>
-              {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            <select
+              id="budget_currency"
+              className={FIELD_INPUT}
+              {...register("budget_currency")}
+              value={watch("budget_currency") ?? ""}
+            >
+              {(currencies ?? []).map((c) => (
+                <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+              ))}
             </select>
           </div>
         </div>

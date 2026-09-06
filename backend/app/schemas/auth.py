@@ -4,13 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, field_validator
 
-_VALID_CURRENCIES = {
-    "AED", "ARS", "AUD", "BRL", "CAD", "CHF", "CLP", "CNY",
-    "COP", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR",
-    "ILS", "INR", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD",
-    "PEN", "PHP", "PLN", "RON", "RUB", "SAR", "SEK", "SGD",
-    "THB", "TRY", "TWD", "UAH", "USD", "ZAR",
-}
+from app.core.currencies import VALID_CURRENCIES as _VALID_CURRENCIES
+
 
 # ≥12 chars, at least one uppercase, one lowercase, one digit, one special char
 _PASSWORD_RE = re.compile(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$')

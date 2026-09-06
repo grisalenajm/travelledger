@@ -3,6 +3,7 @@
 .env.local
 .env.*.local
 .env.production
+.env.infisical
 secrets/*
 !secrets/.gitkeep
 
@@ -45,6 +46,10 @@ Thumbs.db
 # ─── Docker ────────────────────────────────────────────────
 *.pid
 uploads/
+
+# ─── Backups locales de despliegue (ej. *.bak.pre-infisical-*) ─
+*.bak
+*.bak.*
 
 # ─── Claude Code ───────────────────────────────────────────
 .claude/

@@ -114,6 +114,36 @@ async def geocode_expense_bg(expense_id: UUID, query: str) -> None:
             logger.warning("geocode_expense_bg: failed for expense=%s: %s", expense_id, exc)
 
 
+async def reverse_geocode_expense_bg(expense_id: UUID, lat: float, lng: float) -> None:
+    """Background task: rellenar location_name a partir de coords EXIF ya guardadas, via Nominatim reverse geocoding.
+
+    No toca location_lat/lng — esos ya vinieron del EXIF y son la fuente de verdad.
+    Si Nominatim no devuelve nada o falla → silencio total, location_name queda None.
+    """
+    from app.database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        try:
+            result = await geocoding_service.reverse_geocode(lat, lng)
+            if not result:
+                return
+            name = result.get("name") or result.get("display_name", "").split(",")[0].strip()
+            if not name:
+                return
+
+            db_result = await db.execute(select(Expense).where(Expense.id == expense_id))
+            expense = db_result.scalar_one_or_none()
+            if not expense:
+                return
+
+            expense.location_name = name
+            await db.commit()
+            logger.info("reverse_geocode_expense_bg: expense=%s → name='%s'", expense_id, name)
+        except Exception as exc:
+            await db.rollback()
+            logger.warning("reverse_geocode_expense_bg: failed for expense=%s: %s", expense_id, exc)
+
+
 async def _save_local_image(content: bytes, user_id: UUID, expense_id: UUID, filename: str | None) -> str:
     ext = Path(filename).suffix.lower() if filename else ".bin"
     dir_path = f"/app/uploads/{user_id}"

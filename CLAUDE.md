@@ -460,6 +460,15 @@ GET    /api/bot/context/{chat_id}
 - Retorna `(lat, lng) | None`
 - En FASE I: usado manualmente — el frontend envía coords al crear/editar un leg
 - En FASE IV: geocodificación automática en background tras POST/PUT de expense y leg
+- `reverse_geocode(lat, lng)` → `dict | None` con el JSON crudo de Nominatim `/reverse`
+  (`display_name`, `address`, etc. — **no** trae una clave `name` fiable). Para obtener un
+  nombre corto: `result.get("name") or result.get("display_name", "").split(",")[0].strip()`
+  (patrón ya usado en `routers/geocoding.py`, reutilizado en `reverse_geocode_expense_bg`)
+- **`POST /api/receipts/upload`**: si el EXIF de la foto trae coords GPS, se guardan en
+  `location_lat`/`location_lng` de inmediato y se encola `reverse_geocode_expense_bg`
+  (background) para rellenar `location_name` via reverse geocoding — no sobrescribe
+  lat/lng, solo el nombre. Si no hay coords EXIF, sigue el fallback existente de
+  geocodificar por `ocr.description` (merchant) con `geocode_expense_bg`. Ver Fix 65.
 
 ---
 

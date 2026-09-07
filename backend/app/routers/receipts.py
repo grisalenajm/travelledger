@@ -17,7 +17,12 @@ from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.expense import ExpenseRead
 from app.services import currency_service, paperless_service, settings_service
-from app.services.expense_service import extract_exif_gps, geocode_expense_bg, safe_coordinate
+from app.services.expense_service import (
+    extract_exif_gps,
+    geocode_expense_bg,
+    reverse_geocode_expense_bg,
+    safe_coordinate,
+)
 from app.services.image_utils import downscale_for_ocr
 from app.services.ocr_factory import get_ocr_provider
 from app.services.ocr_providers.base import OcrProviderNotConfiguredError
@@ -182,7 +187,15 @@ async def upload_receipt(
     await db.commit()
     await db.refresh(expense)
 
-    # 2. Si no hay GPS EXIF y el OCR extrajo un merchant, intentar Nominatim en background.
+    # 2a. Si hay coords EXIF, rellenar location_name via reverse geocoding en background.
+    # No sobrescribe location_lat/lng — esos ya vienen del EXIF (fuente de verdad).
+    if location_lat is not None and location_lng is not None:
+        background_tasks.add_task(
+            reverse_geocode_expense_bg, expense.id, float(location_lat), float(location_lng)
+        )
+        logger.info("OCR upload: reverse geocoding background para expense=%s (EXIF coords)", expense.id)
+
+    # 2b. Si no hay GPS EXIF y el OCR extrajo un merchant, intentar Nominatim en background.
     # geocode_expense_bg escribe lat/lng/name SOLO si Nominatim devuelve coords.
     if location_lat is None and ocr.description:
         background_tasks.add_task(geocode_expense_bg, expense.id, ocr.description)

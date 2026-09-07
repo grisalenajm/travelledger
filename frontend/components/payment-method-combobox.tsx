@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { PaymentMethodItem } from "@/hooks/use-payment-methods"
 
 interface PaymentMethodComboboxProps {
@@ -21,6 +21,8 @@ export function PaymentMethodCombobox({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [creating, setCreating] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const selectedName = methods.find((m) => m.id === value)?.name
 
@@ -45,16 +47,30 @@ export function PaymentMethodCombobox({
     }
   }
 
-  const handleBlur = () => {
-    setTimeout(() => setOpen(false), 150)
-  }
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown)
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
+  }, [open])
+
+  useEffect(() => {
+    if (open) {
+      inputRef.current?.focus()
+    }
+  }, [open])
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        onBlur={handleBlur}
         className={`w-full text-left ${className}`}
       >
         {selectedName ? (
@@ -68,7 +84,7 @@ export function PaymentMethodCombobox({
         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface rounded-xl shadow-[0_8px_32px_rgba(26,28,30,0.15)] border border-outline-variant/30 overflow-hidden">
           <div className="p-2 border-b border-outline-variant/20">
             <input
-              autoFocus
+              ref={inputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}

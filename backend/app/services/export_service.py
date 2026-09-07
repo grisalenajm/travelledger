@@ -165,7 +165,7 @@ async def build_bundle(
     trip_slug = _slugify(trip.name)
 
     if format == "xlsx":
-        data_bytes = generate_xlsx(expenses, trip, user, payment_methods)
+        data_bytes = generate_xlsx(expenses, trip, user, payment_methods, image_map)
         data_filename = f"gastos_{trip_slug}.xlsx"
     else:
         data_bytes = await build_csv(db, trip, user, expenses, loyalty_cards, image_map)
@@ -249,6 +249,7 @@ def generate_xlsx(
     trip: Trip,
     user: User,
     payment_methods: dict[str, str] | None = None,
+    image_map: dict[str, str] | None = None,
 ) -> bytes:
     wb = Workbook()
 
@@ -268,6 +269,10 @@ def generate_xlsx(
         "Facturable", "Método de pago",
     ]
     COL_WIDTHS = [12, 35, 15, 14, 16, 12, 16, 12, 18]
+
+    if image_map is not None:
+        HEADERS = HEADERS + ["Imagen/Documento"]
+        COL_WIDTHS = COL_WIDTHS + [30]
 
     for col, (header, width) in enumerate(zip(HEADERS, COL_WIDTHS), start=1):
         cell = ws.cell(row=1, column=col, value=header)
@@ -293,6 +298,8 @@ def generate_xlsx(
         base_cell.number_format = "#,##0.00"
         ws.cell(row=row_num, column=8, value="Sí" if exp.billable else "No")
         ws.cell(row=row_num, column=9, value=_payment_method_name(exp, payment_methods))
+        if image_map is not None:
+            ws.cell(row=row_num, column=10, value=image_map.get(str(exp.id), ""))
 
         currency_totals[exp.currency] = (
             currency_totals.get(exp.currency, Decimal("0")) + Decimal(str(exp.amount))
